@@ -11,17 +11,14 @@ const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/,
 
 const ROOT = __树根;
 const MUS = fs.readFileSync(path.join(ROOT, 'data/plugins/music-remote/main.js'), 'utf8');
-const MAIN = fs.readFileSync(path.join(ROOT, 'src/pack/main.cjs'), 'utf8');
+const 声 = fs.readFileSync(path.join(ROOT, 'src/_tauri/src/tauri_bind/vol_cmds.rs'), 'utf8');
+const 判 = fs.readFileSync(path.join(ROOT, 'src/_tauri/src/core/media_rule.rs'), 'utf8');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (extra ? ' · ' + extra : '')); } };
 
 /* ---------- 一、翻译恒定（源码层：尺子挪走了没） ---------- */
 const css = (MUS.match(/const MUS_CSS = `([\s\S]*?)`;/) || ['', ''])[1];
-const volLine = (() => { const i = MAIN.indexOf('function volLine('); if(i < 0) throw new Error('找不到 volLine');
-  let d = 0, j = MAIN.indexOf('{', i);
-  for(let k = j; k < MAIN.length; k++){ if(MAIN[k] === '{') d++; else if(MAIN[k] === '}'){ d--; if(!d) return MAIN.slice(i, k + 1); } }
-  throw new Error('volLine 花括号没配平'); })();
-ok('0 组件那份样式和音量那一支都抓到了（抓空了下面的断言全是假的）', css.length > 2000 && volLine.length > 200, 'css ' + css.length + ' · volLine ' + volLine.length);
+ok('0 组件那份样式抓到了（抓空了下面的断言全是假的）', css.length > 2000, 'css ' + css.length);
 ok('1 亮度尺不再压整行：没有「.mu-line{opacity:.42}」和「.mu-line.act{opacity:1}」那两条了',
   !/\.mu-line\{[^}]*opacity:\.42/.test(css) && !/\.mu-line\.act\{opacity:1\}/.test(css));
 ok('2 尺子挪到原文和注音两块上，两个数值一个字没改（没唱到 .42、正在唱 1）',
@@ -34,70 +31,33 @@ ok('4 翻译那一行（.mu-trans）不再有任何一档随行状态变的写�
 ok('5 注音那一行照旧跟着行走（他没点这一档，一个字不动）',
   /\.mu-note\{font-size:calc\(\.82em/.test(css));
 
-/* ---------- 二、音量：收摊之后还能再起一代 ---------- */
-const bye = /if\(j\.ev === 'bye'\)\{([\s\S]*?)volTell\(\); return;/.exec(volLine);
-ok('6 监听说收摊那句不再把这一路永久判死（bye 那一支只在重起预算用完之后才判死）',
-  !!bye && /else vol\.dead = true/.test(bye[0]) && !/^\s*vol\.dead = true;/.test(bye[1] || ''), bye ? bye[0].slice(0, 70) : '没抓到 bye 那一支');
-ok('7 收摊之后重起有界：没被我们主动收掉、且重试没超三回才再起一代',
-  !!bye && /!vol\.killed && vol\.tries < 3/.test(bye[0]) && /setTimeout\(volStart, 300\)/.test(bye[0]));
-ok('8 抬走这一代的号：它迟到的退出事件不许顶掉新起的那一代', !!bye && /vol\.gen\+\+/.test(bye[0]));
-ok('9 活着推上来一行就把重试预算归零（跑一阵子再摔也还有机会）',
-  /if\(j\.ev === 'vol'\)\{[\s\S]{0,80}vol\.tries = 0/.test(MAIN));
-ok('10 退出码那条路也不再一判死了事：三回以内先重起',
-  /if\(vol\.killed\) return;[\s\S]{0,120}if\(vol\.tries < 3\)\{ vol\.tries\+\+; setTimeout\(volStart, 1200\)/.test(MAIN));
+/* ---------- 二、音量：那一整条常驻子进程的路不使了 ----------
+   从前那一版靠一根常驻的子进程往里推事件：监听一收摊，滑杆就一辈子起不来（volStart 头一句 return），
+   那一类毛病在这一头没有落点 —— 壳里三颗命令每一颗自己起一趟 COM 往返，没有一份「判死了」的常驻状态。 */
+ok('6 音量那三颗都是 async 命令，各放一条自己的线程上办（主线程一个字都不等）',
+  ['vol_get', 'vol_set', 'vol_mute'].every(名 => new RegExp('pub async fn ' + 名 + '\\(').test(声))
+  && /std::thread::Builder::new\(\)/.test(声));
+ok('7 一趟 COM 往返给三秒兜底，到点报的是那一句中文（不把系统原话甩到界面上）',
+  声.includes('const 三秒: Duration = Duration::from_secs(3);') && 声.includes('音量这一趟三秒没回来'));
+ok('8 没有一份常驻的子进程状态可判死（这一类「收摊之后一辈子起不来」的毛病在这头没有落点）',
+  !/Child|stdin|kill\(\)/.test(声) && 声.includes('没有子进程可杀'));
+ok('9 换默认输出设备这一档天然跟得上（每次现拿端点，不靠重起脚本那一代）',
+  声.includes('每次现拿端点') || /GetDefaultEndpoint|默认端点|现拿/.test(声));
+ok('10 硬件音量键、别家程序改音量那一档没挂 COM 回调 —— 这一件写在文件顶上，不装成验过了',
+  声.includes('RegisterControlChangeNotify') && 声.includes('没挂'));
 
-/* ---------- 二之二、拿真函数跑一遍：连摔三回才判死，中间每一回真能重起 ----------
-   上面那五条断的是"代码里写了什么"。这一台把 main.cjs 里那三件真东西（vol 那份状态、volMsg、volLine）
-   原样搬进 vm，再照抄 volStart 头一句那道闸（`if(vol.child || vol.dead) return`），
-   按时间顺序喂 bye 事件、跑被排下的定时器 —— 修好之前这一台第 1 条就不过：一句 bye 就把路钉死，
-   后面永远起不来。 */
-const vm = await import('node:vm');
-function braceSlice(src, marker){
-  const i = src.indexOf(marker); if(i < 0) throw new Error('找不到 ' + marker);
-  let d = 0, j = src.indexOf('{', i);
-  for(let k = j; k < src.length; k++){ if(src[k] === '{') d++; else if(src[k] === '}'){ d--; if(!d) return src.slice(i, k + 1); } }
-  throw new Error(marker + ' 花括号没配平');
-}
-const VOL_OBJ = /^const vol = \{.*$/m.exec(MAIN)[0];
-const GUARD = /function volStart\(\)\{\s*(if\(vol\.child \|\| vol\.dead\) return;)/.exec(MAIN);
-if(!GUARD) throw new Error('volStart 头一句那道闸的写法变了，这一台得跟着改');
-const timers = [];
-const hits = { started:0, told:0 };
-const sb = { console, JSON, String, Number, Boolean, RegExp, timers, hits,
-  setTimeout:(f, ms) => { timers.push({ f, ms }); return 1; }, clearTimeout:() => {},
-  hits, logLine:() => {}, volTell:() => { hits.told++; } };
-vm.createContext(sb);
-vm.runInContext([VOL_OBJ, braceSlice(MAIN, 'function volMsg'),
-  'function volStart(){ ' + GUARD[1] + ' hits.started++; }',
-  'function tick(){ while(timers.length){ const t = timers.shift(); t.f(); } }',
-  volLine,
-  'function fire(l){ volLine(l); tick(); }',
-  'function snap(){ return { dead:vol.dead, tries:vol.tries, gen:vol.gen, started:hits.started, told:hits.told, msg:vol.msg }; }'].join('\n'), sb);
-const step = (msg) => { vm.runInContext('fire(' + JSON.stringify('{"ev":"bye","msg":' + JSON.stringify(msg) + '}') + ')', sb); return vm.runInContext('snap()', sb); };
-const s1 = step('watcher closed'), s2 = step('watcher closed'), s3 = step('watcher closed'), s4 = step('watcher closed');
-ok('11 函数层真跑：第一句 bye 之后仍能重起（修之前这里 started 恒 0、dead 立刻成真）',
-  s1.dead === false && s1.started === 1 && s1.tries === 1 && /正在重起/.test(s1.msg), JSON.stringify(s1));
-ok('12 函数层真跑：连摔的第 2、3 回都还起得来（tries 一路加到 3，dead 仍旧是假）',
-  s2.started === 2 && s2.tries === 2 && s3.started === 3 && s3.tries === 3 && s3.dead === false, JSON.stringify({ s2, s3 }));
-ok('13 函数层真跑：第四回（预算用完）才判死，界面那头拿到 supported:false',
-  s4.dead === true && s4.started === 3, JSON.stringify(s4));
-/* 判死之后重新活着的样子：把状态摆回"监听在跑、预算已用完"，先推一行活的事件（预算应当归零），
-   再喂一句 bye —— 这一回还得起得来。 */
-const s5 = (() => { vm.runInContext('vol.dead = false; vol.tries = 3; hits.started = 0;', sb);
-  vm.runInContext('volLine(\'{"ev":"vol","master":0.5}\')', sb);
-  const a = vm.runInContext('vol.tries', sb); step('watcher closed');
-  return { a, started:vm.runInContext('hits.started', sb) }; })();
-ok('14 函数层真跑：活着推上来一行就把预算归零，摔完之后再来一句 bye 又起得了', s5.a === 0 && s5.started === 1, JSON.stringify(s5));
-const s6 = step('');
-ok('15 界面拿到的 msg 是中文那一句，脚本的英文原话没漏出去', /音量/.test(s6.msg) && !/watcher|failed|denied/i.test(s6.msg), JSON.stringify(s6));
-
-/* ---------- 三、界面上不许冒英文 ---------- */
-ok('16 有一句中文映射兜着：脚本那几句英文原话各有对等的中文',
-  /function volMsg\(raw\)/.test(MAIN) && /音量监听收摊了，正在重起/.test(MAIN) && /音量命令没执行成/.test(MAIN));
-ok('17 原话留着进日志（我要查的还是那句），并且 stderr 也走这一道',
-  /vol\.raw = t\.slice\(0, 300\)/.test(MAIN) && /if\(s\) volMsg\(s\)/.test(MAIN));
-ok('18 三处回给页面的 msg 全是 vol.msg（中文那一版），没有直接把 j.msg 或异常文本交出去',
-  !/msg: j\.msg/.test(MAIN) && /msg: vol\.msg/.test(MAIN));
+/* ---------- 三、界面上不许冒英文 ----------
+   脚本那几句英文原话各有对等的中文，映射那几颗住在纯判断那一格（`core/media_rule.rs`），
+   动磁盘与动系统那一层只叫它，一个字都不重写。从前这一台还把 main.cjs 里那份 vol 状态机搬进虚拟机
+   连摔四回验「预算用完才判死」—— 那一台量的是常驻子进程那一路，这一头没有那一路可摔（见上面第二节），
+   所以那段跟着撤了；留下的这一条盯的是同一件毛病：界面上只能出现中文那一句。 */
+ok('11 有一句中文映射兜着：脚本那几句英文原话各有对等的中文（都只写在纯判断那一格）',
+  ['音量监听收摊了，正在重起', '音量命令没执行成', '系统不让改音量（权限被拒）', '音量监听出了岔子，原话进了日志', '音量监听停了']
+    .every(句 => 判.includes('"' + 句 + '"')));
+ok('12 原话留着进日志（我要查的还是那句），界面上那一格只放中文',
+  /fn 音量话|音量原话|raw/.test(判 + 声) && 声.includes('判::'));
+ok('13 回给页面的 msg 是中文那一句，没有把系统原文或异常文本直接交出去',
+  !/msg: e\.to_string\(\)|msg: 系统/.test(声) && 声.includes('音量这一趟三秒没回来'));
 
 /* ---------- 四、取不到就别摆 ---------- */
 ok('19 系统音量取不到时整排收掉（不再摆一根拖了没反应的滑杆）',
@@ -137,21 +97,17 @@ ok('23 页面里那三块该量到的规则都在（原文两档、注音两档�
   !/\.mu-trans\{[^}]*opacity/.test(css) &&
   !/\n\.mu-trans[^{]*\{[^}]*opacity:/.test('\n' + css));
 
-/* ---------- 六、这台自己咬得住吗：把 bye 那一支改回从前的写法再跑一遍 ----------
-   元规矩那条（不许拿自检全 PASS 当结论）在这里的落法：同一个 vm、同一串事件，
-   只把那一支换回"一句就判死"的老样子 —— 换对了这一台必须报不过，不然它是个哑台。 */
-const OLD = 'vol.dead = true;';
-const volLineOld = volLine.replace(/if\(!vol\.killed && vol\.tries < 3\)\{ vol\.tries\+\+; setTimeout\(volStart, 300\); \}[\s\S]*?else vol\.dead = true;/, OLD);
-const sb2 = Object.assign({}, sb, { timers:[], hits:{ started:0, told:0 } });
-vm.createContext(sb2);
-vm.runInContext([VOL_OBJ, braceSlice(MAIN, 'function volMsg'),
-  'function volStart(){ ' + GUARD[1] + ' hits.started++; }',
-  'function tick(){ while(timers.length){ const t = timers.shift(); t.f(); } }',
-  volLineOld, 'function fire(l){ volLine(l); tick(); }'].join('\n'), sb2);
-vm.runInContext('fire(\'{"ev":"bye","msg":"watcher closed"}\')', sb2);
-const old = vm.runInContext('({ dead:vol.dead, started:hits.started })', sb2);
-ok('24 这一台咬得住：同一串事件喂给从前那句一支判死的老写法，必须起不来（' + JSON.stringify(old) + '）',
-  volLineOld !== volLine && old.dead === true && old.started === 0);
+/* ---------- 六、这台自己咬得住吗 ----------
+   元规矩那条（不许拿自检全 PASS 当结论）在这一头的落法：把壳里那三句锚点各自抽掉一样，
+   对应的判法必须当场报不过，不然它是个哑台。 */
+const 没三秒 = 声.replace('const 三秒: Duration = Duration::from_secs(3);', 'const 三秒: Duration = Duration::from_secs(30);');
+const 又常驻 = 声.replace('没有子进程可杀', '留着那根子进程') + ' let child = Command::new("powershell").stdin(Stdio::pipe()); child.kill();';
+const 漏英文 = 判.replaceAll('"音量监听收摊了，正在重起"', '"watcher closed"');
+ok('24 这一台咬得住：抽掉三秒那一句 / 又把常驻子进程塞回来 / 中文映射换成英文原话 → 第 7、8、11 条各自当场失效',
+  !(没三秒.includes('const 三秒: Duration = Duration::from_secs(3);'))
+  && /Child|stdin|kill\(\)/.test(又常驻)
+  && !['音量监听收摊了，正在重起', '音量命令没执行成', '系统不让改音量（权限被拒）', '音量监听出了岔子，原话进了日志', '音量监听停了']
+    .every(句 => 漏英文.includes('"' + 句 + '"')));
 
 console.log('\n' + pass + ' 过 ' + fail + ' 不过');
 console.log('样式层那半我自己开探针浏览器量（绝不动他正开着那一家）：' + out);
