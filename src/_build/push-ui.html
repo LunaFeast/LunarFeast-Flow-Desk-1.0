@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>推送这一屏</title>
+<style>
+  :root{ --线:#dcdcdc; --字:#1c1c1c; --淡:#776f66; --底:#f4f2ef; --块:#fffdfb; --好:#1d6b3f; --急:#9c2a2a; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:0 18px 26px; background:var(--底); color:var(--字);
+        font:15px/1.55 system-ui,"Microsoft YaHei",sans-serif; }
+  header{ position:sticky; top:0; z-index:2; background:var(--底); padding:14px 0 10px; border-bottom:1px solid var(--线); }
+  h1{ margin:0 0 6px; font-size:17px; font-weight:600; letter-spacing:.02em; }
+  .状态{ color:var(--淡); font-size:13px; }
+  .状态 b{ color:var(--字); font-weight:600; }
+  .状态 .坏{ color:var(--急); }
+  .行{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; }
+  label{ font-size:13px; color:var(--淡); }
+  input[type=text]{ font:inherit; padding:5px 8px; border:1px solid var(--线); border-radius:2px; background:var(--块); min-width:190px; }
+  select{ font:inherit; padding:5px 6px; border:1px solid var(--线); border-radius:2px; background:var(--块); }
+  #支{ min-width:230px; font-family:ui-monospace,Consolas,monospace; }
+  #说明{ min-height:54px; }
+  button{ font:inherit; padding:6px 14px; border:1px solid #b9b1a8; border-radius:2px; background:var(--块); cursor:pointer; }
+  button:hover{ background:#f0ece7; }
+  button.主{ background:var(--字); color:#fff; border-color:var(--字); }
+  button.主:hover{ background:#3a3a3a; }
+  button:disabled{ opacity:.45; cursor:default; }
+  .格{ display:grid; grid-template-columns:repeat(auto-fill,minmax(400px,1fr)); gap:12px; margin-top:14px; }
+  .笔{ background:var(--块); border:1px solid var(--线); border-top:3px solid #b9b1a8; padding:11px 13px 13px; }
+  .笔.动{ border-top-color:var(--好); }
+  .笔.停{ border-top-color:#cfc7bd; color:var(--淡); }
+  .名{ font-weight:600; }
+  .副{ color:var(--淡); font-size:12.5px; margin-top:1px; }
+  .项{ font-size:13px; margin-top:8px; }
+  .项 span{ color:var(--淡); }
+  .号{ font-family:ui-monospace,Consolas,monospace; font-size:13px; }
+  .号 em{ font-style:normal; color:var(--好); }
+  textarea{ width:100%; margin-top:5px; font:inherit; font-size:13.5px; padding:6px 8px;
+            border:1px solid var(--线); border-radius:2px; background:#fff; resize:vertical; min-height:56px; }
+  details{ margin-top:8px; font-size:13px; }
+  summary{ color:var(--淡); cursor:pointer; }
+  .份{ max-height:220px; overflow:auto; margin:6px 0 0; padding:0; list-style:none;
+       font-family:ui-monospace,Consolas,monospace; font-size:12.5px; color:#4a4a4a; }
+  .份 li{ padding:1px 0; word-break:break-all; }
+  .底{ margin-top:16px; border-top:1px solid var(--线); padding-top:12px; }
+  .志{ background:#1f1d1b; color:#e6e2dc; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+      line-height:1.5; padding:10px 12px; height:300px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
+  .志:empty{ display:none; }
+  .确{ display:none; margin-top:12px; padding:12px 14px; border:1px solid var(--急); background:#fff5f3; }
+  .确.开{ display:block; }
+  .确 h2{ margin:0 0 4px; font-size:15px; }
+  .确 p{ margin:0 0 8px; font-size:13px; color:#5a4a48; }
+  .提示{ font-size:13px; color:var(--淡); margin-top:6px; }
+  .淡{ color:var(--淡); font-size:12.5px; }
+  .页签{ display:flex; gap:10px; margin:0 0 8px; }
+  .页{ font:inherit; font-size:14px; padding:2px 2px 5px; border:0; border-bottom:2px solid transparent; border-radius:0;
+      background:none; color:var(--淡); cursor:pointer; }
+  .页:hover{ background:none; color:var(--字); }
+  .页.主{ background:none; color:var(--字); border-bottom-color:var(--字); font-weight:600; }
+  .图预览{ margin-top:7px; height:56px; display:flex; align-items:center; }
+  .图预览 img{ max-height:56px; max-width:120px; }
+  .只在{ margin-top:14px; }
+  /* 一步一行（他 2026-10-13：「给我按照流程一步一个按钮」）：左边第几步与这一句白话，右边那一颗就是这一步 */
+  .步{ border:1px solid var(--线); border-left:4px solid var(--淡); background:var(--块); border-radius:3px; padding:10px 14px 12px; margin-top:10px; }
+  .步头{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .步头 b{ font-size:14.5px; font-weight:600; color:var(--字); white-space:nowrap; }
+  .步头 button{ align-self:center; }
+  .步话{ font-size:13px; color:var(--淡); line-height:1.5; }
+  .步:has(button:not([disabled])){ border-left-color:var(--主); }
+  /* 两栏的标题：一、推远程 二、本地这一枚包（他 2026-10-13 要分开） */
+  .区{ margin:26px 0 6px; padding:0 0 6px; font-size:15px; font-weight:600; color:var(--字); border-bottom:2px solid var(--线); }
+  /* 界面文字那一栏：一屏一段、一段一行，行里三格（原句 / 填改后的句子 / 划掉那一记）排成一排不换行 */
+  #字格{ grid-template-columns:1fr; }
+  .字行{ display:flex; align-items:center; gap:10px; }
+  .字行 .句{ flex:0 1 auto; min-width:8em; max-width:38%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+             color:var(--字); font-family:ui-monospace,Consolas,monospace; font-size:13px; }
+  .字行 input[type=text]{ flex:1 1 auto; min-width:12em; }
+  .字行 label{ flex:0 0 auto; white-space:nowrap; }
+  .只在 .标{ font-size:13px; color:var(--淡); }
+  .只在 .条{ background:var(--块); border:1px solid var(--线); border-left:3px solid var(--急); padding:9px 12px 10px; margin-top:8px; font-size:13.5px; }
+  .只在 .条 b{ font-weight:600; }
+  /* 插件那七家：一家一小格，勾着 = 进这一枚包（格上只有中文名，内部名字不露） */
+  .家格{ display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:8px; }
+  .家{ display:inline-flex; align-items:center; gap:6px; background:var(--块); border:1px solid var(--线); border-radius:3px; padding:6px 10px; font-size:13.5px; color:var(--字); }
+</style>
+</head>
+<body>
+<header>
+  <h1>GitHub 版本资源助手</h1>
+  <div class="页签">
+    <button id="t版" class="页 主">版本与推送</button>
+    <button id="t图" class="页">图标素材</button>
+    <button id="t字" class="页">界面文字</button>
+  </div>
+  <div class="状态" id="状态">正在问现场……</div>
+</header>
+<div id="p版">
+  <div class="提示" id="提示"></div>
+  <div class="提示" id="缺字"></div>
+  <div class="提示" id="git警"></div>
+  <!-- 一屏一条流水：按 AGENTS.md 那两步流程，一步一行、一步一颗按钮（2026-10-13 他：「给我按照流程一步一个按钮」）。
+       每行左边写这一步干什么、右边那颗按钮就是这一步，按不动的时候那一行自己说为什么。 -->
+  <div class="步">
+    <div class="步头"><b>第 1 步 · 同步本地 main</b><span class="步话">本地 main 只是远程那一根的镜像：这一颗 fetch 之后照原样快进，不在它上面写东西。</span><span style="flex:1"></span><button id="同步">同步 main</button></div>
+    <div class="步话" id="同步话"></div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 2 步 · 开这一轮那条支</b><span class="步话">从本地 main 起一根；四类名字照规矩来（重构 / 新增 / 优化 / 集成）。</span><span style="flex:1"></span><button id="开支">开这一条支</button></div>
+    <div class="行">
+      <label for="型">分支类型</label><select id="型"></select>
+      <label for="支">提交分支</label><input type="text" id="支" placeholder="feature/tweak/…" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <span class="状态" id="支注"></span>
+    </div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 3 步 · 说清楚这一轮改了什么</b><span class="步话">「重新量一遍」量出这一轮的现场（哪几家会动、号会变成什么）；下面每一格的字都归你填，空着那一笔就不落。填完点「落笔到各支」，改动才真的进了仓 —— 不落笔，第 4 步那些勾永远还是"还没拆"。</span><span style="flex:1"></span><button id="量">重新量一遍</button><button id="存">保存这五样</button><button id="落笔">落笔到各支</button></div>
+    <div class="行">
+      <label for="基线">版本基线</label><input type="text" id="基线" placeholder="1.0.0-alpha" autocomplete="off"><span class="状态" id="基线注"></span>
+    </div>
+    <div class="行"><label for="说明">本轮说明（PR 的标题与正文的素材，一行一句）</label><textarea id="说明" data-顶="本轮说明" placeholder="第一段就是 PR 的标题"></textarea></div>
+    <div class="格" id="格"></div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 4 步 · 挑这一枚包里带什么</b><span class="步话">只影响打出来这一枚的内容，<b>不决定推哪几条分支</b>：插件那七家一家一格，功能那八项一项一格。装好的软件里不出现这一栏的任何字。</span></div>
+    <div class="只在" id="七家"></div>
+    <div class="只在" id="八项"></div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 5 步 · 本地打包，你手动测</b><span class="步话">从工作树站的这一棵出，跑三趟（生成页面 → 铺出厂镜像 → 出发布物），不提交、不打 tag、不推。Flow-Desk 得先退干净。</span><span style="flex:1"></span><button id="自测">打本地这一枚</button></div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 6 步 · 本地全功能那一枚（可选）</b><span class="步话">把勾中的那几条本地前瞻支合到集成分支上，再从那一棵打一枚 —— 这一根永不进远程。</span><span style="flex:1"></span><button id="集成">重建集成分支</button><button id="完整">从集成分支打这一枚</button></div>
+    <div class="只在" id="只在"></div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 7 步 · 推送并建 PR</b><span class="步话">基础那一支（这一轮那条支）走左边这颗：同步 → 开支 → 落笔 → 扫公开面 → 要你亲手敲一个「推」字 → 推 → 建 PR。<b>功能那八项推不推，是右边那八格的事</b>：勾中哪几格，才推哪几条前瞻支、各建一个 PR；没勾的一条都不推，留在本地。</span><span style="flex:1"></span><button id="pr" class="主">推送基础那一支</button><button id="推项">推勾中的那几项</button></div>
+    <div class="只在" id="推项格"></div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 8 步 · 你在 GitHub 网页上人工合并</b><span class="步话">这台不合并：你核对 diff、亲手点 Squash and merge，并勾上合并后删掉远程那条支。这一颗只是问一眼「合进去没有」。</span><span style="flex:1"></span><button id="查">查合并那一眼</button></div>
+    <div class="步话" id="查话"></div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 9 步 · 本地收尾</b><span class="步话">再同步一次 main，然后把这一轮发完的那条支从本地删掉（没合进 main 的那一颗都不删）。</span><span style="flex:1"></span><button id="快进">各家指针接到 main</button><button id="删支">删本地已发布的那条支</button></div>
+  </div>
+  <div class="步">
+    <div class="步头"><b>第 10 步 · 打包发版（号钉在 main 那一笔）</b><span class="步话">这一颗要三样都齐：盘上干净、站在 main 或拼装那一棵、这一轮那条支已经合进 main。七家的号、tag、发布物一起落。</span><span style="flex:1"></span><button id="发">打包发版</button></div>
+  </div>
+</div>
+
+<div id="p图" hidden>
+  <div class="行">
+    <span class="状态" id="图情">正在数 icons 那一格……</span>
+    <span style="flex:1"></span>
+    <button id="图重">重新数一遍</button>
+    <button id="图对">重新对齐一遍</button>
+  </div>
+  <div class="行">
+    <label for="加名">加一张图</label>
+    <input type="text" id="加名" placeholder="名字空着就照挑中的文件名改（如 gear2.svg；子文件夹写成 tools/gear2.svg）" autocomplete="off" spellcheck="false" style="min-width:300px">
+    <input type="file" id="加档" accept=".svg,.png,.jpg,.jpeg,.webp,.gif">
+    <button id="加送">添进去</button>
+    <span class="状态">挑完文件名字自己填上，添完点「重新对齐一遍」把它记进那份说明书</span>
+  </div>
+  <div class="提示" id="图果"></div>
+  <div class="格" id="图格"></div>
+</div>
+
+<div id="p字" hidden>
+  <div class="行">
+    <label for="字段">哪一页</label>
+    <select id="字段"></select>
+    <label for="字搜">找</label>
+    <input type="text" id="字搜" placeholder="原句或改后的句子里含这几个字" autocomplete="off">
+    <span class="状态" id="字情">正在读 data\ui-text.yaml……</span>
+  </div>
+  <div class="行">
+    <span style="flex:1"></span>
+    <button id="字扫">刷新清单</button>
+    <button id="字存">保存这些句子</button>
+    <button id="字预">预览改动</button>
+    <button id="字落" class="主">写进源码</button>
+    <button id="字重">重新生成产物</button>
+  </div>
+  <div class="提示" id="字果"></div>
+  <div class="格" id="字格"></div>
+</div>
+
+<div class="底">
+  <div class="确" id="确">
+    <h2>要推的就是上面日志里列的那一条支 —— 看清楚再敲</h2>
+    <p>敲一个「推」字回车才真推那条支、才建 PR；这一格空着回车、敲别的字，一律一个字节都不推。
+       main 不推、拼装那一棵不推、tag 不推（这一轮一律走独立分支 + PR，合并只能你人工点）。</p>
+    <div class="行">
+      <input type="text" id="词" autocomplete="off" autocapitalize="off" spellcheck="false" style="min-width:120px">
+      <button id="推" class="主">推那条支并建 PR</button>
+      <button id="不推">不推，停在这儿</button>
+    </div>
+  </div>
+  <div class="志" id="志"></div>
+</div>
+
+<script>
+const 码 = '__码__';
+const 取 = id => document.getElementById(id);
+let 表 = null, 底 = false, 跑着 = false, git坏 = false, 状 = {};   /* 底 = 「① 提交 PR」因为没清单 / 那一趟在跑 / git 叫不动而不亮；状 = 最近一眼现场（灰钮那句要说为什么灰） */
+
+async function 问(){
+  const 对 = await (await fetch('/api/现场')).json();
+  表 = 对.表;
+  const 脏 = 对.脏 < 0 ? '<b class="坏">盘上问不出（git 叫不动）</b>'
+    : 对.脏 ? '<b class="坏">盘上 ' + 对.脏 + ' 处没提交</b>' : '盘上干净';
+  const 开 = 对.开着 ? '<b class="坏">Flow-Desk 开着</b>（要打包先退干净）' : 'Flow-Desk 没开着';
+  git坏 = 对.git好 === false;
+  取('git警').innerHTML = git坏 ? '<b class="坏">' + 文(对.git话 || '这一台叫不动 git') + '</b> —— 量、提交 PR、打包发版、重建集成分支这四颗全不亮：换得到 git 的那个终端里跑 <b>node src\\_build\\push-ui.mjs</b>，或者把 git 装进系统路径再重开这一台。' : '';
+  取('状态').innerHTML = '站在 <b>' + 对.站 + '</b> 那一支 · ' + 脏 + ' · ' + 开 +
+    ' · 清单那一格 <b>' + 对.清单名 + '</b>' + (对.清单在 ? '' : '（还没有，先点「重新量一遍」）');
+  取('基线').value = (表 && 表.基线) || 对.账上底号;
+  取('基线注').textContent = '源码那一格现在是 ' + 对.账上底号;
+  取('支').value = 对.支 || (表 && 表.提交分支) || '';
+  const 型 = 取('型');
+  if(!型.dataset.填){                                   /* 那四个名字从服务端那一张表来，这一屏不自己抄一份 */
+    型.innerHTML = '<option value="">（照支名认）</option>' +
+      (对.支类 || []).map(c => '<option value="' + 编(c.类) + '" title="' + 编(c.话) + '">' + 文(c.类) + '</option>').join('');
+    型.dataset.填 = '1';
+  }
+  型.value = 对.型 || '';
+  取('说明').value = (表 && 表.本轮说明) || '';
+  const 合 = 对.支名合;
+  取('支注').innerHTML = (!对.支 ? '<b class="坏">提交分支那一格空的</b>（先「重新量一遍」拿个默认名）'
+    : (合 && 合.本地) ? '<b class="好" style="color:var(--好)">已合进 main</b> · 可以打包发版'
+    : (合 && 合.远端笔) ? '<b class="坏">远端 main 里有了，本地 main 还没跟上</b>（人工 merge --ff-only，这一台不自动合）'
+    : '<b class="坏">还没合进 main</b> · 打包那一颗不亮（先提交 PR、你人工合并）')
+    + (对.类判 && 对.类判.行 === false ? ' <b class="坏">' + 文(对.类判.话) + '</b>' : '');
+  画(对);
+  集成名 = 对.集成 || '';
+  跑着 = !!对.在跑;
+  画前瞻(对.前瞻);
+  画七家(对.七家);
+  画八项(对.八项);
+  画推项(对.八项);
+  底 = !对.清单在 || 对.在跑 || git坏;
+  取('pr').disabled = 底;
+  取('发').disabled = !对.清单在 || git坏 || !(合 && 合.本地);
+  取('量').disabled = 对.在跑 || git坏;
+  取('自测').disabled = 对.在跑 || git坏;   /* 自测包走的是本地那一档：盘上没提交也照打，只要 git 叫得动、Flow-Desk 退干净 */
+  等字();
+}
+
+/* 「不点就不落笔」的按钮态：会动的卡片里还有哪几笔的提交说明空着，「① 提交 PR」就不亮，
+   并把等谁的名字列出来（提交说明由他填，我不替他补一句默认文字）。本轮说明那一格空的也一样。 */
+function 等字(){
+  const 缺 = [...document.querySelectorAll('textarea[data-会动="1"]')].filter(t => !t.value.trim()).map(t => t.dataset.名);
+  const 没说明 = !取('说明').value.trim();
+  取('pr').disabled = 底 || !!缺.length || 没说明;
+  /* 一步一颗：这一排钮的"能不能按"各说各的（跑着 = 这一台一次只跑一趟） */
+  const 情 = 跑着 || git坏;
+  取('同步').disabled = 情; 取('开支').disabled = 情; 取('查').disabled = 情;
+  取('落笔').disabled = 情 || !状.清单在;
+  取('推项').disabled = 情 || !推中().length;
+  取('推项').title = 推中().length ? '只推勾中的那几项的前瞻支，各自建一个 PR' : '右边那八格一颗都没勾';
+  取('落笔').title = 状.清单在 ? '把这一轮动的份按路径落到各支（本地，不推）；哪一笔的说明空着就不落那一桶'
+    : '先点「重新量一遍」出那一格清单';
+  取('快进').disabled = 情; 取('删支').disabled = 情;
+  取('完整').disabled = 情 || !(状.集成在);
+  取('完整').title = 状.集成在 ? '从本地集成分支那一棵打这一枚（全功能，不推任何东西）'
+    : '本地还没有集成分支那一根 —— 先在下面勾中要合的前瞻支、点「重建集成分支」';
+  /* 灰掉的钮必须自己说为什么灰 —— 点在一颗灰钮上什么也不发生，他那句「提交PR为什么毫无反应」就是这么来的 */
+  const 合 = (状.支名合) || {}, 话 = [];
+  if(缺.length) 话.push('还等 ' + 缺.length + ' 笔的提交说明：<b class="坏">' + 文(缺.join('、')) + '</b>');
+  if(没说明) 话.push('<b class="坏">本轮说明那一格空的</b>（PR 的标题与正文就从这儿来）');
+  if(跑着) 话.push('① 与 ② 这会儿不亮：这一台一次只跑一趟，等刚才那一趟跑完（日志在下面一段段出来）');
+  else if(!状.清单在) 话.push('① 与 ② 这会儿不亮：还没有那一格清单，先点「重新量一遍」');
+  else if(!合.本地) 话.push('② 打包发版不亮：' + (合.远端笔
+      ? '这条支在远端 main 里有了，本地 main 还没跟上 —— 人工跑一句 <b>git -C ' + 文(状.树 || '') + ' merge --ff-only ' + 文(合.远端名 || 'origin') + '/main</b>（这一台不自动合）'
+      : '这条支还没合进 main —— 先「① 提交 PR」、你在 GitHub 网页上人工合并，回来再点 ②'));
+  取('缺字').innerHTML = 话.join(' · ');
+  return 缺;
+}
+document.addEventListener('input', e => { if(e.target && e.target.tagName === 'TEXTAREA') 等字(); });
+
+function 画(对){
+  状 = 对 || {};
+  const 格 = 取('格');
+  格.innerHTML = '';
+  const 笔 = (表 && 表.笔) || [];
+  if(!笔.length){ 格.innerHTML = '<div class="状态">这一格还没有内容：点上面「重新量一遍」，它只量现场、往仓里一个字节都不写。</div>'; return; }
+  for(const b of 笔){
+    const 会动 = /^会动/.test(b.会不会动 || '');
+    const 盒 = document.createElement('div');
+    盒.className = '笔 ' + (会动 ? '动' : '停');
+    const 号 = b.现在挂的号 ? '<span class="号">' + 文(b.现在挂的号) + ' → <em>' + 文(b.会迭代成) + '</em></span>'
+                            : '<span class="号">' + 文(b.会迭代成) + '</span>';
+    盒.innerHTML =
+      '<div class="名">' + 文(b.名) + '</div>' +
+      '<div class="副">' + 文(b.副题) + '</div>' +
+      '<div class="项"><span>会不会动 </span>' + 文(b.会不会动) + '</div>' +
+      '<div class="项"><span>号 </span>' + 号 + '</div>' +
+      (b.描述 !== null && b.描述 !== undefined
+        ? '<div class="项"><span>更新描述</span><textarea data-名="' + 编(b.名) + '" data-会动="' + (会动 ? 1 : 0) +
+          '" placeholder="' + 编(b.参照 ? '参照：' + b.参照 : '这一笔的提交说明，你自己写') + '">' + 文(b.描述) + '</textarea></div>' : '') +
+      (b.份.length ? '<details><summary>动了哪些份 · ' + b.份.length + ' 份</summary><ul class="份">' +
+          b.份.map(f => '<li>' + 文(f) + '</li>').join('') + '</ul></details>'
+        : '<div class="项"><span>动了哪些份 </span>没有</div>');
+    格.appendChild(盒);
+  }
+}
+/* 只在本地、还没推的那几条前瞻支（他 2026-10-12 第 5 件）：一条一格，标它是哪一类、远程有没有它、
+   相对基础版（本地 main）多了哪几笔与哪几份 —— 摊开给他看得见，不写"若干处"这种话。
+   每格一颗勾，勾上的就是「重建集成分支」要合上去的那几条（第 7 件）。 */
+let 集成名 = '';
+function 画前瞻(列){
+  const 盒 = 取('只在');
+  const 钮 = 取('集成');
+  if(!列 || !列.length){ 盒.innerHTML = ''; 钮.disabled = true; 钮.title = '本地没有还没合进 main 的前瞻支'; return; }
+  盒.innerHTML = '<div class="标">只在本地、还没合进 main 的前瞻支（基础版 = 本地 main；这一屏一个字都不往远程推）· 勾上哪几条，「重建集成分支」就把它们一条一条合到 ' + 文(集成名) + ' 上</div>' +
+    列.map(x => '<div class="条"><label><input type="checkbox" data-支="' + 编(x.名) + '" checked>合上去</label> ' +
+      '<b>' + 文(x.名) + '</b> · ' + 文(x.类) + '支 · ' +
+      (x.已推 ? '<b>已经推上远程，还没合进 main</b>' : '<b class="坏">只在本地</b>（远程还没有它）') +
+      ' · 相对基础版多 ' + x.笔数 + ' 笔 · ' + x.份数 + ' 份' +
+      '<details><summary>多了哪几笔</summary><ul class="份">' + x.笔.map(b => '<li>' + 文(b) + '</li>').join('') + '</ul></details>' +
+      '<details><summary>多了哪几份</summary><ul class="份">' + x.份.map(f => '<li>' + 文(f) + '</li>').join('') +
+      (x.份全 ? '<li>……还有 ' + (x.份数 - x.份.length) + ' 份没列出来</li>' : '') + '</ul></details></div>').join('');
+  钮.disabled = false; 钮.title = '';
+  盒.querySelectorAll('input[type=checkbox]').forEach(c => c.addEventListener('change', 数勾));
+  数勾();
+}
+function 勾中(){ return [...document.querySelectorAll('#只在 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['支']); }
+function 数勾(){ const n = 勾中().length; 取('集成').disabled = n === 0 || 跑着 || git坏; }
+/* 那八项功能（名单在 src\_build\forward-features.mjs 那一份里，这一屏只读不抄第二份）：
+   一条一格，标它那条分支起没起、现在这一棵带不带、摘掉要动的是哪几处。
+   勾上的那几项 = 「打本地自测包」要把它们合进这一枚（合到一棵临时的，工作树那一棵不动）。
+   分支还没起来的那一条勾了会当场停下来 —— 那一笔还欠着，不拿现在这一棵冒充带上了。 */
+function 画八项(列){
+  const 盒 = 取('八项');
+  if(!列 || !列.length){ 盒.innerHTML = ''; return; }
+  const 起了 = 列.filter(x => x.起).length;
+  盒.innerHTML = '<div class="标">功能那八项 · 勾哪几项进这一枚包（勾中的合到一棵临时的树上打，你正站着的这一棵一个字不动；' +
+    '装好的软件里不出现这一栏的任何字）· 八条分支起来了 ' + 起了 + ' 条</div>' +
+    列.map(x => '<div class="条"><label><input type="checkbox" data-项="' + 编(x.id) + '"' + (x.起 ? '' : ' disabled') + '>带上</label> ' +
+      '<b>' + 文(x.中文) + '</b> · ' + 文(x.分支) + ' · ' +
+      (x.起 ? '<b>分支那一笔 ' + 文(x.起) + '</b>' : '<b class="坏">分支还没起来</b>（这一项还没拆）') +
+      ' · 这一棵：' + (x.带 ? '带着' : '已摘') + '（' + 文(x.话) + '）' +
+      (x.已拆 ? ' · <b>私有那一棵里已拆，分支跟着源码并进这一个仓</b>' : '') +
+      '<details><summary>摘掉要动的是哪几处</summary><ul class="份">' + x.摘掉.map(f => '<li>' + 文(f) + '</li>').join('') + '</ul></details></div>').join('');
+}
+function 带中(){ return [...document.querySelectorAll('#八项 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['项']); }
+/* 插件那七家：一家一格，格上写的是它的中文名（从前那一格要手打内部名字，他指着问「这个是什么！！！」）。
+   默认七格全勾 = 七家全带；取消哪一格，那一家的活的一份与原版那一份都不进这一枚，货架上也不摆。 */
+function 画七家(列){
+  const 盒 = 取('七家');
+  if(!列 || !列.length){ 盒.innerHTML = ''; return; }
+  盒.innerHTML = '<div class="标">插件那七家 · 勾着的进这一枚包（名字照程序里那七个，一家一条长期分支）</div>' +
+    '<div class="家格">' + 列.map(j => '<label class="家"><input type="checkbox" data-家="' + 编(j.id) + '" checked>' +
+      文(j.中文) + '</label>').join('') + '</div>';
+}
+/* 没勾上的那几家（递出去的还是内部名字，屏上一个都不露） */
+function 不带的家(){ return [...document.querySelectorAll('#七家 input[type=checkbox]')].filter(c => !c.checked).map(c => c.dataset['家']); }
+function 家的名(列, id){ const j = (列 || []).find(x => x.id === id); return j ? j.中文 : id; }
+/* 第 7 步右边那八格：这一轮推哪几项上远程。分支还没起来的那一项勾都点不动（推一条不存在的支没有意义）。 */
+function 画推项(列){
+  const 盒 = 取('推项格');
+  if(!列 || !列.length){ 盒.innerHTML = ''; return; }
+  盒.innerHTML = '<div class="标">功能那八项 · 勾着的才推上远程（一项一条前瞻支、各自一个 PR；没勾的留在本地）</div>' +
+    '<div class="家格">' + 列.map(x => '<label class="家"><input type="checkbox" data-推="' + 编(x.id) + '"' + (x.起 ? '' : ' disabled') + '>' +
+      文(x.中文) + (x.起 ? '' : '（还没拆出来）') + '</label>').join('') + '</div>';
+  盒.querySelectorAll('input[type=checkbox]').forEach(c => c.addEventListener('change', 等字));
+}
+function 推中(){ return [...document.querySelectorAll('#推项格 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['推']); }
+function 文(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function 编(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function 收(){
+  const 描述 = {};
+  for(const t of document.querySelectorAll('textarea[data-名]')) 描述[t.dataset.名] = t.value;
+  return { 基线: 取('基线').value.trim(), 分支类型: 取('型').value, 提交分支: 取('支').value.trim(),
+           本轮说明: 取('说明').value.replace(/\r\n/g, '\n'), 描述 };
+}
+async function 存(安静){
+  const 身 = 收();
+  const 回 = await fetch('/api/存', { method:'POST', headers:{'content-type':'application/json','x-push-code':码 },
+                                      body: JSON.stringify(身) });
+  const 信 = await 回.text();
+  if(!回.ok){ 取('提示').textContent = 信; return false; }
+  if(!安静){
+    const n = Object.keys(身.描述).length;
+    取('提示').textContent = '已经写回清单那一格：' + n + ' 笔更新描述、版本基线 ' + 身.基线 +
+      '、分支类型 ' + (身.分支类型 || '（照支名认）') + '、提交分支 ' + 身.提交分支 + '、本轮说明 ' + (身.本轮说明.split('\n').length) + ' 行';
+  }
+  return true;
+}
+
+async function 跑(路, 标题, 身){
+  取('志').textContent = '';
+  取('确').classList.remove('开');
+  跑着 = true; 数勾(); 取('pr').disabled = true; 取('量').disabled = true; 取('自测').disabled = true; 取('落笔').disabled = true; 等字();
+  取('提示').textContent = 标题 + ' 正在跑……（这一趟要几分钟，别关这个窗口；日志在下面一段段出来）';
+  const 头 = { 'x-push-code':码 };
+  if(身) 头['content-type'] = 'application/json';
+  const 回 = await fetch('/api/' + 路, { method:'POST', headers:头, body: 身 ? JSON.stringify(身) : undefined });
+  if(!回.ok){ 取('志').textContent = await 回.text(); 取('提示').textContent = ''; 跑着 = false; 问(); return; }
+  const 读 = 回.body.getReader(), 解 = new TextDecoder('utf8');
+  const 志 = 取('志');
+  let 全 = '';                                   /* 那一句「确认词：推」可能正好被切断在两段里，所以拿全量比 */
+  for(;;){
+    const { value, done } = await 读.read();
+    if(done) break;
+    const 段 = 解.decode(value, { stream:true });
+    全 += 段;
+    志.textContent += 段;
+    志.scrollTop = 志.scrollHeight;
+    if(全.includes('确认词：')){ 取('确').classList.add('开'); 取('词').value = ''; 取('词').focus(); }
+  }
+  const 尾 = 志.textContent.trim().split('\n').pop() || '';
+  取('提示').textContent = 标题 + ' 跑完了 · ' + 尾;
+  跑着 = false;
+  问();                                         /* 量完画卡片、推完问合并状态、打包完看那一根根指针 */
+}
+
+取('量').onclick = () => 跑('量', '重新量一遍');
+/* 一步一颗：第 1、2、6、8、9 步（同步 main / 开这一轮的支 / 从集成分支打这一枚 / 查合并 / 收尾那两颗） */
+取('同步').onclick = () => 跑('同步', '同步本地 main');
+/* 第 3 步后半：落笔到各支（本地那一半，不推）。这一颗按的是下面那些格子里你写的字：
+   哪一笔的「更新描述」还空着，那一桶就不落，命令会当场停下来点你的名。 */
+取('落笔').onclick = async () => {
+  const 缺 = [...document.querySelectorAll('textarea[data-会动="1"]')].filter(t => !t.value.trim()).map(t => t.dataset.名);
+  if(!取('说明').value.trim() && !confirm('顶上「本轮说明」那一格还空着（主程序那一笔的说明就从这儿来）。\n\n还是要点落笔吗？空着的话那一桶会当场停下来，等这一格填了再落。')) return;
+  if(缺.length && !confirm('还有 ' + 缺.length + ' 笔的「更新描述」空着：' + 缺.join('、') + '\n\n空着的那些桶这一趟不落（命令会点名等谁）。还是要点吗？')) return;
+  if(await 存(true)) 跑('落笔', '落笔到各支');
+};
+取('开支').onclick = async () => { if(await 存(true)) 跑('开支', '开这一轮那条支'); };
+取('查').onclick = () => 跑('查', '查合并那一眼');
+/* 第 7 步右边那颗：只推你勾中的那几项的前瞻支，各自建一个 PR；没勾的一条都不推 */
+取('推项').onclick = () => {
+  const 项 = 推中();
+  if(!项.length){ 取('提示').textContent = '右边那八格一颗都没勾 —— 要推基础那一支，用左边那颗「推送基础那一支」。'; return; }
+  const 名 = 项.map(id => 家的名(状.八项, id)).join('、');
+  if(confirm('把这几项的前瞻支推上远程，各建一个 PR（base = main）？\n\n' + 名 +
+    '\n\n没勾的那 ' + (8 - 项.length) + ' 项一条都不推，留在本地。main、拼装那一棵、集成分支那一根照旧都不推。'))
+    跑('推项', '推勾中的那几项', { 项: 项.join(',') });
+};
+取('快进').onclick = () => { if(confirm('把七家各自那一支接到 main 后面？\n\n只挪指针：已有的一笔都不改写；哪一家那一支上有 main 里没有的东西（真分叉）会停下来报是哪一家。')) 跑('快进', '各家指针接到 main'); };
+取('删支').onclick = () => { const 名 = 取('支').value.trim(); if(confirm('删本地那一条已经发完的支？\n\n要删的是：' + (名 || '（顶上「提交分支」那一格还空着）') + '\n\n这一颗先核对它有没有进 main（压成一笔合进去的也算，比的是两边内容）：没进的绝不删。远程那一条是你在网页上合并时勾的那一下删，这台不推。')) 跑('删支', '删本地已发布的那条支'); };
+取('完整').onclick = () => {
+  const 不带的 = 不带的家();
+  const 话 = 不带的.length ? '\n\n插件这一枚不带：' + 不带的.map(id => 家的名(状.七家, id)).join('、') : '\n\n插件那七格全勾着 —— 七家全带。';
+  if(confirm('从本地集成分支那一棵打这一枚？\n\n那一根上有你勾中的那几条前瞻支（第 6 步「重建集成分支」合上去的），插件那七家一起合进来。\n\n不提交、不打 tag、不推远程；跑那一趟要几分钟。' + 话))
+    跑('完整', '从集成分支打这一枚', { 不带: 不带的.join(',') });
+};
+/* 第 5 步：本地打这一枚自己手动测 —— 在第 7 步推送与第 8 步合并之前，
+   这一档不提交、不落清单、不打 tag、不推任何东西（那两步要的「盘上干净」「已合进 main」这儿不适用）。
+   带什么由第 4 步那两栏勾：插件那七家（一家一格，名字就是程序里那七个）与功能那八项（一项一格）。 */
+取('自测').onclick = () => {
+  const 不带的 = 不带的家();
+  const 带的 = 带中();
+  const 话1 = 不带的.length
+    ? '\n\n插件不带的那几家：' + 不带的.map(id => 家的名(状.七家, id)).join('、') + '（它们活的一份与原版那一份都不进包，货架上也不摆）'
+    : '\n\n插件那七格全勾着 —— 七家全带。';
+  const 话2 = 带的.length
+    ? '\n\n功能额外带上那几项：' + 带的.map(id => 家的名(状.八项, id)).join('、') + '\n（勾中的那几条分支合到一棵临时的树上打，你正站着的这一棵一个字不动。）'
+    : '\n\n功能那八格全没勾 —— 打的就是你现在站的这一棵上有的那些。';
+  if(confirm('打一个本地自测包？\n\n从工作树现在站的这一棵出（盘上没提交的改动也一起打进去），跑三趟：生成页面 → 铺出厂镜像 → 出发布物。' + 话1 + 话2 +
+    '\n\n不提交、不打 tag、不推远程 —— 装完你手动测，测过了再走第 7 步「推送 + 建 PR」。Flow-Desk 得先退干净。'))
+    跑('自测', '打本地自测包', { 不带: 不带的.join(','), 带: 带的.join(',') });
+};
+取('存').onclick = () => 存(false);
+/* 「重建集成分支」那颗（第 7 件）：勾哪几条就把哪几条合上去；这一根永不推远程。
+   它会从本地 main 重新起那一根，所以点下去之前先复述一遍要合谁 —— 看清楚再点。 */
+取('集成').onclick = () => {
+  const 列 = 勾中();
+  if(!列.length){ 取('提示').textContent = '一条都没勾：先在那几条前瞻支上勾「合上去」。'; return; }
+  if(!confirm('要把这 ' + 列.length + ' 条合到 ' + 集成名 + ' 上：\n  ' + 列.join('\n  ') +
+    '\n\n那一根先从本地 main 重新起（原来那一根上的笔照旧留在仓里，旧 assemble 那一支一个字不动）；' +
+    '合到一半撞车就停下来报是哪一条，不自动解。全程不推远程。')) return;
+  跑('集成', '重建集成分支', { 支: 列 });
+};
+取('pr').onclick = async () => { if(await 存(true)) 跑('pr', '提交 PR'); };
+取('发').onclick = async () => { if(await 存(true)) 跑('发', '打包发版'); };
+取('推').onclick = async () => {
+  const 回 = await fetch('/api/确认', { method:'POST', headers:{'content-type':'application/json','x-push-code':码 },
+                                        body: JSON.stringify({ 词: 取('词').value }) });
+  取('提示').textContent = await 回.text();
+  if(回.ok) 取('确').classList.remove('开');
+};
+取('不推').onclick = async () => {
+  const 回 = await fetch('/api/确认', { method:'POST', headers:{'content-type':'application/json','x-push-code':码 },
+                                        body: JSON.stringify({ 词: '' }) });
+  取('提示').textContent = await 回.text();
+  取('确').classList.remove('开');
+};
+取('词').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); 取('推').click(); } });
+
+/* ---------- 三页签：版本与推送 / 图标素材 / 界面文字 ---------- */
+let 图单 = [];
+function 切页(谁){
+  for(const k of ['版','图','字']){ 取('p' + k).hidden = k !== 谁; 取('t' + k).className = '页' + (k === 谁 ? ' 主' : ''); }
+  if(谁 === '图' && !图单.length) 数图();
+  if(谁 === '字' && !字条.length) 字读();
+}
+取('t版').onclick = () => 切页('版');
+取('t图').onclick = () => 切页('图');
+取('t字').onclick = () => 切页('字');
+
+async function 数图(){
+  取('图情').textContent = '正在数 icons 那一格……';
+  const 对 = await (await fetch('/api/图标')).json();
+  图单 = 对.单 || [];
+  const 插件 = 对.插件 || [];
+  取('图情').innerHTML = 对.错 ? '读不到：' + 文(对.错)
+    : 'icons 那一格 ' + 对.张 + ' 张 + 插件包自己那一份 ' + 对.插件张 + ' 张 · 每一张干什么、哪份代码叫它几次，读的是 icons\\索引.txt（那颗索引脚本生成的，这一台不另搜一套）'
+      + (对.没登记 && 对.没登记.length ? '<br><b class="坏">索引里没登记这 ' + 对.没登记.length + ' 张：' + 文(对.没登记.join('、')) + '</b> —— 跑一遍「重新对齐一遍」' : '')
+      + (对.没图 && 对.没图.length ? '<br><b class="坏">索引登记了、icons 里却没这张图：' + 文(对.没图.join('、')) + '</b>' : '')
+      + (对.插件丢图 && 对.插件丢图.length ? '<br><b class="坏">索引登记了、包里却没那张 icon：' + 文(对.插件丢图.join('、')) + '</b>' : '');
+  const 格 = 取('图格'); 格.innerHTML = '';
+  const 张 = (x, 图路, 通用) => {
+    const 盒 = document.createElement('div');
+    盒.className = '笔' + (x.在不在 === false ? ' 停' : '');
+    盒.innerHTML = '<div class="名">' + 文(x.键) + '</div>' +
+      '<div class="副">' + 文(x.名) + ' · ' + 文(x.层) + (x.大 >= 0 ? ' · ' + x.大.toLocaleString() + ' 字节' : ' · 取不到这个文件') + (x.段 ? ' · ' + 文(x.段) : '') + '</div>' +
+      (x.大 >= 0 ? '<div class="图预览"><img src="' + 图路 + '" alt="' + 编(x.键) + ' 读不出图"></div>' : '') +
+      (x.说 ? '<div class="项">' + 文(x.说) + '</div>'
+        : x.登记 === false ? '<div class="项"><b class="坏">那份说明书里还没有这一张</b>：点上面「重新对齐一遍」把它记上</div>'
+        : '<div class="项"><b class="坏">说明书里这一张没写它是干什么的</b>：那句说明住在 src\\_build\\ico-index.mjs 那张表里，要补得改那一处（这台不替你编）</div>') +
+      (x.引用 ? '<div class="项"><span>引用 </span>' + 文(x.引用) + '</div>' : '') +
+      (通用 ? '<div class="项"><button data-换="' + 编(x.名) + '">换这张</button> <button data-删="' + 编(x.名) + '">删这张</button>' +
+              '<input type="file" hidden data-档="' + 编(x.名) + '" accept=".svg,.png,.jpg,.jpeg,.webp,.gif"></div>'
+            : x.在不在 === false ? '<div class="项"><b class="坏">换这张 </b>这一张取不到文件（' + 文(x.名) + '），先对一遍索引再看</div>'
+            : '<div class="项"><button data-换包="' + 编(x.包) + '" data-换档="' + 编(x.档) + '">换这张</button>' +
+              '<input type="file" hidden data-包="' + 编(x.包) + '" data-档="' + 编(x.档) + '" accept=".' + 编((String(x.档).split('.').pop() || 'svg').toLowerCase()) + '">' +
+              '<span class="淡"> 同名盖进 ' + 文(x.名) + '（只认 .' + 编((String(x.档).split('.').pop() || 'svg').toLowerCase()) + '，这一张的文件名写在它的插件清单与那份索引上，不给改名也不给删）</span></div>');
+    格.appendChild(盒);
+  };
+  for(const x of 图单) 张(x, '/api/图标/一张?名=' + encodeURIComponent(x.名), true);
+  for(const x of 插件) 张(x, '/api/图标/一张?包=' + encodeURIComponent(x.包) + '&档=' + encodeURIComponent(x.档), false);
+}
+function 读成64(档){ return new Promise(成 => { const r = new FileReader(); r.onload = () => 成(String(r.result).split(',')[1] || ''); r.readAsDataURL(档); }); }
+async function 发图(哪道, 名, 字64){
+  const 回 = await fetch('/api/图标/' + 哪道, { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 },
+    body: JSON.stringify(字64 === undefined ? { 名 } : { 名, 图: 字64 }) });
+  const 文2 = await 回.text();
+  取('图果').innerHTML = 回.ok ? '<b>' + 哪道 + '完了：</b>' + 文(名) + ' · 现在这一格重数了一遍；要登记进那份说明书再点「重新对齐一遍」'
+    : '<b class="坏">' + 文2 + '</b>';
+  if(回.ok){ 图单 = []; 数图(); }
+}
+取('图格').addEventListener('click', e => {
+  const 换 = e.target && e.target.closest && e.target.closest('button[data-换]');
+  const 换包 = e.target && e.target.closest && e.target.closest('button[data-换包]');
+  const 删 = e.target && e.target.closest && e.target.closest('button[data-删]');
+  if(换){ const 档 = document.querySelector('#图格 input[data-档="' + CSS.escape(换.dataset['换']) + '"]:not([data-包])'); if(档) 档.click(); return; }
+  if(换包){ const 档 = document.querySelector('#图格 input[data-包="' + CSS.escape(换包.dataset['换包']) + '"]'); if(档) 档.click(); return; }
+  if(删){ if(confirm('删掉 icons\\' + 删.dataset['删'] + ' 这一张？索引上说没有代码在叫它才让删（有叫它的话会拒）。')) 发图('删', 删.dataset['删']); }
+});
+取('图格').addEventListener('change', async e => {
+  const 格 = e.target && e.target.dataset;
+  if(!格 || !e.target.files || !e.target.files[0]) return;
+  if(格['包']){ 发插件封面(格['包'], 格['档'], await 读成64(e.target.files[0])); return; }
+  if(格['档']) 发图('换', 格['档'], await 读成64(e.target.files[0]));
+});
+/* 插件包那一格的封面：挑一张同名盖进它自己那一格（后缀由那颗按钮上的 accept 限死，后端再拦一道） */
+async function 发插件封面(包, 档, 字64){
+  取('图果').textContent = '正在把这一张盖进 ' + 包 + ' 那一包…';
+  const 回 = await fetch('/api/图标/换', { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 },
+    body: JSON.stringify({ 包, 档, 图:字64 }) });
+  const 信 = await 回.text();
+  取('图果').innerHTML = 回.ok ? '<b>换好了：</b>' + 文(JSON.parse(信).路径) + ' · 主进程盯着这些图，换完推一份新清单给各窗口，程序不用重启'
+    : '<b class="坏">' + 文(信) + '</b>';
+  if(回.ok){ 图单 = []; 数图(); }
+}
+/* 「加一张图」不必自己起名字：挑了文件就照那个文件名改（空格与不许的字符换成横杠，后缀留着）；
+   名字那一格自己填了就以他填的为准。 */
+const 图名 = n => String(n || '').replace(/^.*[\\/]/, '').replace(/\s+/g, '-').replace(/[\\/:*?"<>|]/g, '')
+  .replace(/^[-.]+/, '').replace(/-+$/g, '').replace(/\.{2,}/g, '.').slice(0, 60);
+取('加档').onchange = () => {
+  const 档 = 取('加档').files[0];
+  if(!档) return;
+  const 名 = 取('加名');
+  if(!名.value.trim()){ 名.value = 图名(档.name); 取('图果').textContent = '名字按挑中的文件填好了：' + 名.value + '（要改名就在名字那一格自己改），点「添进去」落进 icons\\ 那一格'; }
+};
+取('加送').onclick = async () => {
+  const 名 = 取('加名').value.trim(), 档 = 取('加档').files[0];
+  if(!名 && 档) 取('加名').value = 名 = 图名(档.name);
+  if(!名 || !档){ 取('图果').innerHTML = '<b class="坏">名字和文件都要给</b>：名字如 gear2.svg（或 tools/gear2.svg），后面挑一个图文件'; return; }
+  发图('加', 名, await 读成64(档));
+}
+取('图重').onclick = () => { 图单 = []; 数图(); };
+取('图对').onclick = () => 跑('图标/对齐', '重新对齐图标索引');
+
+/* ---------- 界面文字那一栏：一屏只画挑中的那一页，改完先存文件，再预览，再写进源码，最后重跑产物 ---------- */
+let 字条 = [], 当前 = [];
+function 字画(){
+  const 选 = 取('字段').value, 词 = 取('字搜').value.trim();
+  const 全 = 字条.filter(r => r.段 === 选);
+  当前 = 全.filter(r => !词 || r.from.includes(词) || String(r.to || '').includes(词));
+  const 格 = 取('字格');
+  格.innerHTML = '<div class="笔"><div class="名">' + 文(选) + '</div>' +
+    '<div class="副">这一页 ' + 全.length + ' 条' + (词 ? ' · 含「' + 文(词) + '」的 ' + 当前.length + ' 条' : '') +
+    ' · 格子里空着就是不改；勾「这句不要了」是划掉这一句</div>' +
+    当前.map((r, i) => '<div class="项 字行">' +
+      '<span class="句" title="' + 编(r.from) + '">' + 文(r.from) + '</span>' +
+      '<input type="text" data-i="' + i + '" value="' + 编(r.to || '') + '" placeholder="不改就空着">' +
+      '<label><input type="checkbox" data-d="' + i + '"' + (r.del ? ' checked' : '') + '>这句不要了</label>' +
+      (r.del ? ' <b class="坏">（已划掉）</b>' : '') + '</div>').join('') + '</div>';
+}
+async function 字读(){
+  取('字情').textContent = '正在读 data\\ui-text.yaml……';
+  const 对 = await (await fetch('/api/文字')).json();
+  if(对.错){ 取('字情').innerHTML = '<b class="坏">' + 文(对.错) + '</b> —— 先点「刷新清单」生成它'; return; }
+  字条 = 对.条;
+  取('字段').innerHTML = 对.段.map(s => '<option' + (s === 取('字段').value ? ' selected' : '') + '>' + 编(s) + '</option>').join('');
+  取('字情').textContent = '清单 ' + 对.段.length + ' 页 / ' + 对.字条 + ' 条 · 填了先点「保存这些句子」写进 data\\ui-text.yaml，预览与写进源码都以那一格文件为准';
+  字画();
+}
+function 字集(){
+  const 改 = [];
+  当前.forEach((r, i) => {
+    const 框 = document.querySelector('#字格 input[data-i="' + i + '"]');
+    const 勾 = document.querySelector('#字格 input[data-d="' + i + '"]');
+    if(!框) return;
+    const to = 框.value.trim(), del = !!(勾 && 勾.checked);
+    if(to === String(r.to || '') && del === !!r.del) return;
+    改.push({ prog:r.prog, page:r.page, from:r.from, to, del });
+  });
+  return 改;
+}
+取('字段').onchange = 字画;
+取('字搜').oninput = 字画;
+取('字扫').onclick = () => 跑('文字/扫', '刷新界面文字清单');
+取('字存').onclick = async () => {
+  const 改 = 字集();
+  if(!改.length){ 取('字果').textContent = '这一页一句都没动，没什么可存。'; return; }
+  const 回 = await fetch('/api/文字/存', { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 }, body: JSON.stringify({ 改 }) });
+  const 回文 = await 回.text();
+  if(!回.ok){ 取('字果').innerHTML = '<b class="坏">' + 文(回文) + '</b>'; return; }
+  取('字果').textContent = '写进 data\\ui-text.yaml 了：' + JSON.parse(回文).动了 + ' 句。要让它上到界面上，还得「预览改动」→「写进源码」→「重新生成产物」。';
+  字读();
+};
+async function 字走(哪道, 话){
+  取('字果').textContent = 话 + '……（这一趟要扫一遍源码，几秒）';
+  const 回 = await fetch('/api/文字/' + 哪道, { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 }, body: JSON.stringify({}) });
+  const 回文 = await 回.text();
+  if(!回.ok){ 取('字果').innerHTML = '<b class="坏">' + 文(回文) + '</b>'; return; }
+  const 对 = JSON.parse(回文);
+  const 落点 = [];
+  对.成.forEach(x => (x.at || []).forEach(a => { if(!落点.includes(a)) 落点.push(a); }));
+  取('字果').innerHTML = (对.落 ? '<b>已经写进源码 ' + 对.写了.length + ' 份文件</b> · ' : '预览（一个字没写）· ')
+    + '清单里填了 ' + 对.递 + ' 句 · ' + (对.落 ? '写掉了' : '对得上位置、要改') + ' ' + 对.成.length + ' 句（' + 落点.length + ' 处）'
+    + (对.对不上.length ? ' · <b class="坏">对不上 ' + 对.对不上.length + ' 句</b>（清单里那一句原话在当前源码里一处都认不到，多半是那句已经被别处改过：先点「刷新清单」再看）' : '')
+    + (对.落 && 对.成.length ? '<br>落点：' + 文(落点.slice(0, 12).join('、')) + (落点.length > 12 ? ' …（共 ' + 落点.length + ' 处）' : '')
+        + '<br><b>界面上这会儿还没变</b>：改的是源码，得再点一次「重新生成产物」（' + 文((对.重跑 || []).join(' → ')) + '），重开窗口才看得见。' : '');
+}
+取('字预').onclick = () => 字走('预览', '预览改动');
+取('字落').onclick = () => { if(confirm('要把清单里填了的句子写进源码那几份文件？\n\n源码会被改（改完点「重新生成产物」才上到界面上）；这一趟不动 pages\\ 里那一张已经生成的页面。')) 字走('落', '写进源码'); };
+取('字重').onclick = () => 跑('文字/重生成', '重新生成产物');
+
+问();
+</script>
+</body>
+</html>

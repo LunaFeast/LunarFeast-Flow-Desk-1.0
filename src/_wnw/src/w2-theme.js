@@ -1,0 +1,307 @@
+/* ============================================================
+   WNW 外观（三层模型的第二层）
+   FD 只把「主外观」整套色播过来，跟不跟由这里说了算：
+   跟随开着 → 用 FD 播来的那套；关掉 → 用自己池里选中的那条。
+   圆角两档留空表示跟着 FD 的基准，拖过滑块就自己定。
+   外观模式 / 纹理不在这一层管：宿主在根元素上钉好的那一套，三栏直接跟着吃。
+   ============================================================ */
+const Theme = {
+  from:'standalone', id:'', dark:false,
+  cfg:{ follow:true, scheme:'', card:'', ctl:'' },
+  pool:[],
+  fd:null,
+  /* 明暗那一轴（外13-M）：宿主递过来的结论，'light' / 'dark' / ''（还没递到）。
+     为写这端不自己定三档 —— 跟随系统 / 按时间 / 手动那三档住在 Flow-Desk 的外观设置里，
+     这里只吃它一个结论，然后按同一条轴筛自己这一池配色，两端看到的是同一条轴。 */
+  ming:'',
+  async init(){
+    /* 宿主这一套先认下来（模板 head 里的首帧注入用的就是这一份）：
+       不认的话要等 await 读完存档、再等 FD 的 postMessage，中间正好黑一下。 */
+    const pre = fdPalette();
+    if(pre){ this.from = 'fd'; this.fd = pre; this.id = pre.id; this.ming = pre.ming || ''; }
+    const c = await State.get('look', null); if(c) Object.assign(this.cfg, c);
+    const p = await State.get('look-pool', null); if(Array.isArray(p)) this.pool = p;
+    /* 色卡至少说明文和暗两套，用户不选 Rime 也有得挑 */
+    for(const [id, name] of [['light', '明'], ['dark', '暗']])
+      if(!this.pool.find(e => e.id === id)) this.pool.unshift({ id, name, mode:id, locked:true, source:'builtin' });
+    if(!this.cur() && !this.cfg.follow) this.cfg.scheme = 'light';
+    /* 轴已经知道的情况下先把不该留在这一池的配色换掉再上色，免得开机那一帧看着像跨池 */
+    this.mingCheck(false);
+    wnwOn(window, 'message', ev => {
+      const d = ev.data;
+      if(!d || typeof d !== 'object' || d.fd !== 'palette') return;
+      this.from = 'fd'; this.id = d.id || '';
+      this.fd = { id:d.id || '', tokens:d.tokens || null, radius:d.radius || null, font:d.font || '' };
+      /* 字体那张全局表（标记 / 用过几次 / 置顶）跟着配色一起播；开机没读齐就先挂着 */
+      if(d.ff){ Fonts.pending = d.ff; if(Fonts.bootted) Fonts.merge(d.ff); }
+      /* 轴换了（含第一次递到）：本池外那套就地换成就近的同池配色，并说一句 */
+      this.mingCheck(true, d.ming);
+      this.apply();
+    });
+    /* Bus 是为写自己这一层的事件表，不随容器拆装：来回 start/stop 几趟就会叠几份，
+       一次换肤应用好几遍。接一次就够，标记挂在身上，不认容器。 */
+    if(!this._wired){ this._wired = true; Bus.on('theme', () => this.apply()); }
+    this.apply();
+  },
+  save(){ State.set('look', this.cfg); State.set('look-pool', this.pool); },
+  /* FD 还没播过来之前谈不上跟随：那一头没就绪的这一刻，这一层用自己池里那条 */
+  follows(){ return !!(this.cfg.follow && this.fd && this.fd.tokens); },
+  /* 当前实际生效的整套 token；没有就交回模板的兜底变量 */
+  tokens(){
+    if(this.follows()) return this.fd.tokens;
+    const e = this.cur();
+    return e ? tokensOf(e).tokens : null;
+  },
+  cur(){
+    if(this.follows()) return null;
+    return this.pool.find(e => e.id === this.cfg.scheme) || this.pool[0] || null;
+  },
+  /* ---------- 明暗那一轴（外13-M）· 为写这一端 ----------
+     宿主递过来的结论优先（'' = 还没递到：这时按自己当前这套配色现判一个，别硬当明亮）；
+     一套配色归哪一池用的还是宿主那一份口径（mingPoolOf：色卡 明暗 那一栏优先，
+     没写上来才现算 mingDark），这里不另写第二份判定。 */
+  axis(){
+    if(this.ming === 'light' || this.ming === 'dark') return this.ming;
+    const self = this.pool.find(e => e.id === this.cfg.scheme) || this.cur();
+    return (typeof mingPoolOf === 'function' ? mingPoolOf(self) : '') || '';
+  },
+  /* 当前这一轴下能挑的那几套：另一池的不摆出来（项目规矩：不支持的组合不渲染，不是灰显）。
+     轴还不知道（''）时不筛 —— 这时候筛就是把整个名单清空，比摆两套更糟。 */
+  poolNow(){
+    const a = this.axis();
+    if(a !== 'light' && a !== 'dark') return this.pool.slice();
+    const list = this.pool.filter(e => (typeof mingPoolOf === 'function' ? mingPoolOf(e) : a) === a);
+    return list.length ? list : this.pool.slice();
+  },
+  /* 轴变了之后补的一句账：不跟随宿主、而正用的那套不归新的这一池 → 按色调就近换成同池那套，
+     并当场说清换了什么（不许静默、也不许留一套跨池的在这儿）。
+     跟随宿主的时候色号就是宿主那套（宿主那头已经把它的色卡换对了），这里只重筛名单。 */
+  mingCheck(announce, want){
+    if(typeof want === 'string'){ const k = (want === 'light' || want === 'dark') ? want : ''; if(k === this.ming) return false; this.ming = k; }
+    const a = this.axis();
+    if(a !== 'light' && a !== 'dark') return false;
+    if(this.follows()) return false;
+    const cur = this.pool.find(e => e.id === this.cfg.scheme) || null;
+    if(!cur || (typeof mingPoolOf === 'function' ? mingPoolOf(cur) : a) === a) return false;
+    const nt = (typeof mingNearest === 'function') ? mingNearest(this.pool, cur, a) : null;
+    if(!nt) return false;
+    this.cfg.scheme = nt.id; this.save();
+    if(announce) toast('明暗切到' + ((typeof MING_NAME === 'object' && MING_NAME[a]) || a)
+      + '：为写正用的「' + cur.name + '」不归这一池，已按色调就近换成同池的「' + nt.name + '」。');
+    return true;
+  },
+  /* 圆角：先看自己钉过没有，没有就吃 FD 的基准，再没有用全局默认那一档（外13-C：5） */
+  radius(){
+    const base = (this.fd && this.fd.radius) || {};
+    const card = this.cfg.card === '' ? (base.card === undefined ? 5 : base.card) : +this.cfg.card;
+    const ctl  = this.cfg.ctl  === '' ? (base.ctl  === undefined ? 5 : base.ctl)  : +this.cfg.ctl;
+    return { card:clampR(card), ctl:clampR(ctl) };
+  },
+  apply(){
+    const box = wnwRoot(); if(!box) return;
+    const t = this.tokens();
+    const r = box.style;
+    for(const k in (t || {})) r.setProperty(k, t[k]);
+    const rad = this.radius();
+    r.setProperty('--radius', rad.ctl + 'px');
+    r.setProperty('--r-card', rad.card + 'px');
+    r.setProperty('--r-panel', rad.card + 'px');
+    r.setProperty('--r-btn', rad.ctl + 'px');
+    /* 胶囊那一档不再钉死 99px：标签轮廓、chip、徽标、进度条端头这些原来吃 --r-pill 的地方
+       现在和控件同一档，全局圆角一个值管到底（外13-C）。 */
+    r.setProperty('--r-pill', rad.ctl + 'px');
+    /* 外观模式 + 纹理不归这个跟随开关管：那个开关只管色号，边框和阴影是另一层皮。
+       那一层皮由宿主在根元素上钉好（sh-look.js 那一趟），三栏挂上 data-look 就跟着吃，
+       这一头不再自己钉第二遍。 */
+    Ff.apply();
+    this.read();
+    /* 明暗那一轴（外13-M）：钉在为写自己那一层上，宿主的 data-ming 管的是整页那一层。
+       两边都钉，是因为这一层可以被拆开单独装（wnwStart / wnwTeardown），
+       组件里的样式要按轴微调一处两处时吃的是这一记，不必回头找宿主。 */
+    try{ box.dataset.wnwMing = this.axis() || ''; }catch(e){}
+    /* 开着的代码框重新认一次明暗：着色两组挂在编辑器容器上，改类就够，不重建 */
+    icodeRetone();
+    Bus.emit('look');
+  },
+  read(){
+    const box = wnwRoot(); if(!box) return;
+    const t = this.tokens();
+    const bg = (t && t['--page-bg']) || getComputedStyle(box).getPropertyValue('--page-bg') || '#ffffff';
+    const rgb = parseHex(String(bg).trim());
+    this.dark = rgb ? (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255 < .5 : false;
+    box.dataset.wnwTheme = this.dark ? 'dark' : 'light';
+  },
+  /* 池里加一条：同名同色的复用已有的，不越堆越多 */
+  record(entry){
+    const same = this.pool.find(e => e.name === entry.name && (e.colors || []).length &&
+      (e.colors || []).map(c => c.raw).join(',') === (entry.colors || []).map(c => c.raw).join(','));
+    if(same) return same;
+    const e = Object.assign({ id:'l' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36) }, entry);
+    this.pool.push(e); this.save();
+    return e;
+  },
+  select(id){ this.cfg.scheme = id; this.cfg.follow = false; this.save(); this.apply(); },
+  async setFollow(v){
+    this.cfg.follow = !!v; this.save();
+    /* 把跟随关掉的一刻要用自己池里那套了：那套要是不归当前这一轴的那一池，就地换成同池就近的那套 */
+    if(!v) this.mingCheck(true);
+    this.apply();
+  }
+  /* 从前这里有一条 recordRime()：把 _shared/sh-rime.js 解析出来的小企鹅配色灌进为写自己的池。
+     件-9 整条撤下 Rime 配色，这条入口和设置里那个按钮一起撤了。 */
+};
+function clampR(v){ return Math.max(0, Math.min(30, Math.round(+v || 0))); }
+/* 问这一页当前那套配色（宿主在 fd3-shell.js 里留的 FD_PALETTE_SNAPSHOT）。
+   从前为写是装在宿主里的一个 iframe，只能隔着框去问父页；搬进同一张页之后就是问本地，
+   那句「父框就是自己就当没有」的拦条也跟着撤了 —— 留着的话为写永远读不到宿主的色。
+   宿主还没就绪、或者这一版页面压根没留这个口子 —— 一律当没有，返回 null 让调用方照原路走。 */
+function fdPalette(){
+  try{
+    if(typeof window.FD_PALETTE_SNAPSHOT !== 'function') return null;
+    const d = window.FD_PALETTE_SNAPSHOT();
+    if(!d || !d.tokens) return null;
+    return { id:d.id || '', tokens:d.tokens, radius:d.radius || null, font:d.font || '', ff:d.ff || null,
+      ming:d.ming || '' };        /* 外13-M：宿主那条明暗轴首帧就递到，不必等 postMessage */
+  }catch(e){ return null; }
+}
+
+/* 从前这一段叫 RimeLook：拿程序旁边那份 rime-dir.json（声笔输入法练习指过一次 Rime 用户目录就落在那儿）
+   去读 weasel 的几份 yaml，把小企鹅的配色灌进为写自己的池。件-9 整条撤下 Rime 配色，
+   这一段和设置里那个「读 Rime 配色」一起撤了 —— 为写的颜色只从宿主那边跟，或者用自建、从图取色、色卡那三条。 */
+
+function parseHex(s){
+  let m = /^#([0-9a-f]{3})$/i.exec(s);
+  if(m) return { r:parseInt(m[1][0] + m[1][0], 16), g:parseInt(m[1][1] + m[1][1], 16), b:parseInt(m[1][2] + m[1][2], 16) };
+  m = /^#([0-9a-f]{6})$/i.exec(s);
+  if(m) return { r:parseInt(m[1].slice(0, 2), 16), g:parseInt(m[1].slice(2, 4), 16), b:parseInt(m[1].slice(4, 6), 16) };
+  /* color-mix() 这类写法读回来是 color(srgb 0.9 0.92 0.95)，三个数是 0~1 的小数：
+     白板拿它量底的明暗，认不出这一串就等于量不出来，字色永远不翻 */
+  m = /^color\(\s*srgb\s+([^)]+)\)$/i.exec(s);
+  if(m) return triple(m[1], n => n <= 1 ? n * 255 : n);
+  m = /^rgba?\(([^)]+)\)$/i.exec(s);
+  if(m) return triple(m[1], n => n);
+  return null;
+}
+/* '12, 34, 56' / '12 34 56 / 0.5' / '50% 50% 50%' 这三种写法都拆成 {r,g,b}；sc 是单个数的换算 */
+function triple(part, sc){
+  const p = part.split(/[,\s/]+/).filter(Boolean).map(t => ({ n:parseFloat(t), pct:/%$/.test(t) }));
+  if(p.length < 3 || p.some(x => !isFinite(x.n))) return null;
+  const v = x => Math.round(Math.max(0, Math.min(255, x.pct ? x.n * 2.55 : sc(x.n))));
+  return { r:v(p[0]), g:v(p[1]), b:v(p[2]) };
+}
+/* 组件色 slotColor（五个强调位）在底座 _shared/sh-packs.js，和 FD 同一个口径 */
+
+/* ============================================================
+   分区字号：正文 / 纲（左栏 + 章纲） / 侧栏与面板 / 顶栏与书架
+   方案存全局列表；每本书可记住自己用哪个方案，没记就跟随全局。
+   ============================================================ */
+const BUILTIN = '默认 小字 大字'.split(' ');
+const Fs = {
+  zones:[['doc', '正文'], ['gang', '纲 / 左栏'], ['side', '侧栏 / 面板'], ['top', '顶栏 / 书架']],
+  /* 8~32 每档都给：正文 8 号也有人用，跳档反而选不到想要的那一号 */
+  steps:Array.from({ length:25 }, (_, i) => i + 8),
+  plans:[], global:'默认', now:'默认',
+  seed(){
+    return [
+      { name:'默认', doc:14, gang:13, side:13, top:14 },
+      { name:'小字', doc:12, gang:12, side:12, top:13 },
+      { name:'大字', doc:16, gang:13, side:13, top:15 }
+    ];
+  },
+  async load(){
+    const saved = await State.get('fs-plans', null);
+    this.plans = (Array.isArray(saved) && saved.length) ? saved : this.seed();
+    this.global = this.now = await State.get('fs-plan', '默认');
+    if(!this.get(this.global)){ this.global = this.now = '默认'; }
+    this.apply();
+  },
+  get(name){ return this.plans.find(p => p.name === name); },
+  cur(){ return this.get(this.now) || this.get('默认') || this.plans[0]; },
+  /* 书名下的方案：没有单独记就跟随全局 */
+  async forBook(bookId){
+    const map = await State.get('fs-book', {});
+    const nm = bookId && map[bookId];
+    this.now = (nm && this.get(nm)) ? nm : this.global;
+    this.apply();
+  },
+  async pick(name){
+    this.now = name;
+    this.apply();
+  },
+  async setGlobal(name){
+    this.global = this.now = name;
+    State.set('fs-plan', name);
+    this.apply();
+  },
+  async bindBook(bookId, name){
+    const map = Object.assign({}, await State.get('fs-book', {}));
+    if(name) map[bookId] = name; else delete map[bookId];
+    State.set('fs-book', map);
+    if(bookId && Work && Work.book && Work.book.id === bookId) await this.forBook(bookId);
+  },
+  apply(){
+    const p = this.cur(); if(!p) return;
+    const r = wnwRoot().style;
+    for(const [k] of this.zones) r.setProperty('--fs-' + k, (p[k] || 14) + 'px');
+  },
+  async persist(){ State.set('fs-plans', this.plans); },
+  /* 内置方案不给改：一动就复制一份「×× 自定」继续编辑 */
+  async edit(name, vals){
+    let p = this.get(name); if(!p) return null;
+    if(BUILTIN.includes(name)){
+      p = Object.assign({}, p, { name:name + ' 自定' });
+      let n = 2; while(this.get(p.name)) p.name = name + ' 自定 ' + (n++);
+      this.plans.push(p);
+    }
+    Object.assign(p, vals);
+    await this.persist();
+    this.now = p.name;
+    if(this.global === name) this.global = p.name;
+    this.apply();
+    return p;
+  },
+  async add(vals){
+    let name = '我的方案', n = 2;
+    while(this.get(name)) name = '我的方案 ' + (n++);
+    this.plans.push(Object.assign({ name }, vals));
+    await this.persist();
+    return name;
+  },
+  async del(name){
+    if(BUILTIN.includes(name)) return false;
+    this.plans = this.plans.filter(p => p.name !== name);
+    await this.persist();
+    if(this.now === name || this.global === name) await this.setGlobal('默认');
+    return true;
+  }
+};
+
+/* ============================================================
+   分区字体：正文 / 章纲 / 侧栏 / 代码，和上面那套字号同构，落到四个 CSS 变量上。
+   每一档的取法和圆角一样：自己钉过的算，没钉就吃 FD 播过来的全局字体，再没有才是内置那套。
+   代码档默认还是等宽栈 —— 正文换成正楷时，正则、词库文本框那些不该跟着变。
+   ============================================================ */
+const Ff = {
+  zones:[['doc', '正文'], ['gang', '章纲 / 左栏'], ['side', '侧栏 / 面板'], ['code', '代码']],
+  cfg:{ doc:'', gang:'', side:'', code:'' },
+  async load(){
+    const c = await State.get('font-zone', null);
+    if(c) Object.assign(this.cfg, c);
+    this.apply();
+  },
+  set(k, v){ this.cfg[k] = v || ''; State.set('font-zone', this.cfg); this.apply(); },
+  /* FD 的全局字体压住内置栈，当成没钉过那几档的基准 */
+  base(){
+    const fd = this.fdFont();
+    return fd ? ffQuote(fd) + ',' + FF_BASE_WNW : FF_BASE_WNW;
+  },
+  fdFont(){ return (Theme.fd && Theme.fd.font) || ''; },
+  of(k){ return k === 'code' ? ffStack(this.cfg.code, FF_MONO) : ffStack(this.cfg[k], this.base()); },
+  apply(){
+    const r = wnwRoot().style, b = this.base();
+    for(const [k] of this.zones) r.setProperty('--ff-' + k, this.of(k));
+    /* 顶栏、书架、设置面板这些没单列档的地方跟着侧栏走 */
+    r.setProperty('--ff-ui', ffStack(this.cfg.side, b));
+  }
+};
+

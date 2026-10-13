@@ -1,0 +1,894 @@
+/* 四层里的第一层 · 插件那一摊的尺（外46 三 批六搬前两摊、批七再补三摊 · 对 src\pack\main.cjs 1751~1887 与 1892~2072）
+   ------------------------------------------------------------
+   原件那五颗通道（pack:list / pack:file / pack:set / pack:import / pack:wipe）在 main.cjs 里靠这些 helper 干活：
+   packScan()（1797 行）、packOne(dir,name,kind)（1774 行）、packRaw(id,rel)（1855 行）、packHas(id)（1844 行）、
+   packAfterSet()（1892 行）、packManifestOf(buf)（1918 行）、walkPackDir(dir,rel,out)（1926 行）、
+   expandZipPack(dir,buf,id)（1936 行）、keepOriginal(id)（1988 行）。
+   三颗里「开不开得到盘、读不读得出字节」那一半归第三层动手；这一格只收「拿一串名字或一串字节就能定」的那几手：
+     · 名字 —— 哪几个名字不进这一列（打头的点与下划线、那两份名单本体）、压缩包名怎么折成包名、
+       包名那一名干不干净、末段与后缀怎么折（导入那一条的兜底包名）；
+     · 两趟 —— 文件夹先收、同名 zip 后收（原件 1794~1796 行那段理由，整段抄在下面 分成两趟 顶上）；
+     · 名单 —— 那两份清单（off.json / installed.json）各种写法读成几颗名字、老那份换算成「记为卸掉」的哪几家、
+       页面递的「开着的」换成落盘的「卸掉的」（1907 行那一手）；
+     · 段名 —— pack:file 那一路的相对写法怎么洗、哪一种递法当场不认（原件 packRaw 头两行）、
+       摊包那一条 zip 条目该怎么认（原件 expandZipPack 1944~1948 行那四手）；
+     · 大小 —— 24MB 那道闸的数与那句白话（原件 1879~1884 行）；
+     · 落点 —— 导入那一条页面递的门牌折成绝对落点（原件 1999 行 path.resolve 那一手）、
+       清数据那一条还剩在数据层根以内不是、插件那一格留不留得下（2067~2068 行那两把闸）；
+     · 句子 —— 三种读不成的原话 + 取不到那份的原话 + 读不出文本的前缀 + 写名单那四句 + 导入那十句 +
+       清数据那一句理由，页面上摆的就是这一串。
+   字面值由闸钉着：src\tools\probes\gate-tauripack46.mjs 现场读 main.cjs 那两段逐字对，动那边不动这边当场红。
+   ------------------------------------------------------------
+   与原件差在两处（写在这儿，别当没看见）：
+   ① Node 的 readFileSync(...,'utf8') 与 toString('utf8') 遇到不是 UTF-8 的字节是替换成 U+FFFD、不抛，
+     这一头读文本认严格 UTF-8：同样一串字节在这儿会落到「读不出文本：」/「插件清单读不成那份格式：」那一句。
+     落点还是原件那两格（ok + msg / id + kind + error），页面上看到的还是那一句白话，只是后半截措辞不一样。
+   ② 包名那道闸（原件 /^[A-Za-z0-9._-]+$/）整串就是 '.' 与 '..' 两种名字时，原件认它干净，
+     于是 path.join(plugins, '..') 折到 data\、join(plugins, '.') 折到 plugins\ 自己 ——
+     接着那一道「这里已经有一份「…」了」会把它挡下来（那两格盘上永远在），落不成半个字节。
+     这一头沿用 fd_core::comp_rule::包名干净 那把尺（改代码那一摊早把这两种当不干净），
+     所以同样动手不了别家，只是先走「包名不干净，不敢落地：」那一句而不是「这里已经有一份」那一句。 */
+use serde_json::Value;
+
+/* ---------- 那几处名字与那两串种类 ---------- */
+
+/// 被卸掉的那几家（原件 OFF_LIST，1752 行）
+pub const 卸掉那份: &str = "off.json";
+/// 外41 六段之前那份「装了哪些」，读到一次就换算掉（原件 OLD_LIST，1753 行）
+pub const 老的那份: &str = "installed.json";
+/// 插件清单那一份（原件 packOne 两头都认这一名）
+pub const 清单那份: &str = "manifest.json";
+/// 文件夹那种（原件 kind === 'dir'，页面上判的就是这一串）
+pub const 文件夹那种: &str = "dir";
+/// 压缩包那种（原件 kind === 'zip'）
+pub const 压包那种: &str = "zip";
+/// 压缩包那一位后缀（原件 n.endsWith('.zip') 与 n.slice(0,-4)）
+pub const 压包后缀: &str = ".zip";
+/// 一份文件走这条道的上限（原件 PACK_FILE_MAX = 24 * 1024 * 1024，1879~1880 行）
+pub const 封顶字节: u64 = 24 * 1024 * 1024;
+
+/* ---------- 那几句原话：措辞与 main.cjs 一字不差 ---------- */
+
+/// 文件夹那一格里插件清单读不成那句（原件 packOne 的 catch，后面接系统那句）
+pub const 清单读不成那句: &str = "插件清单读不成那份格式：";
+/// 压缩包没带插件清单那句（原件 packOne 那一支，不带前缀也不接别的话）
+pub const 没带清单那句: &str = "压缩包里没带插件清单";
+/// 压缩包整个读不动那句（原件 packOne 第二层 catch 的前缀）
+pub const 压包读不动那句: &str = "zip 读不动：";
+/// 取不到那份文件（原件 pack:file 第一支：拼的是页面递进来的那两串，不是洗过的）
+pub fn 包里没有那句(id: &str, 相对: &str) -> String {
+    format!("包里没有这份文件：{}/{}", id, 相对)
+}
+/// 转不成文本那句（原件 pack:file 最后一支的前缀）
+pub const 读不出文本那句: &str = "读不出文本：";
+
+/// 那一串字节折成「多少 MB」：原件是 Math.round(字节 / 1048576)，四舍五入、不带小数
+fn 折成兆(字节: u64) -> i64 {
+    (字节 as f64 / 1048576.0).round() as i64
+}
+
+/// 过了 24MB 那道闸那一句（原件：'这份文件 ' + Math.round(len/1048576) + 'MB，太大不走这条路'）
+pub fn 太大那句(字节: u64) -> String {
+    format!("这份文件 {}MB，太大不走这条路", 折成兆(字节))
+}
+
+/* ---------- 名字：哪几枚进这一列 ---------- */
+
+/// 一枚名字在盘上是什么（原件是 fs.statSync 那一手：问不到就 continue，1805~1806 行）
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum 盘上 {
+    /// 是一格目录
+    是格,
+    /// 是一份文件
+    是份,
+    /// statSync 抛了（正在被别的程序删着、链接坏了那种）
+    问不到,
+}
+
+/// 这个名字要不要进这一列（原件 1804 行：打头的点、打头的下划线、那两份名单本体都不进）
+pub fn 该看的名(名: &str) -> bool {
+    !名.starts_with('.') && !名.starts_with('_') && 名 != 卸掉那份 && 名 != 老的那份
+}
+
+/// 一份压缩包名折成包名（原件 n.endsWith('.zip') + n.slice(0,-4)）：不是这一后缀的回 None
+pub fn 压包成名(名: &str) -> Option<&str> {
+    名.strip_suffix(压包后缀)
+}
+
+/* ---------- 两趟收：文件夹赢同名 zip ---------- */
+
+/// 分成两趟（原件 1803~1809 那一趟分类 + 1810~1819 那两趟收的形状）：
+/// 第一串全是文件夹名、第二串是压缩包折出来的包名，两种各自照给进来的序。
+///
+/// 为什么分两趟收而不是照着读目录的顺序边走边记 —— 原件 1794~1796 行那段注释就是这么写的，照抄：
+///   「扫一遍：文件夹先收，同名 zip 就不收了（文件夹赢，和生成页面那头一致）。
+///     分两趟收而不是照着 readdir 的顺序边走边记 —— 名字排序碰巧让 zip 先露面的话，
+///     同一个包会在页面上列两行。」
+/// 一句话：赢家必须是「文件夹」这一种，不能是「谁先露面」，所以先分类、再按种类各收一趟。
+/// 同名那一家到底让不让开，归 同名那格已占 那颗问 —— 原件的 seen 只记真列进这一列的（if(p){...seen.add(n)}），
+/// 文件夹那一格读不成（packOne 回 null）时占不算数，同名 zip 照样露面。
+pub fn 分成两趟(名册: &[(String, 盘上)]) -> (Vec<String>, Vec<String>) {
+    let mut 格: Vec<String> = vec![];
+    let mut 压: Vec<String> = vec![];
+    for (名, 相) in 名册 {
+        if !该看的名(名) {
+            continue;
+        }
+        match 相 {
+            盘上::是格 => 格.push(名.clone()),
+            /* 原件 1808 行：既不是格也不是 .zip 的一份（txt、exe、图片那种）一律不进这一列 */
+            盘上::是份 => {
+                if let Some(包名) = 压包成名(名) {
+                    压.push(包名.to_string());
+                }
+            }
+            盘上::问不到 => {}
+        }
+    }
+    (格, 压)
+}
+
+/// 同名那格占没占（原件 1816 行 if(seen.has(id)) continue：文件夹赢，这一颗替 zip 那一趟回答让不让）
+pub fn 同名那格已占(已列出的: &[String], 包名: &str) -> bool {
+    已列出的.iter().any(|x| x == 包名)
+}
+
+/* ---------- 两份名单：读成几颗名字、老那份怎么换算 ---------- */
+
+/// 照 JS 的 String(x) 给个交代：那两份名单现实里只放字符串，别的形状也不许在这儿 panic。
+/// （数那一档 serde_json 把 1.0 写成 "1.0"、JS 的 String(1.0) 是 "1"，只在有人往名单里塞小数时才看得出来）
+/// 页面递进来的名单与回执都用这一颗（原件两处写的都是 .map(String)）
+pub fn 串成(x: &Value) -> String {
+    match x {
+        Value::String(s) => s.clone(),
+        Value::Number(n) => n.to_string(),
+        Value::Bool(b) => b.to_string(),
+        Value::Null => "null".to_string(),
+        Value::Array(a) => a.iter().map(串成).collect::<Vec<_>>().join(","),
+        /* 原件 .map(String) 撞上一格对象就是这一串 */
+        Value::Object(_) => "[object Object]".to_string(),
+    }
+}
+
+/// off.json 读成那几家（原件 1834~1837 行：整份就是列表、或列表住在 off 那一格，两种以外都算一家都没卸；
+/// 读不成 JSON 也是同一结果 —— 那一个 catch 里 off = []）
+pub fn 开单成列(文本: &str) -> Vec<String> {
+    let 值 = match serde_json::from_str::<Value>(文本) {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+    let 列 = match &值 {
+        Value::Array(a) => Some(a),
+        Value::Object(o) => match o.get("off") {
+            Some(Value::Array(a)) => Some(a),
+            _ => None,
+        },
+        _ => None,
+    };
+    match 列 {
+        Some(a) => a.iter().map(串成).collect(),
+        None => vec![],
+    }
+}
+
+/// 老那份 installed.json 读成「装了哪些」（原件 1827 行：整份是列表、或列表住在 installed 那一格；
+/// 读不成、两种都不是 → null，往下就是「老那份没记下任何一家」）
+pub fn 老单成列(文本: &str) -> Option<Vec<String>> {
+    let 值 = serde_json::from_str::<Value>(文本).ok()?;
+    let 列 = match &值 {
+        Value::Array(a) => Some(a),
+        Value::Object(o) => match o.get("installed") {
+            Some(Value::Array(a)) => Some(a),
+            _ => None,
+        },
+        _ => None,
+    };
+    列.map(|a| a.iter().map(串成).collect())
+}
+
+/// 这一格里该记为卸掉的几家（原件 1828 行：扫到的每一家，老名单里没记的就进 off）。
+/// 老那单是 None（读不成那份格式、或两种形状都不是）→ 一家都不记：原件同一支是 Array.isArray(ids) 不中、
+/// 取 []，但换算那一趟照走（写 off.json、删掉老那份都还在同一个 try 里，1829~1830 行）—— 不是「读不成就不换算」。
+pub fn 记为卸掉(扫到的: &[String], 老名单: Option<&[String]>) -> Vec<String> {
+    match 老名单 {
+        Some(装了) => 扫到的
+            .iter()
+            .filter(|家| !装了.iter().any(|x| x == *家))
+            .cloned()
+            .collect(),
+        None => vec![],
+    }
+}
+
+/// 写 off.json 那一串的形状（原件 1829 行 JSON.stringify({ off:卸 }, null, 2) + '\n'）：
+/// 这儿只管把「记为卸掉」的那几家递成 { off: [...] } 那一格，缩进与尾巴那个换行由第三层落盘时照抄
+pub fn 卸掉那一格(卸: &[String]) -> Value {
+    serde_json::json!({ "off": 卸 })
+}
+
+/* ---------- pack:file 那一路的相对写法（原件 packRaw 头两行，1856~1857 行） ---------- */
+
+/// 洗那一串段名：反斜杠当斜杠、打头的斜杠去掉，然后照原件「段里只要有 .. 或 . 或空段就整串不认」。
+/// 注意与 zip_pack 里那颗 干净名 不同一处：干净名是把空段与 . 扔掉继续走，这一颗直接不认 ——
+/// 原件 packRaw 与 zip-read.cjs 的 cleanName 本来就是两把尺，各对各的原件，不许在这儿给统一了。
+pub fn 洗那串(相对: &str) -> Option<String> {
+    let 斜 = 相对.replace('\\', "/");
+    let 净 = 斜.trim_start_matches('/');
+    if 净.is_empty() {
+        return None;
+    }
+    for 段 in 净.split('/') {
+        if 段.is_empty() || 段 == "." || 段 == ".." {
+            return None;
+        }
+    }
+    Some(净.to_string())
+}
+
+/// 段拆开（第三层把洗过那一串并成落点用，原件 path.join(dir, ...clean.split('/'))）
+pub fn 拆成段(洗过的: &str) -> Vec<&str> {
+    洗过的.split('/').collect()
+}
+
+/* ---------- pack:set：名单落盘那几句与「开着的换成卸掉的」（原件 packAfterSet 1892~1894、handler 1895~1910） ---------- */
+
+/// 那一列建不出来那一句（原件 1897 行 mkdirSync 那一道；pack:import 2002 行建同一格，用的也是这一句）
+pub const 建不出那句: &str = "插件目录建不出来：";
+/// 那份名单删不掉那一句（原件 1901 行，后头接系统那句）
+pub const 名单删不掉那句: &str = "名单删不掉：";
+/// 那份名单写不进去那一句（原件 1909 行，后头接系统那句）
+pub const 名单写不进那句: &str = "名单写不进去：";
+/// 页面递上来的不是列表那一句（原件 1903 行：整句就是这一串，后头不接任何东西）
+pub const 不是列表那句: &str = "名单得是一份 id 列表";
+/// 卸完名单之后收后台监听时给的那句理由（原件 1893 行 mediaStop('音乐遥控器卸掉了')，落进监听账那一句「话」）
+pub const 卸掉监听那句: &str = "音乐遥控器卸掉了";
+
+/// 页面递的那一串换成一颗颗 id（原件 1904 行 new Set(ids.map(String)) 与 1908 行回给页面的 ids:ids.map(String)，两处同一串）
+pub fn 开着的名单(递的: &[Value]) -> Vec<String> {
+    递的.iter().map(串成).collect()
+}
+
+/// 「开着的」换成「卸掉的」（原件 1907 行：off = 这一格里扫到的全部 减 开着的，名单里没点名的都算开着）。
+/// 算术与老那份名单换算那一次（1828 行）是同一把尺 —— 就着 记为卸掉 那一颗，不在这一格抄第二遍 filter。
+/// 递进来的 全部 是 扫一遍 那一列里每家折出来的 id（原件 p => String(p.id)，pack id 本来就是名）。
+pub fn 换成卸掉(全部: &[String], 开着: &[String]) -> Vec<String> {
+    记为卸掉(全部, Some(开着))
+}
+
+/* ---------- pack:import：那十句原话与几手字符串活（原件 1995~2044 行 + packManifestOf 1918、walkPackDir 1926、expandZipPack 1936） ---------- */
+
+/// 那一份东西读不到那一句（原件 2001 行，后头接的是折成绝对之后的那一串门牌）
+pub const 读不到那份那句: &str = "那份东西读不到：";
+/// 挑的是文件又不是压缩包那一句（原件 2005 行，整句就是这一串）
+pub const 只收压包那句: &str = "挑文件这一条只收压缩包 · 解开的样子请挑那个文件夹";
+/// 压缩包读不动那一句（原件 2009 行 packManifestOf 那一道的前缀；摊开那一步读不成走的也是这一句，1939 行）
+pub const 包读不动那句: &str = "这个包读不动：";
+/// 压缩包没带插件清单那一句（原件 1922 行 packManifestOf 抛的那一句）
+pub const 不像插件那句: &str = "这个压缩包里没带插件清单，不像一个插件";
+/// 文件夹里没带插件清单那一句（原件 2022 行；与上面那句只差在「压缩包 / 文件夹」那一截）
+pub const 格没带清单那句: &str = "这个文件夹里没带插件清单，不像一个插件";
+/// 包名不干净那一句（原件 2011 / 2027 行，后头接的是折出来的那一名 —— 与「改代码」那一摊那句「不敢动手」不同一句）
+pub const 包名不干净那句: &str = "包名不干净，不敢落地：";
+/// 同名已经在那儿了那一句（原件 2013 / 2029 行，包名夹在两枚书名号中间）
+pub fn 已占那句(包名: &str) -> String {
+    format!("这里已经有一份「{}」了 · 要换先把它挪走", 包名)
+}
+/// 包里有脏路径那一句（原件 1948 / 1950 / 2034 行三处都是这一串，后头接没洗过的那一条）
+pub fn 脏路径那句(那一条: &str) -> String {
+    format!("包里有脏路径，不敢落地：{}", 那一条)
+}
+/// 摊包时那条目录记的是空路径（原件 1946 行 throw 的那一句，往上落还是挂「这个包落不成：」那一句）
+pub const 空路径那句: &str = "空路径";
+/// 落了一半卡住了那一句（原件 1958 行，后头接系统那句；这一支之前那半截已经整格删掉）
+pub const 落不成那句: &str = "这个包落不成：";
+/// 挑的既不是文件也不是文件夹（原件 2042 行，整句就是这一串）
+pub const 两不象那句: &str = "挑的东西既不是文件也不是文件夹";
+/// 整颗兜底那一句（原件 2043 行，后头接系统那句）
+pub const 导入失败那句: &str = "导入失败：";
+
+/// 原件那一手 String(x || '')：没给、给了空串、给了 null、给了 false、给了 0 都算空串，
+/// 剩下的照 JS 的 String() 折（与 串成 同一把尺；空数组折出来也是空串，两头一致）
+pub fn 递的那串(值: &Value) -> String {
+    match 值 {
+        Value::Null => String::new(),
+        Value::Bool(b) => if *b { "true".to_string() } else { String::new() },
+        Value::Number(n) => {
+            if n.as_f64().map(|v| v == 0.0).unwrap_or(false) { String::new() } else { 串成(值) }
+        }
+        Value::String(s) => s.clone(),
+        /* 数组与对象在 JS 里都是真值，走 String() 那一手（空数组是 ''，空对象是 '[object Object]'） */
+        _ => 串成(值),
+    }
+}
+
+/// 页面递进来的那份东西的门牌（原件 1999 行 String(p.src || '')：payload 没递、src 没写都算空串）
+pub fn 那份东西(递的: &Value) -> String {
+    递的那串(递的.get("src").unwrap_or(&Value::Null))
+}
+
+/// 插件清单上点名的那一格（原件 2010 / 2026 行 String(m.id || 兜底).trim()）：没写、写了空串都退兜底，
+/// 兜底由调用方算好（压包那一种是不带后缀的末段、文件夹那一种是末段本身）
+pub fn 清单上的id(单: &Value, 兜底: &str) -> String {
+    let 写 = 递的那串(单.get("id").unwrap_or(&Value::Null));
+    if 写.is_empty() { 兜底.to_string() } else { 写 }.trim().to_string()
+}
+
+/// 插件清单上那个名字（原件 1960 / 2040 行 m.name || id）：回给页面 name 那一格的就是它，
+/// 与 id 不同一处 —— 原件这一栏压根没 trim，照旧不去首尾空白
+pub fn 清单上的名字(单: &Value, 兜底: &str) -> String {
+    let 写 = 递的那串(单.get("name").unwrap_or(&Value::Null));
+    if 写.is_empty() { 兜底.to_string() } else { 写 }
+}
+
+/// 收不收这一份压缩包（原件 2005 行 /\.zip$/i）：只看尾巴那四个字，大小写两种都算
+pub fn 是压包那份(那串: &str) -> bool {
+    那串.to_ascii_lowercase().ends_with(压包后缀)
+}
+
+/// 一串路径的末段（原件 path.basename）：反斜杠与斜杠都当分隔；整串只剩分隔符时给空串（Node 同一手）
+pub fn 末段(那串: &str) -> String {
+    let 洗 = 那串.replace('/', "\\");
+    match 洗.rsplit_once('\\') {
+        Some((_, 尾)) => 尾.to_string(),
+        None => 洗,
+    }
+}
+
+/// 一串路径的后缀（原件 path.extname）：末段里最后一个点往后的那一段（带着那枚点）。
+/// 点在末段的第一个字上（'.zip' 那种当名字用的写法）算没后缀，整串没点也算没后缀 —— 两头同字
+pub fn 后缀(那串: &str) -> String {
+    let 段 = 末段(那串);
+    match 段.rfind('.') {
+        Some(位) if 位 > 0 => 段[位..].to_string(),
+        _ => String::new(),
+    }
+}
+
+/// 末段去掉后缀（原件 2010 行 path.basename(src, path.extname(src))，压包没写 id 时的兜底包名）。
+/// 整段就等于后缀时不折空（原件也不给空名字）
+pub fn 末段去后缀(那串: &str) -> String {
+    let 段 = 末段(那串);
+    let 尾 = 后缀(那串);
+    if !尾.is_empty() && 段 != 尾 && 段.ends_with(&尾) {
+        return 段[..段.len() - 尾.len()].to_string();
+    }
+    段
+}
+
+/// 一串路径的顶（折成绝对 用）：回「顶」与「顶以外的那一串」。
+/// 认三种写法：字母 + 冒号 + 分隔（盘符，顶就是「字母 + 冒号」这一段）、两个分隔符打头（UNC，顶是机器名加共享名）、
+/// 单个分隔符打头（原件按同一个盘的当前目录往上算，顶就取 当前格 里那枚盘符）；剩下的一律算相对写法，并进 当前格
+fn 拆顶(那串: &str, 当前格: &str) -> (String, String) {
+    let 字 = 那串.as_bytes();
+    if let Some(尾) = 那串.strip_prefix("\\\\") {
+        let 们: Vec<&str> = 尾.split('\\').filter(|x| !x.is_empty()).collect();
+        return match (们.first(), 们.get(1)) {
+            (Some(机), Some(享)) => (format!("\\\\{}\\{}", 机, 享), 们.iter().skip(2).copied().collect::<Vec<_>>().join("\\")),
+            (Some(机), None) => (format!("\\\\{}", 机), String::new()),
+            /* 只剩分隔符那种（'\\\\'）：原件折出来就是 '\\\\'，这一头当相对写法办，动的还是同一格 */
+            _ => (去尾分隔(当前格), 尾.to_string()),
+        };
+    }
+    if 字.len() >= 3 && 字[1] == b':' && 字[2] == b'\\' {
+        return (那串[..2].to_string(), 那串[3..].to_string());
+    }
+    /* 只剩盘符那一截（'X:'）：原件给的是那一个盘的当前目录，壳里不知道那一格在哪，就按盘根算 */
+    if 字.len() == 2 && 字[1] == b':' && 字[0].is_ascii_alphanumeric() {
+        return (那串[..2].to_string(), String::new());
+    }
+    if 那串.starts_with('\\') {
+        return (盘根(当前格), 那串[1..].to_string());
+    }
+    (去尾分隔(当前格), 那串.to_string())
+}
+
+/// 当前那一格里的那枚盘符（单个分隔符打头那种写法要用）：认不出盘符就只剩一个分隔符当顶
+fn 盘根(当前格: &str) -> String {
+    let 字 = 当前格.as_bytes();
+    if 字.len() >= 2 && 字[1] == b':' && 字[0].is_ascii_alphanumeric() {
+        return 当前格[..2].to_string();
+    }
+    "\\".to_string()
+}
+
+fn 去尾分隔(串: &str) -> String {
+    let mut s = 串.to_string();
+    while s.ends_with('\\') || s.ends_with('/') {
+        s.pop();
+    }
+    s
+}
+
+/// 页面递进来的那串折成绝对落点（对应原件 1999 行 path.resolve(String(p.src || ''))）：
+/// 空串就是当前那一格；绝对写法照它自己那一格当顶、相对写法并进当前那一格。
+/// 段里的 . 与空段扔掉、.. 退一格（退得进顶自己的段，退到顶就停住 —— 与原件同一手），分隔一律折成反斜杠 ——
+/// 折出来的这一串只用在两处：问盘上有没有（原件 statSync）与那句「那份东西读不到：」后头接的那一串。
+/// 与原件差在一处：'C:x' 那种盘符后头不带分隔的写法，原件走的是同一个盘的当前目录（壳里不知道那是哪一格），
+/// 这一头当相对写法并进当前那一格（读不到就落那句「那份东西读不到：」，一个字节都不会多动）。
+pub fn 折成绝对(那串: &str, 当前格: &str) -> String {
+    let 串 = 那串.replace('/', "\\");
+    let (顶, 余下) = if 串.is_empty() { 拆顶(当前格, 当前格) } else { 拆顶(&串, 当前格) };
+    let (标记, 顶段) = 分标记(&顶);
+    let mut 段: Vec<String> = 顶段;
+    for x in 余下.split('\\') {
+        if x.is_empty() || x == "." {
+            continue;
+        }
+        if x == ".." {
+            /* 顶自己的段也一并退（原件 path.resolve 就是把整串折平），退到标记那一格就停住 */
+            if !段.is_empty() {
+                段.pop();
+            }
+            continue;
+        }
+        段.push(x.to_string());
+    }
+    if 段.is_empty() {
+        /* 顶上什么段都不剩：盘符那一档要把顶上那枚分隔补回去（原件把一路全退光就退到那一个盘的根） */
+        return if 标记.is_empty() {
+            "\\".to_string()
+        } else if 标记.ends_with(':') {
+            format!("{}\\", 标记)
+        } else {
+            标记
+        };
+    }
+    if 标记.is_empty() {
+        return format!("\\{}", 段.join("\\"));
+    }
+    format!("{}\\{}", 标记, 段.join("\\"))
+}
+
+/// 一串绝对写法拆成「标记」与「标记底下的段」（折成绝对 用）：
+/// 两个分隔符打头的是 UNC（机器名 + 共享名 那一串整个当标记，底下的段才许退，退不出共享名以外）；
+/// 「字母 + 冒号」当标记（底下的段一路退可以到盘根）；其余写法整串当段，标记是空串（顶就是那一个盘的根）。
+/// 拆之前 拆顶 已经把分隔折成反斜杠、尾分隔去掉，所以这儿只看开头那几枚字
+fn 分标记(顶: &str) -> (String, Vec<String>) {
+    let 字 = 顶.as_bytes();
+    if 顶.starts_with("\\\\") {
+        return (顶.to_string(), vec![]);
+    }
+    if 字.len() >= 2 && 字[1] == b':' && 字[0].is_ascii_alphanumeric() {
+        let 尾 = 顶[2..].replace('/', "\\");
+        return (顶[..2].to_string(), 尾.split('\\').filter(|x| !x.is_empty()).map(|x| x.to_string()).collect());
+    }
+    if 顶 == "\\" {
+        return (String::new(), vec![]);
+    }
+    /* 认不出标记的写法（当前那一格本身不是绝对地址那种）：整串都算段，退到头就是空 */
+    (String::new(), 顶.split('\\').filter(|x| !x.is_empty()).map(|x| x.to_string()).collect())
+}
+
+/// 摊开那一条目录记的什么（原件 expandZipPack 1944~1948 行那四手，一次一条）
+#[derive(Debug, PartialEq, Eq)]
+pub enum 那一条 {
+    /// 有人压包会把文件夹也记一条（尾巴带分隔符），跳过这一条不落地
+    跳过,
+    /// 干净段名，可以照着落到这一家那一格里
+    落成(Vec<String>),
+    /// 脏（含空路径）：整格删掉重来，这一串就是往上落的那半句原话
+    脏(String),
+}
+
+/// 一条目录名该怎么摊（原件那四手）：反斜杠当斜杠 → 带尾斜杠的跳过 → 空路径算脏 →
+/// 空段与 . 扔掉、段里有 .. 或整串没段就算脏。
+/// 差在一处（照 zip_pack 顶上那条同一口径）：共用的那颗解包件读目录时已经把段名洗过一遍
+/// （干净名 挡的就是带 .. 与空段那种），所以 脏 这一支在这儿永远不中；留着是照抄原件那三道闸，一道都不撤。
+pub fn 摊那一条(名: &str) -> 那一条 {
+    let 相 = 名.replace('\\', "/");
+    if 相.ends_with('/') {
+        return 那一条::跳过;
+    }
+    if 相.is_empty() {
+        return 那一条::脏(空路径那句.to_string());
+    }
+    let 段: Vec<String> = 相.split('/').filter(|x| !x.is_empty() && *x != ".").map(|x| x.to_string()).collect();
+    if 段.is_empty() || 段.iter().any(|x| x == "..") {
+        return 那一条::脏(脏路径那句(&相));
+    }
+    那一条::落成(段)
+}
+
+/* ---------- pack:wipe：删哪几格、留哪几格（原件 2052~2072 行，一手都不许多删） ---------- */
+
+/// 原件 2054 / 2062 行那两把 Array.isArray：页面递的不是列表就按空的一串办（一颗都不动）
+pub fn 按名单收(递的: Option<&Value>) -> Vec<&Value> {
+    match 递的 {
+        Some(Value::Array(列)) => 列.iter().collect(),
+        _ => vec![],
+    }
+}
+
+/// 那一串还在数据层根以内不是（原件 2067 行 rf.startsWith(root + path.sep)）：
+/// 等号那一格自己不算以内 —— 根本体这一颗也不给删（原件同字）
+pub fn 在根以内(落: &str, 根: &str) -> bool {
+    let 跟 = 去尾分隔(根);
+    落.starts_with(&format!("{}\\", 跟))
+}
+
+/// 插件那一格与它底下的永远留着（原件 2061 行 comp = path.resolve(PACKS_DIR()) 与 2068 行那一道）：
+/// 「包和名单永远留着」说的就是这一格 —— 装得回来靠的就是包还在，off.json 也住在这一格里。
+/// 除这一格以外的数据层根底下的东西（用户目录、库文件、日志…）原件都许删，这一头一处都不许多留、也不许少留。
+pub fn 包那一格留着(落: &str, 包格: &str) -> bool {
+    let 跟 = 去尾分隔(包格);
+    落 == 跟 || 落.starts_with(&format!("{}\\", 跟))
+}
+
+#[cfg(test)]
+mod 验判断 {
+    use super::*;
+    use serde_json::json;
+
+    fn 名(格: &[&str], 份: &[&str]) -> Vec<(String, 盘上)> {
+        let mut 出 = vec![];
+        for n in 格 {
+            出.push((n.to_string(), 盘上::是格));
+        }
+        for n in 份 {
+            出.push((n.to_string(), 盘上::是份));
+        }
+        出
+    }
+
+    #[test]
+    fn 打头那两种与两份名单本体都不进这一列() {
+        assert!(!该看的名(".隐藏"));
+        assert!(!该看的名("_下划线"));
+        assert!(!该看的名(卸掉那份));
+        assert!(!该看的名(老的那份));
+        assert!(该看的名("demo-scene"));
+        assert!(该看的名("demo-scene.zip"));
+        /* 名单那两名打头也是字母，别拿 starts_with 那一手误放进来 */
+        assert!(!该看的名("off.json"));
+        assert!(!该看的名("installed.json"));
+    }
+
+    #[test]
+    fn 压缩包名折成包名只认那一位后缀() {
+        assert_eq!(压包成名("词库.zip"), Some("词库"));
+        assert_eq!(压包成名("词库.ZIP"), None);
+        assert_eq!(压包成名("词库"), None);
+        assert_eq!(压包成名(".zip"), Some("")); /* 原件 slice(0,-4) 也是这一结果，照旧不特殊处理 */
+    }
+
+    #[test]
+    fn 分成两趟把文件夹排在前面那串() {
+        let (格, 压) = 分成两趟(&名(&["甲家", "乙家"], &["丙.zip", "丁.txt", "戊.zip"]));
+        assert_eq!(格, vec!["甲家".to_string(), "乙家".to_string()]);
+        assert_eq!(压, vec!["丙".to_string(), "戊".to_string()]);
+    }
+
+    #[test]
+    fn zip名字排在前面也不会列两行() {
+        /* 原件那段理由钉这一手：读目录回来的序碰巧让 zip 先露面（"a.zip" 排在 "a" 之前），
+           两趟收之后同名那一格还是文件夹赢，页面上只列一行 */
+        let 名册 = vec![
+            ("a.zip".to_string(), 盘上::是份),
+            ("a".to_string(), 盘上::是格),
+        ];
+        let (格, 压) = 分成两趟(&名册);
+        assert_eq!(格, vec!["a".to_string()]);
+        assert_eq!(压, vec!["a".to_string()]);
+        assert!(同名那格已占(&格, "a"));
+    }
+
+    #[test]
+    fn 问不到的与既不是格又不带后缀的一律不收() {
+        let 名册 = vec![
+            ("坏链接".to_string(), 盘上::问不到),
+            ("说明.txt".to_string(), 盘上::是份),
+        ];
+        let (格, 压) = 分成两趟(&名册);
+        assert!(格.is_empty() && 压.is_empty());
+    }
+
+    #[test]
+    fn 文件夹没列成时同名zip照样露面() {
+        /* 原件 seen 只记真推进这一列的那几家：文件夹那一格读不成（回 null）就不占名字 */
+        let 已列出: Vec<String> = vec![];
+        assert!(!同名那格已占(&已列出, "甲家"));
+        let 已列出 = vec!["甲家".to_string()];
+        assert!(同名那格已占(&已列出, "甲家"));
+        assert!(!同名那格已占(&已列出, "乙家"));
+    }
+
+    #[test]
+    fn 种类那两串照原件() {
+        assert_eq!(文件夹那种, "dir");
+        assert_eq!(压包那种, "zip");
+    }
+
+    #[test]
+    fn 那三句读不成的前缀逐字对() {
+        assert_eq!(清单读不成那句, "插件清单读不成那份格式：");
+        assert_eq!(没带清单那句, "压缩包里没带插件清单");
+        assert_eq!(压包读不动那句, "zip 读不动：");
+        assert_eq!(读不出文本那句, "读不出文本：");
+    }
+
+    #[test]
+    fn 包里没有那句拼的是递进来的那两串() {
+        assert_eq!(
+            包里没有那句("词库", "bank\\data.txt"),
+            "包里没有这份文件：词库/bank\\data.txt"
+        );
+        assert_eq!(包里没有那句("", ""), "包里没有这份文件：/");
+    }
+
+    #[test]
+    fn 二十四兆那道闸的数与那句白话() {
+        assert_eq!(封顶字节, 24 * 1024 * 1024);
+        /* 闸本身是「严格大于」：正好 24MB 还是走这条路（原件 buf.length > PACK_FILE_MAX） */
+        assert_eq!(太大那句(封顶字节 + 1), "这份文件 24MB，太大不走这条路");
+        assert_eq!(太大那句(25 * 1048576), "这份文件 25MB，太大不走这条路");
+        /* Math.round 那一手：半兆往上进一颗 */
+        assert_eq!(太大那句(24 * 1048576 + 524288), "这份文件 25MB，太大不走这条路");
+        assert_eq!(太大那句(1048576 * 3), "这份文件 3MB，太大不走这条路");
+    }
+
+    #[test]
+    fn off名单那两种写法都认第三种算一家都没卸() {
+        assert_eq!(开单成列(r#"["甲家","乙家"]"#), vec!["甲家".to_string(), "乙家".to_string()]);
+        assert_eq!(开单成列(r#"{"off":["甲家"]}"#), vec!["甲家".to_string()]);
+        assert!(开单成列(r#"{"installed":["甲家"]}"#).is_empty());
+        assert!(开单成列("{}").is_empty());
+        assert!(开单成列("读不成那份格式").is_empty());
+    }
+
+    #[test]
+    fn 老名单那两种写法都认别的形状回没记下() {
+        assert_eq!(老单成列(r#"["甲家"]"#), Some(vec!["甲家".to_string()]));
+        assert_eq!(老单成列(r#"{"installed":["甲家","乙家"]}"#), Some(vec!["甲家".to_string(), "乙家".to_string()]));
+        assert_eq!(老单成列(r#"{"off":["甲家"]}"#), None);
+        assert_eq!(老单成列("读不成那份格式"), None);
+    }
+
+    #[test]
+    fn 老名单里没记的才记为卸掉() {
+        let 扫到的 = vec!["甲家".to_string(), "乙家".to_string(), "丙家".to_string()];
+        let 装了 = vec!["甲家".to_string()];
+        assert_eq!(记为卸掉(&扫到的, Some(&装了)), vec!["乙家".to_string(), "丙家".to_string()]);
+        /* 老那份读不成：一家都不记，但换算那一趟照走（见 记为卸掉 顶上那段） */
+        assert!(记为卸掉(&扫到的, None).is_empty());
+        assert!(记为卸掉(&[], Some(&装了)).is_empty());
+    }
+
+    #[test]
+    fn 名单里塞了非字符串也照原件给个交代() {
+        assert_eq!(开单成列(r#"{"off":[1,true,null]}"#), vec!["1".to_string(), "true".to_string(), "null".to_string()]);
+        assert_eq!(开单成列(r#"{"off":[{}]}"#), vec!["[object Object]".to_string()]);
+        assert_eq!(开单成列(r#"{"off":[["甲","乙"]]}"#), vec!["甲,乙".to_string()]);
+    }
+
+    #[test]
+    fn 卸掉那一格就是off那一格() {
+        let 卸 = vec!["乙家".to_string()];
+        assert_eq!(
+            serde_json::to_string_pretty(&卸掉那一格(&卸)).unwrap(),
+            "{\n  \"off\": [\n    \"乙家\"\n  ]\n}"
+        );
+        assert_eq!(serde_json::to_string_pretty(&卸掉那一格(&[])).unwrap(), "{\n  \"off\": []\n}");
+    }
+
+    #[test]
+    fn 段名洗法照原件那两行() {
+        assert_eq!(洗那串("bank/data.txt").as_deref(), Some("bank/data.txt"));
+        assert_eq!(洗那串("bank\\data.txt").as_deref(), Some("bank/data.txt"));
+        assert_eq!(洗那串("///bank//../x").as_deref(), None); /* 打头斜杠去掉后还剩空段与 .. */
+        assert_eq!(洗那串("./a"), None); /* 原件只去打头斜杠，点段留给下面那一道拒 —— './a' 一样不认 */
+    }
+
+    #[test]
+    fn 回退写法与空段当场不认() {
+        assert_eq!(洗那串(""), None);
+        assert_eq!(洗那串("/"), None);
+        assert_eq!(洗那串(".."), None);
+        assert_eq!(洗那串("a/../../b"), None);
+        assert_eq!(洗那串("a/./b"), None);
+        assert_eq!(洗那串("a//b"), None);
+        assert_eq!(洗那串("a/b/"), None);
+    }
+
+    #[test]
+    fn 洗过的再拆开就是一段一段() {
+        assert_eq!(拆成段("bank/data.txt"), vec!["bank", "data.txt"]);
+        assert_eq!(拆成段("data.txt"), vec!["data.txt"]);
+    }
+
+    #[test]
+    fn 那几处名字常量照原件() {
+        assert_eq!(卸掉那份, "off.json");
+        assert_eq!(老的那份, "installed.json");
+        assert_eq!(清单那份, "manifest.json");
+        assert_eq!(压包后缀, ".zip");
+    }
+
+    /* ---------- 批七：写名单 / 导入 / 清数据 那三摊的尺 ---------- */
+
+    #[test]
+    fn 写名单与导入那十四句原话逐字对() {
+        assert_eq!(建不出那句, "插件目录建不出来：");
+        assert_eq!(名单删不掉那句, "名单删不掉：");
+        assert_eq!(名单写不进那句, "名单写不进去：");
+        assert_eq!(不是列表那句, "名单得是一份 id 列表");
+        assert_eq!(卸掉监听那句, "音乐遥控器卸掉了");
+        assert_eq!(读不到那份那句, "那份东西读不到：");
+        assert_eq!(只收压包那句, "挑文件这一条只收压缩包 · 解开的样子请挑那个文件夹");
+        assert_eq!(包读不动那句, "这个包读不动：");
+        assert_eq!(不像插件那句, "这个压缩包里没带插件清单，不像一个插件");
+        assert_eq!(格没带清单那句, "这个文件夹里没带插件清单，不像一个插件");
+        assert_eq!(包名不干净那句, "包名不干净，不敢落地：");
+        assert_eq!(落不成那句, "这个包落不成：");
+        assert_eq!(两不象那句, "挑的东西既不是文件也不是文件夹");
+        assert_eq!(导入失败那句, "导入失败：");
+    }
+
+    #[test]
+    fn 那两句带包名与带那一条的都是原件那一串拼法() {
+        assert_eq!(已占那句("词库"), "这里已经有一份「词库」了 · 要换先把它挪走");
+        assert_eq!(已占那句(""), "这里已经有一份「」了 · 要换先把它挪走");
+        assert_eq!(脏路径那句("a/../b"), "包里有脏路径，不敢落地：a/../b");
+        assert_eq!(空路径那句, "空路径");
+    }
+
+    #[test]
+    fn 页面递的名单折成一颗颗id() {
+        let 递的: Vec<Value> = serde_json::from_str(r#"["甲家",2,true,null,{"a":1},["乙","丙"]]"#).unwrap();
+        /* 原件那一手是 ids.map(String)：一颗都不筛，形状各异也照 String() 折 */
+        assert_eq!(开着的名单(&递的),
+            vec!["甲家".to_string(), "2".to_string(), "true".to_string(), "null".to_string(),
+                 "[object Object]".to_string(), "乙,丙".to_string()]);
+        assert!(开着的名单(&[]).is_empty());
+    }
+
+    #[test]
+    fn 开着的换成卸掉的是扫到的全部减开着的() {
+        let 全部: Vec<String> = vec!["甲家".to_string(), "乙家".to_string(), "丙家".to_string()];
+        let 开着 = vec!["甲家".to_string(), "丙家".to_string()];
+        /* 落盘的是「卸掉的」：这一格里扫到的、页面没点名说开着的（原件 1907 行那一句 filter） */
+        assert_eq!(换成卸掉(&全部, &开着), vec!["乙家".to_string()]);
+        /* 一家都没点名 ⇒ 全部记成卸掉；点名的那一家本来就没扫到 ⇒ off 里不会多出名字 */
+        assert_eq!(换成卸掉(&全部, &[]), 全部);
+        assert_eq!(换成卸掉(&全部, &["丁家".to_string()]), 全部);
+        assert!(换成卸掉(&[], &开着).is_empty());
+    }
+
+    #[test]
+    fn 递的那串照原件那一手只有假值才算空() {
+        assert_eq!(递的那串(&Value::Null), "");
+        assert_eq!(递的那串(&json!("")), "");
+        assert_eq!(递的那串(&json!(false)), "");
+        assert_eq!(递的那串(&json!(0)), "");
+        assert_eq!(递的那串(&json!("a")), "a");
+        assert_eq!(递的那串(&json!(true)), "true");
+        assert_eq!(递的那串(&json!(7)), "7");
+        assert_eq!(递的那串(&json!([])), "");
+        assert_eq!(递的那串(&json!(["x", "y"])), "x,y");
+    }
+
+    #[test]
+    fn 那份东西只读src那一栏没递也算空串() {
+        assert_eq!(那份东西(&json!({"src": "某处\\一棵树\\甲家.zip"})), "某处\\一棵树\\甲家.zip");
+        assert_eq!(那份东西(&json!({"src": ""})), "");
+        assert_eq!(那份东西(&json!({"src": null})), "");
+        assert_eq!(那份东西(&json!({})), "");
+        assert_eq!(那份东西(&Value::Null), "");
+        assert_eq!(那份东西(&json!([])), "");
+    }
+
+    #[test]
+    fn 清单上的id退兜底并去掉首尾空白() {
+        let 单 = json!({"id": "  甲家  ", "name": "  甲之名  "});
+        assert_eq!(清单上的id(&单, "兜底名"), "甲家");
+        /* 没写 id、写了空串、写了 null 都退兜底（原件 String(m.id || 兜底)） */
+        assert_eq!(清单上的id(&json!({}), "兜底名"), "兜底名");
+        assert_eq!(清单上的id(&json!({"id": ""}), "兜底名"), "兜底名");
+        assert_eq!(清单上的id(&json!({"id": null}), "兜底名"), "兜底名");
+        /* 名字那一栏不 trim —— 原件 m.name || id 就是照原文给 */
+        assert_eq!(清单上的名字(&单, "兜底名"), "  甲之名  ");
+        assert_eq!(清单上的名字(&json!({"name": ""}), "甲家"), "甲家");
+    }
+
+    #[test]
+    fn 收不收压缩包只看尾巴那四个字() {
+        assert!(是压包那份("某处\\那一格\\甲家.zip"));
+        assert!(是压包那份("某处\\那一格\\甲家.ZIP"));
+        assert!(!是压包那份("某处\\那一格\\甲家"));
+        assert!(!是压包那份("某处\\那一格\\zip"));
+        assert!(!是压包那份(""));
+    }
+
+    #[test]
+    fn 末段与后缀两头折法照node() {
+        assert_eq!(末段("某处\\那一格\\甲家.zip"), "甲家.zip");
+        assert_eq!(末段("某处/那一格/甲家.zip"), "甲家.zip");
+        assert_eq!(末段("甲家"), "甲家");
+        assert_eq!(末段(""), "");
+        assert_eq!(后缀("某处\\那一格\\甲家.zip"), ".zip");
+        /* 点在末段第一个字上（'.zip' 那种当名字用）算没后缀 —— path.extname 同一手 */
+        assert_eq!(后缀("某处\\那一格\\.zip"), "");
+        assert_eq!(后缀("某处\\那一格\\甲家"), "");
+        assert_eq!(末段去后缀("某处\\那一格\\甲家.zip"), "甲家");
+        assert_eq!(末段去后缀("某处\\那一格\\甲家.b.zip"), "甲家.b");
+        assert_eq!(末段去后缀("某处\\那一格\\甲家"), "甲家");
+        /* 整段就等于后缀时不折成空名字 */
+        assert_eq!(末段去后缀("某处\\那一格\\.hidden\\.hidden"), ".hidden");
+    }
+
+    #[test]
+    fn 折成绝对三种写法各归各的顶() {
+        let 当前 = format!("{}:\\某处\\一棵树", 'C');
+        /* 空串：原件 path.resolve('') 就是当前那一格 */
+        assert_eq!(折成绝对("", &当前), format!("{}:\\某处\\一棵树", 'C'));
+        /* 相对写法：并进当前那一格 */
+        assert_eq!(折成绝对("那一格\\甲家.zip", &当前), format!("{}:\\某处\\一棵树\\那一格\\甲家.zip", 'C'));
+        /* 盘符写法：斜杠折成反斜杠、顶上那枚分隔留着 */
+        assert_eq!(折成绝对(&format!("{}:/那一格/甲家", 'D'), &当前), format!("{}:\\那一格\\甲家", 'D'));
+        assert_eq!(折成绝对(&format!("{}:", 'D'), &当前), format!("{}:\\", 'D'));
+        /* 单个分隔打头：原件走同一个盘的根，这里也从 当前格 里取那枚盘符 */
+        assert_eq!(折成绝对("\\那一格\\甲家", &当前), format!("{}:\\那一格\\甲家", 'C'));
+        /* UNC：机器名 + 共享名 当顶 */
+        assert_eq!(折成绝对("\\\\另一台\\那一格\\甲家.zip", &当前), "\\\\另一台\\那一格\\甲家.zip");
+    }
+
+    #[test]
+    fn 折成绝对把段里的点与回退折干净() {
+        let 当前 = format!("{}:\\某处\\一棵树", 'C');
+        assert_eq!(折成绝对(&format!("{}:\\甲\\乙\\.\\丙", 'D'), &当前), format!("{}:\\甲\\乙\\丙", 'D'));
+        assert_eq!(折成绝对(&format!("{}:\\甲\\乙\\..\\丙", 'D'), &当前), format!("{}:\\甲\\丙", 'D'));
+        /* 退到顶就停住：原件 path.resolve 也不会退到顶以外 */
+        assert_eq!(折成绝对(&format!("{}:\\..\\..", 'D'), &当前), format!("{}:\\", 'D'));
+        assert_eq!(折成绝对("甲\\..\\..\\乙", &当前), format!("{}:\\某处\\乙", 'C'));
+        assert_eq!(折成绝对("甲//乙/", &当前), format!("{}:\\某处\\一棵树\\甲\\乙", 'C'));
+    }
+
+    #[test]
+    fn 摊那一条三种款式各照原件那一手() {
+        assert_eq!(摊那一条("assets/"), 那一条::跳过);
+        assert_eq!(摊那一条("assets\\"), 那一条::跳过);
+        assert_eq!(摊那一条(""), 那一条::脏(空路径那句.to_string()));
+        assert_eq!(摊那一条("./a//b"), 那一条::落成(vec!["a".to_string(), "b".to_string()]));
+        assert_eq!(摊那一条("a\\b.txt"), 那一条::落成(vec!["a".to_string(), "b.txt".to_string()]));
+        assert_eq!(摊那一条("a/../../b"), 那一条::脏(脏路径那句("a/../../b")));
+        assert_eq!(摊那一条(".."), 那一条::脏(脏路径那句("..")));
+        /* 原件那一手先判尾斜杠（1945 行），'./' 那种记的是文件夹，跳过轮不到段名那一道 */
+        assert_eq!(摊那一条("./"), 那一条::跳过);
+    }
+
+    #[test]
+    fn 页面递的不是列表就按空的一串办() {
+        let 列 = json!(["甲", "乙"]);
+        assert_eq!(按名单收(Some(&列)).len(), 2);
+        assert!(按名单收(Some(&json!("甲"))).is_empty());
+        assert!(按名单收(Some(&json!({"a": 1}))).is_empty());
+        assert!(按名单收(None).is_empty());
+        assert!(按名单收(Some(&Value::Null)).is_empty());
+    }
+
+    #[test]
+    fn 清数据只在数据层根以内动手() {
+        let 根 = "某处\\一棵树\\data";
+        assert!(在根以内("某处\\一棵树\\data\\userdata-fd\\notes.json", 根));
+        assert!(在根以内("某处\\一棵树\\data\\logs", 根));
+        /* 等号那一格自己不算以内（原件 root + path.sep 那一手）：数据层根本体不许整颗删 */
+        assert!(!在根以内(根, 根));
+        assert!(!在根以内("某处\\一棵树\\data2\\x", 根));
+        assert!(!在根以内("某处\\一棵树", 根));
+        /* 根上带不带尾分隔都同一个比法 */
+        assert!(在根以内("某处\\一棵树\\data\\x", "某处\\一棵树\\data\\"));
+    }
+
+    #[test]
+    fn 插件那一格与名单永远留着只挡这一格() {
+        let 包格 = "某处\\一棵树\\data\\plugins";
+        /* 整格本身与底下每一份都留着（包与 off.json 永远不许动 —— 装得回来靠的就是它还在） */
+        assert!(包那一格留着(包格, 包格));
+        assert!(包那一格留着("某处\\一棵树\\data\\plugins\\甲家\\main.js", 包格));
+        assert!(包那一格留着("某处\\一棵树\\data\\plugins\\off.json", 包格));
+        /* 名字像但不是的那一格不挡（原件比的是 resolve 完的前缀） */
+        assert!(!包那一格留着("某处\\一棵树\\data\\pluginsx", 包格));
+        /* 原厂底那一格（plugins-factory）原件压根没挡 —— 照实钉住，不许哪天「顺手保守一点」 */
+        assert!(!包那一格留着("某处\\一棵树\\data\\plugins-factory\\甲家", 包格));
+        assert!(!包那一格留着("某处\\一棵树\\data\\logs", 包格));
+    }
+}

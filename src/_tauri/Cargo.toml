@@ -1,0 +1,75 @@
+# Flow-Desk 的 Tauri 壳（外46 起这条线开工，目标是换掉 Electron 那一层）
+# 三元组必须走 GNU：这台机器没有微软那个链接器（link.exe 缺，而且 Git 自带一个同名的 link 抢在前面）。
+# 编译别直接喊 cargo —— 用同一格里的 build.mjs，它把 RUSTUP_HOME / CARGO_HOME / PATH 三样一起设死
+# （只改 PATH 的话 rustup 会按默认往 C 盘下一整套装具，2026-10-10 踩过一次，2.8 GB）。
+[package]
+name = "flowdesk"
+version = "2.0.0-alpha.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# tray-icon 这一档是给「关窗口那张框 · 收进托盘」那条留的落点：不开这一档，主进程那边的 hideToTray 在壳里没有对应的接口。
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# 挑文件与挑目录那两道对话框：走官方那颗插件的 Rust 接口（app.dialog().file()），
+# 页面上那串 window.showOpenFilePicker 由还没写的 JS 桥顶上去，页面本身不改。
+tauri-plugin-dialog = "2"
+# 这一组搬的是系统那一头的三件事，全走 Windows 自己的接口，不学 Electron 那样 shell 出去喊 powershell：
+#   Win32_Graphics_DirectWrite → 系统字体族表（IDWriteFontCollection，一张真脸带着数出来的字重）
+#   Win32_System_Registry      → 「现在是深色还是浅色」那一个值（Chromium 背后读的也是同一格注册表）
+#   Graphics_Imaging + Media_Ocr + Globalization + Foundation_Collections + Storage + Storage_Streams
+#                              → 取色用的那一套离线 OCR（Windows.Media.Ocr）与它的解码/缩放
+#   Win32_System_WinRT         → WinRT 的类要先给这一条线程定线程模型（RoInitialize；
+#                                链的是 api-ms-win-core-winrt-l1-1-0.dll —— windows-core 本来就链这一颗，不是新添）
+# 版本钉 0.62：这台机器上缓存里就这一版（tauri/wry 已经带上了），换版本就要现下。
+windows = { version = "0.62", features = [
+  "Win32_Graphics_DirectWrite",
+  "Win32_System_Registry",
+  "Win32_System_WinRT",
+  # 批二加的三个口子：网址取标题走 wininet.dll 自己取（这一头没有 TLS 件，也不另下一套 reqwest，
+  # Windows 自带的 SChannel 就是这一条路）；图片「用系统看图打开」走 shell32 的 ShellExecuteW，
+  # 与 Electron 那颗 shell.openPath 同一手（它那一栏 SHOW_WINDOW_CMD 住在 WindowsAndMessaging 那一档里）。
+  "Win32_Networking_WinInet",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+  # 批四（音乐遥控器那九颗）加的四档，每档各写自己那点的名：
+  # Media_Control → Windows.Media.Control 那一整摊（SMTC）：media:state 读会话快照、media:cmd 发控制命令，
+  #   media:hold / media:release 起收的那条监听线程挂会话那三个变更事件 + 管理器那两个 —— 对应 tauri_bind::media_cmds
+  "Media_Control",
+  # Win32_Media_Audio → vol:get / vol:set / vol:mute 这三颗：MMDeviceEnumerator 现数默认输出端点，
+  #   GetDefaultAudioEndpoint(eRender, eConsole) + IMMDevice::Activate（Activate 那颗的入参也指在这儿）
+  "Win32_Media_Audio",
+  # Win32_Media_Audio_Endpoints → 还是 vol:get / vol:set / vol:mute 那三颗，真动音量的那枚接口 IAudioEndpointVolume
+  #   （Get / SetMasterVolumeLevelScalar 与 Get / SetMute 都在这一档里）
+  "Win32_Media_Audio_Endpoints",
+  # Win32_System_Com → 还是 vol:get / vol:set / vol:mute 那三颗：CoInitializeEx / CoUninitialize
+  #   给那条后台线程定 COM 线程模型，CoCreateInstance + CLSCTX_INPROC_SERVER 现拿端点
+  "Win32_System_Com",
+  "Win32_Foundation",
+  "Foundation",
+  "Foundation_Collections",
+  "Globalization",
+  "Graphics_Imaging",
+  "Media_Ocr",
+  "Storage",
+  "Storage_Streams",
+] }
+# 取色那一条要照主进程那边一样兜住「三十秒没回来」，还要把那一趟放到自己的一条线程上跑
+# （WinRT 那些对象不是 Send，挪不进 tauri 那条 async 命令的future 里）：
+# rt = 那条线程自带一台单线程 tokio，sync = 线程与命令之间的回执通道，time = 三十秒那颗闸。
+# 这三档都在这份 crate 已经在的依赖图里，不另下一套东西。
+tokio = { version = "1", features = ["rt", "sync", "time"] }
+# data:wipe 那张字条上的「排下的那一刻」：主进程那边是 new Date().toLocaleString()（本机墙上时间，
+# 月与日不带零），std 里没有时区件，只能用同一份图里已经编好的 chrono（tauri-utils → serde_with 那条链上就带着它）。
+# 只开 clock + std 那一档：默认的 wasmbind 会把 js-sys / wasm-bindgen 挂进名单（这台机器用不着，公开面白多两行）。
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+# 插件那一列那两颗（pack:list 读包里的插件清单、pack:file 从包里取一份文件）要解 deflate 那一档压缩：
+# 走图里已经编好的这一颗（png → flate2 那条链上本来就带着它，不另下一套东西，也不在壳里写第二个解包器 ——
+# 拆包只有 fd_core::zip_pack 那一颗，目录() 与 取一份() 两头共用）。
+# 只开默认那两档（rust_backend + runtime_detection）：纯 Rust 的那一款，不链 C 的 zlib。
+flate2 = "1"
+tauri-plugin-single-instance = "2.5.3"
