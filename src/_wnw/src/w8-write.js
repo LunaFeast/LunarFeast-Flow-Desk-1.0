@@ -1757,7 +1757,7 @@ class ChView{
     on('type:set', () => this.syncTypeRow());
     /* 灵感 / 卡片往正文里投一段：谁最后打开，就投进谁这一章。词格那一档投进来的是一行格子 */
     const sink = (text, k) => {
-      if(词格档.在 && this.c.mode === LYRIC_MODE && this.grid) return this.grid.pourIn(text);
+      if(this.c.mode === LYRIC_MODE && this.grid) return this.grid.pourIn(text);
       this.c.paras.push(newPara('p', text)); this.dirty(); this.drawBody(); return true;
     };
     ChPlug.sink = sink;
@@ -1784,7 +1784,7 @@ class ChView{
      不然切一次模式就把人家的记号吞了。词格那一档的正文不住在 c.paras（住在 c.lyric，真源是 lyrics\\ 那个文件），
      切进去切出来都不许碰它那几段。 */
   plain(){
-    if(this.c.mode === 'note' || (词格档.在 && this.c.mode === LYRIC_MODE)) return;
+    if(this.c.mode === 'note' || this.c.mode === LYRIC_MODE) return;
     for(const p of this.c.paras){
       if(OBJ_KINDS.includes(p.k) || (p.k === 'p' && !p.done)) continue;
       const was = p.t;
@@ -1821,7 +1821,7 @@ class ChView{
       h('span', { style:'flex:1' })
     ]);
     /* 模式不换第三个按钮：这一个显示当前那一档，点开下拉换（词格进下拉，不并排） */
-    const MODE_IT = [['write', '写作模式'], ['note', '笔记 / 富文本模式']].concat(词格档.在 ? [[LYRIC_MODE, '词格模式']] : []);
+    const MODE_IT = [['write', '写作模式'], ['note', '笔记 / 富文本模式'], [LYRIC_MODE, '词格模式']];
     const now = MODE_IT.find(m => m[0] === c.mode) || MODE_IT[0];
     const seg = h('div', { class:'wnw-seg' });
     seg.appendChild(h('button', { class:'on', title:'点开换这一屏的模式', onclick:ev => Menu.under(ev.currentTarget,
@@ -1830,7 +1830,7 @@ class ChView{
     name.appendChild(seg);
     top.appendChild(name);
     /* 词格这一档不摆工具条和版式那一行：块类型、样式、markdown 都进不来，动作在格子那排自己的头上 */
-    if(!(词格档.在 && c.mode === LYRIC_MODE)){ top.appendChild(this.toolbar()); top.appendChild(this.fmtRow()); }
+    if(c.mode !== LYRIC_MODE){ top.appendChild(this.toolbar()); top.appendChild(this.fmtRow()); }
     return top;
   }
   /* 换模式：切档不改另一档的数据 —— 词格那份挂在 c.lyric，正文那几段 c.paras 原样留着，切回去还在 */
@@ -2086,7 +2086,7 @@ class ChView{
     const c = this.c;
     this.grid = null;
     /* 词格这一档：正文是一排格子，不是编辑器 —— 章纲卡片、批注那一栏、右键那套都不建 */
-    if(词格档.在 && c.mode === LYRIC_MODE){
+    if(c.mode === LYRIC_MODE){
       this.ed = null;
       this.sideBox.style.display = 'none';
       this.sideTab.style.display = 'none';
@@ -2204,7 +2204,7 @@ class ChView{
     if(box.contains(document.activeElement)) return;
     box.innerHTML = '';
     /* 词格这一档不接批注与修订痕迹那一栏：那一栏数的是 c.paras 上的段，这一档的正文不在那儿 */
-    const lyric = !!this.c && 词格档.在 && this.c.mode === LYRIC_MODE;
+    const lyric = !!this.c && this.c.mode === LYRIC_MODE;
     const on = !lyric && !!this.c && this.sideOn();
     box.style.display = on ? '' : 'none';
     if(this.sideTab) this.sideTab.style.display = on || lyric ? 'none' : '';
@@ -2924,7 +2924,7 @@ class ChView{
   }
   logKeys(){
     const c = this.c;
-    if(!c || (词格档.在 && c.mode === LYRIC_MODE)) return;
+    if(!c || c.mode === LYRIC_MODE) return;
     const now = (c.paras || []).map(p => p.t || '');
     const was = this.kWas;
     this.kWas = now;
@@ -2941,7 +2941,7 @@ class ChView{
     clearTimeout(this.dirtyTimer);
     if(!this.c) return;
     /* 词格那一档的真源是 lyrics\ 里那个明文文件：先把文件落稳，再留版本、再写章缓存（缓存里的 lyricAt 用来认新旧） */
-    if(词格档.在 && this.c.mode === LYRIC_MODE && this.grid) await this.grid.persist();
+    if(this.c.mode === LYRIC_MODE && this.grid) await this.grid.persist();
     /* 从前这里每存一次正文就顺手落一版整本快照（60 秒内不重复）。逐字记录上了之后那一摞快照不再需要：
        敲过的每一个字、隔多久敲的，都在 history\<章id>\keystroke.txt 里，一版都不落也回放得出来。
        手动「存一版」照旧留档，回退之前那一版也照旧留。 */
@@ -2959,7 +2959,7 @@ class ChView{
     const c = this.c;
     if(!this.foot) return;
     /* 词格那一档的账在格子上，不在 c.paras 上：页脚给行 / 格 / 时长，不给「本章几字」 */
-    if(词格档.在 && c.mode === LYRIC_MODE && this.grid){ this.grid.foot(msg); return; }
+    if(c.mode === LYRIC_MODE && this.grid){ this.grid.foot(msg); return; }
     const cnt = parasCount(c.paras), ol = parasCount(c.outline);
     this.foot.innerHTML = '';
     this.foot.appendChild(h('span', {}, '本章 ' + cnt.w + ' 字' +
@@ -3023,9 +3023,7 @@ function cntTxt(own, den, cum, g){
   return s;
 }
 /* 一章存的是哪一档（外25 第 8 条）：三档各挂一张现成的图，不新造图形 */
-const CH_MODE_ICO = { write:['pencil', '写作模式'], note:['list', '笔记 / 富文本模式'] };
-/* 词格那一档在的时候，w18 自己把 lyric 那一项添回来 */
-if(词格档.在) CH_MODE_ICO[LYRIC_MODE] = ['music', '词格模式'];
+const CH_MODE_ICO = { write:['pencil', '写作模式'], note:['list', '笔记 / 富文本模式'], lyric:['music', '词格模式'] };
 
 Views.reg('panel-ch', {
   name:'章节', icon:'list', dockable:true, compactBelow:220,
@@ -3365,7 +3363,7 @@ Views.reg('panel-ch', {
         { label:'在新标签页打开', fn:() => openVol(v) },
         { label:'在停靠打开', fn:() => Desk.dockIt('vol', v.id, v.title) },
         /* 词巡航只吃「整卷的章都是词格」那种卷，不够格就不摆这一条（摆一条点不动的比少一条更糟） */
-        ...巡航菜单,
+        cruiseReady(v.id) ? { label:'词巡航（这一卷的词格闪卡）', fn:() => Desk.addTab('cruise', v.id) } : null,
         { sep:true },
         /* 解散和删除是两回事，两条并排放着、各自把章的去向写在题目上：
            解散一章都不丢（只剩这一卷时全书改成不分卷，否则并进邻卷），删除才进回收站。 */
@@ -3416,7 +3414,7 @@ Views.reg('panel-ch', {
       Menu.open(ev.clientX, ev.clientY, [
         { label:'改名', fn:() => rename(v.title, async t => { await Work.renameVol(v.id, t); draw(); }) },
         { label:'这一卷加一章', fn:() => add(v.id) },
-        ...巡航菜单,
+        cruiseReady(v.id) ? { label:'词巡航（这一卷的词格闪卡）', fn:() => Desk.addTab('cruise', v.id) } : null,
         { sep:1 },
         { label: only ? '全书改成不分卷（章挂到书名底下）' : '解散这一卷（章并进' + (b.vols[0].id === v.id ? '后一卷' : '前一卷') + '）', fn:() => dissolve(v) },
         { label:'删除这一卷（章进回收站）', fn:() => delVol(v) }
@@ -3459,7 +3457,9 @@ Views.reg('panel-ch', {
           fn:() => BookImport.pick('here', draw) },
         /* 书巡航（外26 追加）：跨卷把整本书每一卷的词格章串成一串闪卡。
            这本书一个词格都没有的时候这一条不摆（摆一条点开来是空屏的比少一条更糟）。 */
-        ...巡航菜单,
+        cruiseBookReady() ? { label:'书巡航（整本书的词格闪卡）',
+          title:'不分卷：这本书里哪些章是词格模式，就收哪些章的行；卷巡航只吃整卷都是词格的那一卷，这一条放宽到一章',
+          fn:() => Desk.addTab('cruise', CRUISE_BOOK) } : null,
         { sep:1 },
         { label:'快捷创建章节', on:listSt.quick, fn:async () => { listSt.quick = !listSt.quick; await State.set('ch.list', listSt); draw(); } },
         { label:'显示累计字数（按书籍累计）', on:listSt.cum, fn:async () => { listSt.cum = !listSt.cum; await State.set('ch.list', listSt); draw(); } },

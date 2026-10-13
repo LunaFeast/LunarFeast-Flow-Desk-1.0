@@ -4,16 +4,6 @@
    卡片 / 模板 / 灵感 / 笔记 / 画板 / 版本 / 词库覆盖 各自独立键
    全部放在 wnw-docs 一个库里，靠键名前缀区分类型；WNW 自己的表单状态在另一个库
    ============================================================ */
-/* ---------- 词格那一档在不在（这一枚包没勾词格时，走这一格）----------
-   本体在 w18-lyric.js 与 w19-cruise.js 里；这一枚没带上那两份，于是这一格全是空的 ——
-   模式下拉里少一档、章与卷右键那几项巡航不摆、＋ 那张清单里那两条也不摆，界面上不留半个坏口。
-   老章里 mode 还写着 lyric 的按正文那一档摆：c.lyric 与 lyrics\ 那个明文文件一个字不动，
-   勾上词格那一枚照旧全在。 */
-const LYRIC_MODE = 'lyric';
-const 词格档 = { 在:false, paras:c => (c && c.paras) || [] };
-const 巡航菜单 = [];
-const 巡航拾取 = [];
-
 function uid(p){
   return (p || 'x') + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 7);
 }
@@ -569,7 +559,7 @@ const Work = {
         for(const p of c.outline) push({ p, ind:true });
       }
       /* 词格那一档的正文不住在 c.paras（那是切进这一档之前的旧正文）：整本导出要的是眼下这几行词 */
-      const body = (词格档.在 && c.mode === LYRIC_MODE && c.lyric) ? 词格档.paras(c) : c.paras;
+      const body = (c.mode === LYRIC_MODE && c.lyric) ? lyricParas(c.lyric) : c.paras;
       for(const p of (body && body.length ? body : c.paras)) push({ p });
       if(opt.withAnno && opt.annosOf.length){
         blocks[blocks.length - 1].chEnd = opt.annosOf;
