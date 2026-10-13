@@ -131,9 +131,12 @@ delete process.env.FD_底号;
 
 台.题('五、失败即停');
 台.判('任何一步砸了都走 停（里面 process.exit(1)）', 停颗.includes('process.exit(1)'));
-台.判('打包那三趟任何一趟砸了都当场停，停得比最后那一眼还早（什么都不推）',
-  rel.indexOf('src/pack/publish.mjs') < rel.indexOf('if(!NOPUSH)') && rel.indexOf('src/_fd/build.mjs') < rel.indexOf('src/pack/publish.mjs') &&
-  rel.includes('这一趟没跑成，一律不推'));
+const 发链 = rel.slice(rel.indexOf('const 跑 = (cmd, args)'));
+台.判('发布那一串任何一趟砸了都当场停，停得比推那一步还早（什么都不推）',
+  发链.includes('uitext.artifactBuilds()') &&
+  发链.indexOf("src/_tauri/build.mjs") < 发链.indexOf("src/pack/publish.mjs") &&
+  发链.indexOf("src/pack/publish.mjs") < 发链.indexOf('if(!NOPUSH)') &&
+  发链.includes('这一趟没跑成，一律不推'));
 台.判('那条支推砸了也报是哪一条（不吞、不说含混话、不重试强推）', pr.includes('那条支推砸了（'));
 台.判('未合并那道闸排在任何写活之前：号要钉在 main 上真实存在的那一笔上',
   rel.indexOf('先合并 PR，再打包') < rel.indexOf('const 装 = 拼装(') && rel.indexOf('先合并 PR，再打包') > rel.indexOf('const 主仓dirty'));

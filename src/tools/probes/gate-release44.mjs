@@ -43,7 +43,9 @@ const pub = rd('src/pack/publish.mjs');
 台.判('③ 每一家的号用它自己那一支上最后动过代码的那一笔的短哈希拼', /底号\(\) \+ '\+build\.' \+ 笔/.test(rel) && /那一支最后一笔\(job\)/.test(rel));
 台.判('③ tag 由脚本本地打（v + 完整号），同名钉在另一笔上就停下', /git\(dir, \['tag', '-a', name/.test(rel) && rel.includes('别让它指歪'));
 台.判('④ 号当环境变量传进打包：FD_BUILD + FD_PLUGINS 两格', /FD_BUILD: 主短/.test(rel) && /FD_PLUGINS: JSON\.stringify/.test(rel));
-台.判('④ 打包那三趟按顺序跑：生成 → 铺出厂镜像 → 出发布物', rel.indexOf('src/_fd/build.mjs') < rel.indexOf('src/pack/build-app.mjs') && rel.indexOf('src/pack/build-app.mjs') < rel.indexOf('src/pack/publish.mjs'));
+台.判('④ 发布那一串按顺序跑：先按这一棵自己的次序生成产物（为写那颗内核 → 页面）→ 编 Tauri 那颗壳 → 出发布物',
+  rel.includes('uitext.artifactBuilds()') && rel.indexOf('uitext.artifactBuilds()') >= 0 &&
+  rel.indexOf("src/_tauri/build.mjs") < rel.indexOf("src/pack/publish.mjs"));
 台.判('⑤ 任何一步砸了都走 停（里面一律不推）', rel.indexOf('停(') > 0 && /process\.exit\(1\)/.test(rel));
 台.判('⑥ 这一颗一个字节都不推：release.mjs 里没有 push 那一手，推只在 pr.mjs 里推那一条支，而且排在同步→开支→落笔→扫公开面 之后',
   !/'push'/.test(rel) && !/push origin/.test(rel) &&
@@ -51,9 +53,9 @@ const pub = rd('src/pack/publish.mjs');
   pr.indexOf('公开面闸(名, 远端)') < pr.indexOf("'push', '-u', 远端, 名") && pr.indexOf('公开面闸(名, 远端)') > pr.indexOf('export function 同步远程'));
 台.判('⑥ 提交都已经在远端的棵不推（--dry 也不推）', /未推 === 0/.test(rel) && rel.includes('提交都已经在远端了，不推'));
 台.判('试跑那一格留得下来：--不推 走完提交到本地 tag，一根不推（tag 是本地对象，不外传）', /const NOPUSH = has\('--不推'\)/.test(rel) && /if\(!NOPUSH\)/.test(rel) && rel.indexOf('打tag(TREE,') < rel.indexOf('if(!NOPUSH)'));
-台.判('看一眼那两格留得下来：--dry 与 --看 都在真打包之前就退出，仓里什么都没写（自测包那一道里也写着 publish 那一名，所以钉的是真调用那一处）',
+台.判('看一眼那两格留得下来：--dry 与 --看 都在真打包之前就退出，仓里什么都没写（真跑那一串从 跑() 那一颗起，所以钉的是它之前那两道 exit）',
   /if\(DRY\)\{/.test(rel) && rel.includes('（--dry：什么都没写') && rel.includes('（--看：仓里什么都没写') &&
-  rel.indexOf('process.exit(0)') < rel.indexOf("跑(process.execPath, ['src/pack/publish.mjs'])"));
+  rel.indexOf('process.exit(0)') < rel.indexOf('const 跑 = (cmd, args)'));
 
 台.题('三、插件那一头的旧口径撤干净了');
 台.判('不再压成一颗没有爹的提交（amend / reset --soft 都下台了）', !/--amend/.test(rep) && !/'reset', '-q', '--soft'/.test(rep));
@@ -80,9 +82,10 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   const 自 = 起 < 0 ? '' : rel.slice(起, rel.indexOf('\n}\n', 起) + 3);
   台.判('0 那一道切得出来（不是空切片：切不到就是这一档被挪走或删了，下面几条会全成空跑）',
     自.length > 400, 自.length + ' 字');
-  台.判('1 这一档只跑那三趟，且四样 git 写活一个都不沾：不落笔、不挪指针、不打 tag、不推',
-    /'src\/_fd\/build\.mjs', 'src\/pack\/build-app\.mjs', 'src\/pack\/publish\.mjs'/.test(自) &&
-    !/commit-tree|update-ref|merge-tree|往那一支写|拼装\(|同步那一支\(|'tag'|'push'/.test(自), '三趟 + 零写活');
+  台.判('1 这一档只跑那一串（生成产物的次序从 artifactBuilds() 取，其后编壳、发布点名 tauri），且四样 git 写活一个都不沾：不落笔、不挪指针、不打 tag、不推',
+    /uitext\.artifactBuilds\(\)\.map/.test(自) && /'src\/_tauri\/build\.mjs'/.test(自) && /'--壳=tauri'/.test(自) &&
+    !/'src\/pack\/build-app\.mjs'/.test(自) &&
+    !/commit-tree|update-ref|merge-tree|往那一支写|拼装\(|同步那一支\(|'tag'|'push'/.test(自), '那一串 + 零写活');
   台.判('2 号只当环境变量传进生成那一趟（不写 version.json、不写各家清单）',
     /FD_BUILD: 短/.test(自) && !自.includes('写清单(') && !自.includes('号写回清单'));
   台.判('3 盘上没提交照打（这一趟要量的就是这些），但 Flow-Desk 开着就停 —— 页面与壳那一层会被它自己咬住',
@@ -118,7 +121,7 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
     自.includes("val('--不带', '')") && 自.includes('没点 —— 这一枚带的就是这一棵上的全部') &&
     !/停\('--不带.*空着/.test(自));
   台.判('12 不带的落到发布那一趟的 --skip=（publish 里那一颗已经把两格与货架一起挑掉，这里不另写一份挑货的）',
-    /'--skip=' \+ 不带\.join\(','/.test(自) && 自.includes("趟 === 'src/pack/publish.mjs'") &&
+    /'--skip=' \+ 不带\.join\(','/.test(自) && 自.includes("'src/pack/publish.mjs'") &&
     自.includes('家表.some(j => j.id === id)') && !自.includes("'--skip=notes'"));
   台.判('13 屏上那两栏勾完直接递给这一道（插件那六家一家一格、功能那八项一项一格，屏上不露内部名字、不要他手打）',
     rd('src/_build/push-ui.html').includes('id="七家"') && rd('src/_build/push-ui.html').includes('function 不带的家') &&

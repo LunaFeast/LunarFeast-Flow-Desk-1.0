@@ -59,6 +59,7 @@ import { 清单名, 清单路, 读盘清单, 读清单, 拼清单, 写清单, �
 /* 推支与建 PR 那一整手住在 pr.mjs 里；这一颗只借它两道只读的闸：支名形状、合并状态那一眼 */
 import { 校验支名, 查合并 } from './pr.mjs';
 import { 八项, 认这项, 中文名 as 中文名of, 分支of, 分支在不在, 摊打包那一棵 } from './forward-features.mjs';
+import uitext from '../pack/uitext.cjs';    /* 生成产物那几趟的次序只在它那一颗里说一次，这一头不抄第二份 */
 
 const argv = process.argv.slice(2);
 const has = f => argv.some(a => a === f || a.startsWith(f + '='));
@@ -74,7 +75,11 @@ const DRY = 看 || has('--dry');
 const NOPUSH = has('--不推');
 const ONLY = val('--only', '').split(',').map(s => s.trim()).filter(Boolean);
 const P = (n) => console.log(n);
-const 停 = (why) => { console.error('\n停下来：' + why + '\n'); process.exit(1); };
+/* 停下来之前要先收的那一手（临时那一棵那一格）：停 = 当场退，try/finally 那一块跑不到，
+   不收就会在盘上留一棵摊开的与一根注册过的 worktree —— 下一次再摊同一格，git 报的是
+   「is a missing but already registered worktree」，得先 prune 才走得动（2026-10-14 就是这么撞的）。 */
+let 收摊 = null;
+const 停 = (why) => { try{ if(收摊) 收摊(); }catch(e){} console.error('\n停下来：' + why + '\n'); process.exit(1); };
 
 if(!看 && !发 && !自测 && !DRY)
   停('这一颗现在认三道命令：--看（量出清单、写完就停）、--打自测包（流程第 3 步：本地出一个自测包给你手动测，不落笔、不打 tag、不推）、' +
@@ -191,31 +196,50 @@ if(自测){
      main 这一棵本来就是基础版，所以打包这一趟不做什么"摘"的动作 —— 少一样东西靠的是不合进来，不是删代码。 */
   let 那棵 = null;
   {
-    const 一格 = path.join(工区 || '', '打包那一棵-' + 自测档 + '-' + 短 + (项.length ? '-带' + 项.join('+') : '-只有基点'));
+    /* 那一格的名字必须纯英文：编壳那一趟里 windres 编译图标时认不了中文路径
+       （报的是 `can't open icon file ...: Invalid argument`，跟 编译缓存那一格必须纯英文同一类坑）。
+       简装 / 完整 这两个字在这一格里换成 lite / full，界面上与清单里照旧用中文。 */
+    const 一格 = path.join(工区 || '', 'pack-' + (自测档 === '完整' ? 'full' : 'lite') + '-' + 短
+      + (项.length ? '-' + 项.join('+') : '-base'));
     if(!工区) 停('要打这一枚，得先有「工区」那一格（src\\tools\\本地路径.cjs 里登记的）—— 那一棵要摊到仓外，不能落在仓里。');
     try{
       那棵 = 摊打包那一棵(TREE, 基点支, 项, 一格, undefined, 基点支 === 'HEAD' ? [] : 家表.map(j => j.支));
+      收摊 = () => { if(那棵){ 那棵.撤(); P('\n  那一格收掉了（中途停下也收，不留那一棵与那根临时指针在盘上）。'); } };
       P('  这一枚从一棵临时的树上打：' + 那棵.目录);
       for(const x of 那棵.合了) P('    + 合上 ' + x.中文 + '（' + x.分支 + ' 那一笔 ' + x.支头 + ' → 临时那一笔 ' + x.笔 + '）');
       P('  你那一棵（' + 站 + '）一个字不动；这一趟跑完把那一格收掉。');
     }catch(e){ if(那棵) 那棵.撤(); 停('摊那一棵没摊成：' + String((e && e.message) || e)); }
   }
   const 跑在 = 那棵 ? 那棵.目录 : TREE;
+  let 出事 = '';
   try{
-    for(const 趟 of ['src/_fd/build.mjs', 'src/pack/build-app.mjs', 'src/pack/publish.mjs']){
-      const 参 = 趟 === 'src/pack/publish.mjs' && 不带.length ? [趟, '--skip=' + 不带.join(',')] : [趟];
+    /* 这一棵只剩 Tauri 那一颗壳，所以这一串是：先按那一棵自己的次序把产物生成齐（为写那颗内核 → 页面，
+       带上推演组件定制那一棵时它也在这串里），再编壳，最后发布那一趟（点名要 tauri 那一颗）。
+       编壳要的那三样环境（Rust 两套工具链的家、齐的一串 binutils、gnu 那三元组）由 src\_tauri\build.mjs
+       自己从不进仓那份 本地路径.cjs 里取，这一头不重复一遍；发布那一趟找那颗 exe 也走同一格。 */
+    /* 发布那一趟在临时那一棵里跑，产物要落回你这一棵的 dist\ —— 不给它指这一格，
+       那一个 setup.exe 就落在临时那一格里，跟着「收格子」那一步一起没了（2026-10-14 真跑这一串时量到的）。 */
+    const 三趟 = [...uitext.artifactBuilds().map(趟 => [趟, []]), ['src/_tauri/build.mjs', []],
+      ['src/pack/publish.mjs', ['--壳=tauri', '--out=' + path.join(TREE, 'dist', 'tauri')]
+        .concat(不带.length ? ['--skip=' + 不带.join(',')] : [])]];
+    for(const [趟, 附] of 三趟){
+      const 参 = [趟].concat(附);
       P('\n$ node ' + 参.join(' ') + '   （在 ' + 跑在 + '）');
       try{
         const out = execFileSync(process.execPath, 参, { cwd:跑在, env, encoding:'utf8', stdio:['ignore','pipe','pipe'] });
         process.stdout.write(out.split(/\r?\n/).slice(-14).join('\n') + '\n');
       }catch(e){
-        停('「' + 趟 + '」这一趟没跑成。自测包到这儿为止 —— 仓里没提交、没打 tag、没推。\n' +
-          String((e && (e.stdout || e.stderr)) || (e && e.message) || e).replace(/\r?\n/g, '\n  ').slice(0, 1200));
+        /* 先记下来、走完这一串再停：停 = 当场 process.exit，写在收格子那一步之前就会把这一棵与那根指针留在盘上 */
+        出事 = '「' + 趟 + '」这一趟没跑成。自测包到这儿为止 —— 仓里没提交、没打 tag、没推。\n' +
+          String((e && (e.stdout || e.stderr)) || (e && e.message) || e).replace(/\r?\n/g, '\n  ').slice(0, 1200);
+        break;
       }
     }
   } finally {
+    收摊 = null;
     if(那棵){ 那棵.撤(); P('\n  那一格收掉了（临时那几笔与那根临时指针一并清掉）。'); }
   }
+  if(出事) 停(出事);
   P('\n自测包出好了（号 ' + 基线 + '+build.' + 短 + '，这一串只烧进产物，没写进 data\\version.json、没写各家清单）。');
   P('  发布物在 dist\\ 那一格；装完你手动测，测过了再走流程第 4 步：node src/_build/pr.mjs --提交PR。');
   process.exit(0);
@@ -472,11 +496,14 @@ const 跑 = (cmd, args) => {
     停('「' + args[0] + '」这一趟没跑成，一律不推。\n' + String((e && (e.stdout || e.stderr)) || (e && e.message) || e).replace(/\r?\n/g, '\n  ').slice(0, 1200));
   }
 };
-跑(process.execPath, ['src/_fd/build.mjs']);
-/* 出厂镜像那一层（resources\app\）必须在打包之前铺齐 —— 从前这一步搭在 build-update.mjs 里顺手办了，
-   那条 zip 更新链撤了之后，publish 只管照着盘上那一层收，谁铺齐它不管：所以在这儿明着跑一次。 */
-跑(process.execPath, ['src/pack/build-app.mjs']);
-跑(process.execPath, ['src/pack/publish.mjs']);
+/* 发布那一趟也走 Tauri 这一条：先按这一棵自己的次序把产物生成齐（为写那颗内核 → 页面，
+   带上推演组件定制那一棵时它也在这串里 —— 次序只在 uitext.artifactBuilds() 那一份里说一次），
+   再编那颗壳，最后发布那一趟点名要 tauri。
+   从前第二趟跑的是 src\pack\build-app.mjs（铺 Electron 那一份 resources\app 镜像）—— 换成这颗壳之后
+   桥、命令表、硬地板那份名单都编进 exe 里，那一层没有对等的东西要铺。 */
+for(const [趟, 附] of [...uitext.artifactBuilds().map(x => [x, []]),
+                       ['src/_tauri/build.mjs', []], ['src/pack/publish.mjs', ['--壳=tauri']]])
+  跑(process.execPath, [趟].concat(附));
 
 /* ---------- 旧版本就地收走（他 2026-10-10 两句：「这种多版本的地方都需要定期清理旧版本」+「只留最新，旧版转移到存档那一格」）----------
    两个地方会堆：pages\（每生成一张写一张）、dist\（每打一颗 exe 多一份）。

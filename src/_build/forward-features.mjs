@@ -132,30 +132,52 @@ export function 现在带不带(在, 项) {
   return { 带: null, 话: '这一项还没登记怎么量（不当它带着，也不当它没有）' };
 }
 
-/* 把一棵里那些「不进仓、但跑那三趟要」的格子（node_modules 那一种）用硬链接铺过去：
+/* 把一棵里那些「不进仓、但跑那三趟要」的东西（运行时那一格、本机那份登记）用硬链接铺过去：
    同一块盘上只存一份，243 MB 的运行时不复制第二遍；删那一格里的副本动不到原来那一份。
+   源可以是一整格，也可以就一份文件（src\tools\本地路径.cjs 那一种：它不进仓，可在临时那一棵里跑的
+   编壳与发布两趟都要读它 —— 少带这一份，临时那一棵里报的是「本地那份登记里没写 Rust 那三颗位置」）。
    跨盘链不动 —— 当场抛并说清楚为什么（那一格得换到仓所在那一块盘上）。 */
 export function 硬链接一份(源, 到) {
   let 数 = 0;
+  const 链 = (s, d) => { try{ fs.linkSync(s, d); 数++; } catch(err){
+    throw new Error('链不动 ' + s + ' → ' + d + '：' + ((err && err.message) || err) + '（同一块盘上才链得上 —— 那一格得换到仓所在那一块盘上）');
+  } };
+  const 单 = fs.statSync(源);   /* 读不到就当场抛：宁可停在这儿，也别静默出一棵缺件子的树 */
+  if(单.isFile()){
+    fs.mkdirSync(path.dirname(到), { recursive: true });
+    fs.rmSync(到, { force: true });
+    /* 一份文件跨盘链不上就照原样复制一份（这台：仓在 D 盘、临时那一棵在 E 盘）——
+       要的只是「临时那一棵里读得到同一份内容」，省不省那几 KB 无关紧要。
+       一整格那种（几百 MB 的运行时）不暗地复制：那是真占地方，链不动就停下报名字。 */
+    try{ 链(源, 到); }
+    catch(err){
+      if(!/cross-device|EXDEV/.test(String((err && err.message) || err))) throw err;
+      fs.copyFileSync(源, 到);
+    }
+    return 数;
+  }
   const walk = (a, b) => {
     fs.mkdirSync(b, { recursive: true });
-    for(const e of fs.readdirSync(a, { withFileTypes: true })){
+    for(const e of fs.readdirSync(a, { withFileTypes:true })){
       const s = path.join(a, e.name), d = path.join(b, e.name);
-      if(e.isDirectory()) walk(s, d);
-      else { try{ fs.linkSync(s, d); 数++; } catch(err){
-        throw new Error('硬链接不动 ' + s + '：' + ((err && err.message) || err) + '（硬链接要求同一块盘 —— 那一格换到仓所在那一块盘上）'); } }
+      if(e.isDirectory()){ walk(s, d); continue; }
+      fs.rmSync(d, { force: true });
+      链(s, d);
     }
   };
   walk(源, 到);
   return 数;
 }
 
-/* 打包用的那一棵：合上勾中的那几项 + 把跑那三趟要的那几格链过去。
-   要链的名单只在这一份里说一次（src/pack/node_modules 那一格是 electron 运行时，发布那一步要读它）。 */
+/* 打包用的那一棵：合上勾中的那几项 + 把跑那一串要的东西链过去。
+   要链的名单只在这一份里说一次，两样都不进仓：
+     · src/pack/node_modules —— 从前 electron 那一颗的运行时，发布那一步要读它（这一棵上没有就自动跳过）；
+     · src/tools/本地路径.cjs —— 这台机器的登记（Rust 那三颗位置、编译缓存那一格、工区、存档落点）。
+       临时那一棵里跑的编壳与发布两趟都要读它；少带这一份，报的是「本地那份登记里没写 Rust 那三颗位置」。 */
 export function 摊打包那一棵(在, 基点, 项列表, 那一格, 要链, 额外支) {
   const 根 = path.resolve(在 || TREE);
   const 果 = 合那一棵(根, 基点, 项列表, 那一格, 额外支);
-  const 链 = (要链 || ['src/pack/node_modules']).filter(相 => fs.existsSync(path.join(根, 相)));
+  const 链 = (要链 || ['src/pack/node_modules', 'src/tools/本地路径.cjs']).filter(相 => fs.existsSync(path.join(根, 相)));
   const 链了 = [];
   for(const 相 of 链){
     const 数 = 硬链接一份(path.join(根, 相), path.join(果.目录, 相));
@@ -204,7 +226,13 @@ export function 合那一棵(在, 基点, 项列表, 那一格, 额外支) {
   git(根, ['update-ref', 指针, 笔]);
   const 目录 = path.resolve(那一格 || path.join(path.dirname(根), 'Flow-Desk-打包那一棵'));
   const 列表 = [];
-  if (fs.existsSync(目录)) throw new Error('那一格已经有东西：' + 目录 + '（先收掉再合，不覆盖别人的目录）');
+  /* 这一格只由这一颗自己摊、自己收。上一趟要是崩在半路（停 = 当场退，从前那一趟没收回这一格），
+     下一趟 git 报的就是「missing but already registered worktree」，非先 prune 才走得动 ——
+     摊之前按同一把尺把它收干净：清的就是这一格，别处一根指针、一格东西都不碰。 */
+  if (fs.existsSync(目录)){
+    try { git(根, ['worktree', 'remove', '--force', 目录]); } catch (e) {}
+    try { fs.rmSync(目录, { recursive: true, force: true }); } catch (e) {}
+  }
   git(根, ['worktree', 'add', '--detach', 目录, 笔]);
   列表.push(目录);
   return {
