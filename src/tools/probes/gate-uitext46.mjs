@@ -25,7 +25,23 @@ const 台 = 记账('gate-uitext46');
 const require = createRequire(import.meta.url);
 const U = require(ROOT + 'src/pack/uitext.cjs');
 const 文UIT = rd('src/pack/uitext.cjs');
-const 文主 = rd('src/pack/main.cjs'), 文载 = rd('src/pack/preload.cjs'), 文桥 = rd('src/_tauri/ui/fd-bridge.js');
+const 文桥 = rd('src/_tauri/ui/fd-bridge.js');
+/* 整棵源码汇一份文本：撤干净那几条扫的就是这一整棵（Electron 那两份退场后没有「另一头」可比了） */
+let 全树文 = null;
+function 全树(){
+  if(全树文 !== null) return 全树文;
+  const 中 = [];
+  (function 走(d){
+    for(const e of fs.readdirSync(d, { withFileTypes: true })){
+      if(e.name === 'node_modules' || e.name.startsWith('.') || (d === path.join(ROOT, 'src') && e.name === 'tools')) continue;
+      const p = path.join(d, e.name);
+      if(e.isDirectory()) 走(p);
+      else if(/\.(js|cjs|mjs|rs|html)$/.test(e.name)) 中.push(fs.readFileSync(p, 'utf8'));
+    }
+  })(path.join(ROOT, 'src'));
+  全树文 = 中.join('\n');
+  return 全树文;
+}
 const hash = p => { try{ const b = fs.readFileSync(p); return b.length + ':' + require('node:crypto').createHash('sha1').update(b).digest('hex'); }catch(e){ return '读不到'; } };
 const 颗 = (源, 名) => { try{ return 切(源, 名); }catch(e){ return ''; } };
 
@@ -183,22 +199,22 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
   台.判('h() 里那两处查表与 data-txp 那一钉都撤了（title/placeholder 走回原生那一路）',
     !/data-txp/.test(rd('src/_fd/src/fd3-shell.js')) && !/data-txp/.test(rd('src/_wnw/src/w3-shell.js')));
   台.判('#275「跳到那一处」整块与它那条 uitext-jump 通道一起没了',
-    !/JUMP_TOOL|const Jump = \{/.test(rd('src/_fd/src/fd3-shell.js')) && !/uitext-jump/.test(文主));
-  台.判('主进程那六条界面文字通道一颗不留（read/write/open/plan/apply/adopt）',
-    !/ipcMain\.handle\('ui-text:/.test(文主) && !/ui-text:changed/.test(文主));
-  台.判('页面上那八颗喊手在 Electron 与 Tauri 两头都没了',
-    !/uiText/.test(文载) && !/uiText/.test(文桥));
+    !/JUMP_TOOL|const Jump = \{/.test(rd('src/_fd/src/fd3-shell.js')) && !/uitext-jump/.test(全树()));
+  台.判('界面文字那六条通道一颗不留（read/write/open/plan/apply/adopt）',
+    !/ui-text:/.test(全树()));
+  台.判('页面上那八颗喊手在两头都没了（uiTextRead / Write / Open / Plan / Apply / Adopt / Changed / List）',
+    !/uiText(?:Read|Write|Open|Plan|Apply|Adopt|Changed|List)/.test(全树()));
   台.判('加载器那一道硬地板与打包那把尺里也一并退了（挡空的名不留，桥上有的才在名单上）',
     !/uiText/.test(rd('src/_shared/sh-load.js')) && !/uiText/.test(rd('src/_build/scan-packs.mjs')));
   台.判('Rust 那一头的地板与测试同样退了这两颗', !/uiText/.test(rd('src/_tauri/src/core/app_deny.rs'))
     && !/uiText/.test(rd('src/_tauri/src/core/perm_rule.rs')));
-  台.判('主进程里那一份「开机把出厂清单补铺到数据层」整台没了（程序运行时不读界面文字清单）',
-    !/syncLists|layList/.test(文主));
-  台.判('主进程不再跟着重扫界面文字清单（装完卸完功能都不重扫）',
-    !/UIT/.test(文主) && !/require\(['"]\.\/uitext\.cjs['"]\)/.test(文主));
+  台.判('「开机把出厂清单补铺到数据层」那一整台没了（程序运行时不读界面文字清单）',
+    !/syncLists|layList/.test(全树()));
+  台.判('装完卸完功能都不重扫界面文字清单（运行时那几本里没有一颗读它的）',
+    !/UIT\./.test(全树().replace(rd('src/pack/uitext.cjs'), '')));
   台.判('卡片大小那一台一处不留：清单生成器、运行时那一份、四颗通道、设置里那一行',
     !fs.existsSync(ROOT + 'src/pack/cardsize.cjs') && !fs.existsSync(ROOT + 'src/_fd/src/fd10-size.js')
-    && !/cardSize|card-size/.test(文主) && !/cardSize|card-size/.test(文载) && !/cardSize|card-size/.test(文桥)
+    && !/cardSize|card-size/.test(全树())
     && !/SizeList|SizeCfg/.test(rd('src/_fd/src/fd3-shell.js') + rd('src/_fd/src/fd4-builtin.js') + rd('src/_fd/src/fd6-boot.js')));
 }
 

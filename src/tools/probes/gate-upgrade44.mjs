@@ -50,8 +50,10 @@ const Install = 段('Install');
 台.题('三、旧的先去备份，落点和程序里「关于」列的那一格是同一处');
 台.判('备份落在 update\\backups\\<时间戳>（覆盖升级写这一格，关于那一屏读同一格）', /Path\.Combine\(dest, "update"\)/.test(Install) && /"backups"/.test(sfx));
 台.判('时间戳是四位年两位月日 - 时分秒（这一颗起的名字要能顺着排进关于那一列）', /ToString\("yyyyMMdd-HHmmss"\)/.test(sfx));
-台.判('程序里那一屏列备份是按名字排的（这一颗起的名字要能插进去，不能自成一套）',
-  /\.readdirSync\(dir\)\.filter\(n => !n\.startsWith\('\.'\)\)\.sort\(\)\.reverse\(\)/.test(rd('src/pack/main.cjs')));
+台.判('程序里那一屏列备份是按名字排的（点开头的不要，排一遍再倒过来，只报最近那五格）',
+  /列\.sort\(\);\s*列\.reverse\(\);/.test(rd('src/_tauri/src/core/about_info.rs'))
+  && rd('src/_tauri/src/core/about_info.rs').includes('!n.starts_with(\'.\')')
+  && rd('src/_tauri/src/core/about_info.rs').includes('take(5)'));
 台.判('整层挪只有 resources\\app\\ 这一处（Directory.Move 全文就一次）', (sfx.match(/Directory\.Move/g) || []).length === 1, (sfx.match(/Directory\.Move/g) || []).length);
 台.判('那一处整层挪的是 src\\ 那一层（程序自己的源码），不是页面层', /Directory\.Move\(srcLayer, to\)/.test(sfx));
 台.判('pages\\ 不做整层挪（源码里 pages 和 Directory.Move 不沾边）', !/Directory\.Move\([^)]*pages/i.test(sfx));

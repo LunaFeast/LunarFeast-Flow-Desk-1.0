@@ -54,7 +54,7 @@ const 让 = (sfx.match(/KeepUserFile\(dest, it\)/g) || []).length;
 台.判('正好三处：占用检查、旧的搬备份、新的摊出去（少一处就是要么白搬走要么强覆盖）', 让 === 3);
 
 台.题('四、旧口径那几句话消失');
-for(const f of ['src/pack/publish.mjs', 'src/pack/main.cjs', 'src/pack/comp-files.cjs',
+for(const f of ['src/pack/publish.mjs', 'src/pack/comp-files.cjs',
                 'src/pack/sfx.cs', 'src/tools/audit.mjs', 'src/_fd/fd-serve.mjs',
                 'src/_build/release.mjs']){
   台.判(f + ' 里不再说「一个插件都不带 / 一棵都不进 / 不许带插件代码」',

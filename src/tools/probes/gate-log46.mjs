@@ -24,7 +24,6 @@ const 包 = rd('src/_tauri/src/tauri_bind/pack_cmds.rs');
 const 乐 = rd('src/_tauri/src/tauri_bind/media_cmds.rs');
 const 壳 = rd('src/_tauri/src/main.rs');
 const 桥 = rd('src/_tauri/ui/fd-bridge.js');
-const 原 = rd('src/pack/main.cjs');
 
 /* ---------- 一 · 那一行的形状 ---------- */
 台.题('一 · 纯判断那一格：一行长什么样、落到哪一个文件');
@@ -59,10 +58,9 @@ const 原 = rd('src/pack/main.cjs');
   动.includes('① ') && 动.includes('② ') && 动.includes('③ ') && 动.includes('FD_USERDATA'));
 
 /* ---------- 三 · 四处调用点 ---------- */
-台.题('三 · 四处调用点一句一字照原件');
+台.题('三 · 四处调用点那四句逐字钉住');
 const 原话 = ['旧插件留了备份：', '已装 ', '名单换算 ', '原版留进 plugins-factory\\', '这一家没留出原版（'];
 for(const 句 of 原话){
-  台.判('原件里有这一句：' + 句, 原.includes(句));
   台.判('壳里落的也是这一句：' + 句, (包 + 乐).includes(句));
 }
 台.判('音乐那两颗各记一笔（留备份、装成了）', (乐.match(/log_cmds::记一笔\("插件"/g) || []).length === 2,

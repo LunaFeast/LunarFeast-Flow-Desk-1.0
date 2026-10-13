@@ -11,8 +11,8 @@ import { rd, 记账, ROOT } from './lib-slice.mjs';
 
 const 台 = 记账('gate-about44');
 const 在 = 相 => fs.existsSync(path.join(ROOT, 相));
-const 主 = rd('src/pack/main.cjs'), 发 = rd('src/_build/release.mjs'), 壳 = rd('src/pack/sfx.cs'),
-      预 = rd('src/pack/preload.cjs'), 桥 = rd('src/_shared/sh-load.js'),
+const 发 = rd('src/_build/release.mjs'), 壳 = rd('src/pack/sfx.cs'),
+      桥 = rd('src/_shared/sh-load.js'),
       页 = rd('src/_fd/src/fd4-builtin.js'), 拼 = rd('src/_fd/build.mjs'),
       顶 = rd('src/_fd/src/fd9-title.js'),
       公 = rd('src/pack/publish.mjs'), 单 = rd('src/pack/uitext.cjs');
@@ -46,8 +46,9 @@ function 全扫(认){
   全扫(s => /upd(Info|Pick|Plan|Start)\b/.test(s)).length === 0, 全扫(s => /upd(Info|Pick|Plan|Start)\b/.test(s)).join(' | '));
 台.判('插件读包那两颗还在：src/pack/zip-read.cjs 露 zipIndex 和 unzipEntry',
   在('src/pack/zip-read.cjs') && /module\.exports = \{ zipIndex, unzipEntry, cleanName \}/.test(rd('src/pack/zip-read.cjs')));
-台.判('主进程读插件包改吃这一份（四处 require 全跟上）', (主.match(/require\('\.\/zip-read\.cjs'\)/g) || []).length === 4,
-  (主.match(/require\('\.\/zip-read\.cjs'\)/g) || []).length);
+台.判('壳里读插件包吃的是纯判断那一格那份 zip（core/zip_pack.rs 在、动手那一本叫它）',
+  fs.existsSync(path.join(ROOT, 'src/_tauri/src/core/zip_pack.rs'))
+  && rd('src/_tauri/src/tauri_bind/pack_cmds.rs').includes('zip_pack'));
 台.判('发布脚本不再收 update\\packages 那一格（那一格是那条路的产物）', !发.includes('packages'));
 台.判('那一格在盘上也收走了（树里已经没有 update\\packages）', !在('update/packages'));
 台.判('覆盖升级换下来的旧东西还照原样进 update\\backups（这一格留着）', /"backups"/.test(壳));
@@ -72,19 +73,22 @@ function 全扫(认){
 台.判('拼页面的名单里不再点它（顶上那句历史账本提一句不算）', !拼.includes("'fd7-help.js'"));
 台.判('主进程不再往 data\\ 铺工作副本（syncHelp 一处不剩）', 全扫(s => /syncHelp/.test(s)).length === 0, 全扫(s => /syncHelp/.test(s)).join(' | '));
 台.判('顶栏菜单里那一项没了（也没有 Ctrl H 那条快捷键）', !顶.includes('帮助文档') && !页.includes('打开帮助'));
-台.判('主进程不再拦 Ctrl+H、不再往页面递 fd:help', !/winCtl\('help'\)/.test(主) && !/fd:help/.test(主) && !/fd:help/.test(预));
+台.判('不再拦 Ctrl+H、也不再往页面递 fd:help（整棵源码里这一颗名一处不剩）',
+  全扫(s => /fd:help|winCtl\('help'\)/.test(s)).length === 0, 全扫(s => /fd:help/.test(s)).join(' | '));
 台.判('源码里不再有「help.md」这个名（改名表那类历史账本除外）',
   全扫(s => /help\.md/.test(s)).length === 0, 全扫(s => /help\.md/.test(s)).join(' | '));
 
 /* ---------- 四 · 关于：程序 + 每一家的号 ---------- */
 台.题('四、关于那一屏看得到当前版本号');
-台.判('主进程把装着的一家一家递出去（取的是运行时真正加载的那份插件清单）',
-  /packs:家/.test(主) && /packScan\(\)\.packs\.filter\(p => p\.manifest\)/.test(主));
-台.判('没有插件清单的那一格不列（不编一个号出来）', /filter\(p => p\.manifest\)/.test(主));
+台.判('壳里把装着的一家一家递出去（关于那一格带 packs 那一栏，取的是盘上真扫到的那几家）',
+  /packs: 装着的那几家\(&数\)/.test(rd('src/_tauri/src/tauri_bind/info_cmds.rs')));
+台.判('没有插件清单的那一家不列（不编一个号出来）',
+  rd('src/_tauri/src/core/about_info.rs').includes('pub fn 算一家'));
 台.判('关于那一行把每一家列出来，没写号的照实说', 页.includes('r.packs') && 页.includes('清单里没写号'));
 台.判('压零卖的包时把插件清单那一格换成发布传进来的号（号只有一处真身）',
   /function packZip\(p, 用了号\)/.test(公) && /Object\.assign\(\{\}, m, \{ version: 用了号 \}\)/.test(公));
 台.判('货架清单和安装标记里那一份号同源（都吃传进来的那一串）', /version: 出/.test(公) && /plugins: shelf\.map/.test(公));
-台.判('关于那一格不再吃更新包的信息（只报本机是什么）', !主.includes('updVersions') && /aboutVersions/.test(主));
+台.判('关于那一格不再吃更新包的信息（只报本机是什么，updVersions 那一颗名整棵源码里一处不剩）',
+  全扫(s => /updVersions/.test(s)).length === 0, 全扫(s => /updVersions/.test(s)).join(' | '));
 
 台.收尾();
