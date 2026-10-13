@@ -282,8 +282,6 @@ function pageOf(rel, fn, dyn, packs){
   /* 那两本「函数名 → 设置里的某一页」只从 Flow-Desk / 为写 自己的源码里认：
      功能包里恰好也有个同名的方法（比如都叫 render），不能算到设置那一页头上。 */
   if(fn && /^src\/_(fd|wnw)\//.test(f) && dyn[fn]) return { prog:dyn[fn][0], page:dyn[fn][1] };
-  if(f === 'src/pack/main.cjs') return { prog:P_MAIN, page:'窗口菜单与托盘' };
-  if(f === 'src/pack/preload.cjs') return { prog:P_MAIN, page:'关窗询问框' };
   if(f === 'src/pack/zip-read.cjs') return { prog:P_MAIN, page:'插件导入报错' };
   /* 定期备份那一颗（外30 戊组）：它嘴里那几句最后都摆在 设置 · 数据 那一块和 toast 上，界面上看得见 */
   if(f === 'src/pack/backup.cjs') return { prog:P_MAIN, page:'定期备份' };

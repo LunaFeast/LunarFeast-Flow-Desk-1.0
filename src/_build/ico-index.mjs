@@ -183,7 +183,7 @@ function refWhere(name){
 }
 
 /* ---------- 认文件夹：有什么图就写什么行，顺带揪出两个家不一样多的 ----------
-   只开一层子文件夹（和主进程那趟扫描同一个口径，见 src/pack/main.cjs 的 iconScan）：
+   只开一层子文件夹（和壳里那趟扫描同一个口径，见 src/_tauri/src/core/icon_scan.rs 顶上那段）：
    icons\子文件夹\x.png 在这里的名字是 子文件夹-x。 */
 function namesIn(dir){
   const out = new Set();
