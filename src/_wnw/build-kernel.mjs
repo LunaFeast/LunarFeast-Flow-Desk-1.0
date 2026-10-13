@@ -26,7 +26,7 @@ const OUT = path.join(HERE, 'wnw-kernel.js');
 /* 顺序沿用为写自己那份装配单的相对次序 —— 装配那份（w6-boot）排在数据层之后的那一份，
    要的是它交上去的宿主接口先定义好，别自己重排。 */
 const PARTS = ['w0-skin.js', 'w1-core.js', 'w2-theme.js', 'w3-shell.js', 'w7-data.js', 'w5-load.js', 'w12-rich.js',
-  'w8-write.js', 'w14-num.js', 'w15-hist.js', 'w9-shelf.js', 'w10-cards.js', 'w11-board.js', 'w17-tags.js',
+  'w8-write.js', 'w22-web.js', 'w14-num.js', 'w15-hist.js', 'w9-shelf.js', 'w10-cards.js', 'w11-board.js', 'w17-tags.js',
   'w20-keystroke.js',
   'w13-docx.js', 'w16-export.js', 'w6-boot.js'];
 

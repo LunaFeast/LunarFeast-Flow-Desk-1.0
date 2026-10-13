@@ -103,6 +103,58 @@ await 假host.全身().find(x => x.字 === '刷新').点();
 台.判('10「选卡」那框给名单里每一块留了设定项这一口：假块那一行进得去（本体不写死别人家的开关）', 一跑.叫.设 === 1);
 
 /* ================== 三、热力图自己登记的那一半（真跑它那句 reg） ================== */
+/* ================== 四、空白网页这一档（＋ 那张清单里的一组） ================== */
+台.题('四、空白网页 —— 主界面那份不再点名它，＋ 那张清单只认名单');
+const 主界面 = rd('src/_wnw/src/w3-shell.js');
+const 皮肤 = rd('src/_wnw/src/w0-skin.js');
+const 网页 = rd('src/_wnw/src/w22-web.js');
+台.判('17 历史收藏那一摊、网页区本体、那一条视图注册都只在 w22-web.js 里',
+  ['const WebHist = {', 'const WebPage = {', "Views.reg('web'"].every(n => 网页.includes(n)));
+台.判('18 主界面与皮肤那两份里搜不到网页的任何一颗符号和任何一个类名（搬完不留半截）',
+  !/WebPage|WebHist|wnw-web|kind:'web'/.test(主界面) && !/wnw-web/.test(皮肤));
+台.判('19 主界面那份连「查资料」这三个字都不提（那一组的组名归它自己那份说）',
+  !/查资料|空白网页/.test(主界面));
+台.判('20 装配名单把这一份排在主界面之后，页名表里也认得它',
+  装配.indexOf("'w22-web.js'") > 装配.indexOf("'w3-shell.js'") && /'w22-web\.js':'[^']+'/.test(页名));
+/* ＋ 那张清单里那一段是真源码：切进干净环境跑一遍，看登记的那一组进不进得来、排在哪儿 */
+function 跑清单(砍, 登记){
+  const 上下文 = {
+    Work:{ cur:null, book:{ chs:[] } }, REL_PICKS:[{ kind:'rel', label:'关系图' }],
+    巡航菜单:[], 巡航拾取:[], 词格档:{ 在:false, paras:c => (c && c.paras) || [] }, LYRIC_MODE:'lyric',
+    cruiseAnyVol:() => 'V1', cruiseBookReady:() => true, CRUISE_BOOK:'CB', Tools:[],
+    PICK_GROUPS:登记 ? [登记] : []
+  };
+  const 源 = 主界面.replace(砍 || '~不可能有的那一行~', '');
+  const i = 源.indexOf('const groups = [') + 'const groups = '.length;
+  const 段 = 到收尾(源, i);
+  if(段[段.length - 1] !== ']') throw new Error('那张清单没切齐');
+  vm.createContext(上下文);
+  new vm.Script('清单 = ' + 段, { filename:'加号那张清单' }).runInContext(上下文);
+  return 上下文.清单;
+}
+const 假登记 = { name:'查资料', items:[{ kind:'web', ref:() => '', label:'空白网页' }] };
+const 清单 = 跑清单(null, 假登记);
+const 序 = 清单.map(g => g.name);
+台.判('21 登记进去的那一组真出现在清单里，位置还在「本书」之后、「辅助功能」之前',
+  序.indexOf('查资料') === 序.indexOf('本书') + 1 && 序[序.length - 1] === '辅助功能', 序.join(' → '));
+台.判('22 名单空着 = 清单里就没有那一组（摘掉一家，本体那份一个字不用改）',
+  !跑清单(null, null).some(g => g.name === '查资料'));
+/* 它自己那份末尾那句登记也真跑一遍 */
+function 跑网页登记(){
+  const 收 = {};
+  const 上下文 = { PickGroup:{ reg(g){ 收.组 = g; } } };
+  vm.createContext(上下文);
+  new vm.Script(到收尾(网页, 网页.lastIndexOf('PickGroup.reg(')), { filename:'网页那一登记' }).runInContext(上下文);
+  return 收;
+}
+const 网页组 = 跑网页登记();
+台.判('23 它登记的那一组组名、条目、那句「空白网页」跟从前写死在主界面里的一字不差',
+  网页组.组 && 网页组.组.name === '查资料' && 网页组.组.items.length === 1
+  && 网页组.组.items[0].kind === 'web' && 网页组.组.items[0].label === '空白网页'
+  && 网页组.组.items[0].ref() === '');
+台.判('24 视图注册那句跟着搬走了（主界面那份没有 Views.reg(\'web\' 这一颗，摘掉这一家就不认得 kind web）',
+  !/Views\.reg\('web'/.test(主界面));
+
 /* ================== 五、负控：每一处登记各砍一刀 ================== */
 台.题('五、负控 —— 这几刀砍下去这台闸必须报红（不然上头那些条是自证的）');
 const 砍一 = 跑本体('    for(const reg of STAT_BLOCKS) blocks.push(reg.mount(host, ctx));\n');
@@ -116,5 +168,7 @@ await 砍二.上下文.假块对象.render(host3, null, { dispose:() => {} });
 host3.全身().find(x => x.字 === '选卡').点();
 台.判('26 砍掉「选卡」框里那句「各家自己摆设定项」→ 块照样立、设定项一条不进',
   砍二.叫.挂 === 1 && 砍二.叫.设 === 0);
-台.数('这一闸现在管几家', '统计那一块的名单登记（热力图与空白网页那两份 2026-10-13 拆到各自那条支上了）都真跑过）');
+台.判('27 砍掉清单里那句「...PICK_GROUPS」→ 那一组当场没了（第 21~23 条跑的是真源码那一句）',
+  !跑清单('      ...PICK_GROUPS,\n', 假登记).some(g => g.name === '查资料'));
+台.数('这一闸现在管几家', '热力图 + 空白网页（各一份文件、一处登记，登记两条口都真跑过）');
 台.收尾();

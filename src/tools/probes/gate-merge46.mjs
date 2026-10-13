@@ -106,7 +106,6 @@ for(const j of 家.filter(x => x.id !== 'why-not-write')){
 台.判('为写那一家没有"并回主仓"那一笔（它是这一轮才并进来的，历史还在那六棵之外）', 问(['log', '--grep=为写那一家并回主仓']) === '');
 台.判('为写这一家在这个仓里只有那颗内核产物不认（它是 w1..w22 拼出来的，留源码又留产物就是两份同一个东西）',
   成(['check-ignore', '-q', '--', 'src/_wnw/wnw-kernel.js']) && !成(['check-ignore', '-q', '--', 'src/_wnw/src/w1-core.js']) &&
-  /* 热力图与空白网页那两份 2026-10-13 拆基础版时搬到各自那条支上了，基础版这一棵里不该有 */
-  !跟踪.some(f => f === 'src/_wnw/src/w21-heat.js') && !跟踪.some(f => f === 'src/_wnw/src/w22-web.js'));
+  跟踪.some(f => f === 'src/_wnw/src/w21-heat.js') && 跟踪.some(f => f === 'src/_wnw/src/w22-web.js'));
 
 台.收尾();
