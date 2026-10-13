@@ -18,6 +18,12 @@ const mk = old => {
     { console, Date, Math, Number, String, Array, clearTimeout, JUMP_MS: num('JUMP_MS'), CALIB_BACK: num('CALIB_BACK') });
   return A;
 };
+/* 这一台吃的是真观察那一份账（smtc-observed.jsonl，音乐遥控器那一段现场跑出来的），
+   不在就明说量不出来 —— 拿空表跑下去会把「一条都没验」报成验过了。 */
+if(!fs.existsSync('smtc-observed.jsonl')){
+  console.log('缺数据：这一格没有 smtc-observed.jsonl（要真跑一趟观察才有）—— 这一台量不出来');
+  process.exit(77);
+}
 const rows = fs.readFileSync('smtc-observed.jsonl', 'utf8').split('\n').filter(Boolean)
   .map(l => JSON.parse(l)).filter(r => r.raw).map(r => JSON.parse(r.raw))
   .filter(o => /musicbee/i.test(o.app || '') && o.status === 'Playing');

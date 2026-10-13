@@ -47,7 +47,9 @@ const 目录 = fs.readdirSync(格).filter(n => fs.statSync(格 + '/' + n).isDire
 const 插件清单 = {};
 for(const d of 目录) if(fs.existsSync(格 + '/' + d + '/manifest.json'))
   插件清单[d] = JSON.parse(fs.readFileSync(格 + '/' + d + '/manifest.json', 'utf8')).id;
-const 名单 = JSON.parse(fs.readFileSync(格 + '/off.json', 'utf8')).off;   /* 外41 六段起这份记的是「被卸掉的」 */
+/* off.json = 「被卸掉的那几个」，是程序里卸一家才写出来的：新克隆的一棵上还没有它，
+   没有就等于一个都没卸（主进程那一条也是这么认的），照这个意思给空表，不拿读不到当崩。 */
+const 名单 = fs.existsSync(格 + '/off.json') ? JSON.parse(fs.readFileSync(格 + '/off.json', 'utf8')).off : [];
 台.数('插件格', 目录.join('、'));
 台.数('卸掉的', 名单.length ? 名单.join('、') : '（一家都没卸）');
 台.判('三家新名字在目录和插件清单两处都对得上，旧名字一处没有；卸掉那份名单不认旧名',

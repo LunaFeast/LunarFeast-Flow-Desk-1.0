@@ -16,6 +16,12 @@ const LOOK = rd('src/_shared/sh-look.js');
 const LIB = rd('src/_fd/src/fd3-lib.js');
 const SHL = rd('src/_fd/src/fd3-shell.js');
 const UI = rd('src/_fd/src/fd4-builtin.js');
+/* 外观方案那一份是程序开机从存档里长出来的（data\looks.yaml）：新克隆的一棵上还没有它，
+   这一台量的就是「磁盘那一份里长什么样」，没有就明说量不出来，不拿空串当证据。 */
+if(!fs.existsSync(ROOT + 'data/looks.yaml')){
+  console.log('缺数据：这台机器上还没有 data\\looks.yaml（程序第一次跑过才会长出来）—— 这一台量不出来');
+  process.exit(77);
+}
 const YAML = rd('data/looks.yaml');
 const ALL = { 'src/_shared/sh-look.js':LOOK, 'src/_fd/src/fd3-lib.js':LIB, 'src/_fd/src/fd3-shell.js':SHL, 'src/_fd/src/fd4-builtin.js':UI };
 let pass = 0, fail = 0;

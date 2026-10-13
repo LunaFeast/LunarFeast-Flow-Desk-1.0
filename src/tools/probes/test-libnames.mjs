@@ -4,7 +4,7 @@
    报一句「存不进文件：只认这几份库文件」、重启就没了 —— 色卡那一份 cards.yaml 就是漏登记过一整轮。
    这台不改代码，只做一件事：把页面里真走这条通道的名字数出来，跟两道闸逐条比，并且咬三口确认比得动。 */
 import fs from 'node:fs';
-import { rd, 记账 } from './lib-slice.mjs';
+import { rd, 记账, ROOT } from './lib-slice.mjs';
 
 const R = 记账('test-libnames');
 const MAIN = rd('src/pack/main.cjs');
@@ -13,7 +13,9 @@ const 页面 = {
   'fd11-cards.js': rd('src/_fd/src/fd11-cards.js'),
   'fd3-lib.js': rd('src/_fd/src/fd3-lib.js'),
   'fd3-shell.js': rd('src/_fd/src/fd3-shell.js'),
-  'sh-gen.js': rd('src/_wcustom/src/sh-gen.js')
+  /* 推演组件定制那一份源码住在它自己那条分支上：这一棵上没有就不数它，
+     「名字要在两处登记」那条规矩对它在那一条分支上照样量（那一条分支上这一份就在） */
+  ...(ROOT && fs.existsSync(ROOT + 'src/_wcustom/src/sh-gen.js') ? { 'sh-gen.js': rd('src/_wcustom/src/sh-gen.js') } : {})
 };
 
 /* 名单：两处各是一份数组字面量，从源码里原样端出来 */
@@ -43,8 +45,13 @@ const 主闸 = 闸(MAIN, '主进程'), 服闸 = 闸(SERVE, '开发服务器'), �
 R.题('一、页面里真走库文件通道的那几个名字（先数清楚有几份）');
 R.判('数得到名字，而且不是数漏了才显得对得上（色卡那一份必须在这串里）',
   页面要.length >= 4 && 页面要.includes('cards.yaml'), 页面要);
+/* 待实现清单（lib-pending.json）那一格是推演组件定制那一家写的，它的源码住在自己那条分支上。
+   这一棵上没有那一家，就把这一格单独钉住：两道闸里必须在册（那条分支合回来当场就要存得下去），
+   而页面里此刻没人写它。这一条形同白名单，只此一名 —— 别的名字敢「没人写却在册」，当场红。 */
+const 分支上才写的 = fs.existsSync(ROOT + 'src/_wcustom/src/sh-gen.js') ? [] : ['lib-pending.json'];
 R.判('一份文件只指一个名字：四份库文件各管一件事（色卡两套 / 外观方案 / 图片库 / 待实现清单）',
-  ['cards.yaml', 'palettes.yaml', 'looks.yaml', 'images.yaml', 'lib-pending.json'].every(n => 页面要.includes(n)), 页面要);
+  ['cards.yaml', 'palettes.yaml', 'looks.yaml', 'images.yaml', 'lib-pending.json']
+    .every(n => 页面要.includes(n) || 分支上才写的.includes(n)), 页面要);
 
 R.题('二、两道闸跟这串名字逐条比');
 R.判('主进程那道闸认全了页面要的每一份（漏一份就是程序里存不下去）',
@@ -55,8 +62,10 @@ R.判('色卡那一份 cards.yaml 两边都在册（外29 那一轮两处都漏�
   主闸.includes('cards.yaml') && 服闸.includes('cards.yaml'), { 主闸, 服闸 });
 R.判('两道闸一字不差（同一条尺：主进程那份是准，服务器那份跟着它）',
   主闸.join(',') === 服闸.join(','), { 主闸, 服闸 });
-R.判('闸里不许养着页面里没人写的名字（多一条就是废旧，将来读它的、写它的对不上）',
-  主闸.every(n => 页面要.includes(n)), 主闸.filter(n => !页面要.includes(n)));
+R.判('闸里不许养着页面里没人写的名字（多一条就是废旧，将来读它的、写它的对不上）—— 只放行那一格跟着分支走的',
+  主闸.every(n => 页面要.includes(n) || 分支上才写的.includes(n)), 主闸.filter(n => !页面要.includes(n) && !分支上才写的.includes(n)));
+R.判('那一格「跟着分支走」的名单自己也得钉住：既然这一棵上没那一家，它就必须还在两道闸里（合回来当场存得下去）',
+  分支上才写的.every(n => 主闸.includes(n) && 服闸.includes(n)), 分支上才写的);
 
 R.题('三、读那一路吃的是同一道闸（读写两条都得认，否则开机读不到、又拿「文件不存在」当空盖掉用户攒的）');
 R.判('主进程 lib:read 和 lib:write 都拿 LIB_NAMES 拦，没另开第二张名单',
