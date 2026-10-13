@@ -9,6 +9,7 @@ import { icodeEmbed } from '../_vendor/icode/embed.mjs';
 import tree from '../_build/tree.cjs';
 import { assertClean } from '../_build/scan-packs.mjs';
 import uitext from '../pack/uitext.cjs';
+import { 铺图标一层 } from '../_build/ico-dump.mjs';
 import { rpKernelSource } from '../_build/rp-kernel.mjs';
 import { 号, 页名 } from '../_build/version.mjs';
 import { PACK_RENAME } from '../_build/pack-rename.mjs';
@@ -67,6 +68,10 @@ let js = '\n/* ==== 版本号 · 真身在 src\\_build\\version.json，这一趟
    这一份产物里从来不嵌，程序运行时也不读它 —— 它是「GitHub 版本资源助手」那一屏的工作台：
    在那里填一句 → 写回源码那一份 → 重跑下面这三趟 → 界面上就是新句子（2026-10-13 方案甲）。 */
 uitext.refresh(TREE.tree);
+/* 树根 icons\ 那一格：程序和开发服务器扫的是它（一个名字一张图）。出厂那一格里不是线稿的那几份
+   （FD_Icon.png、索引.txt）照同名补过去，他换过的图不动 —— 新克隆的一棵跑这一趟就齐了。 */
+{ const 图 = 铺图标一层(TREE.tree);
+  console.log('图标：出厂 ' + 图.出厂 + ' 张重画 · 树根 icons\\ 补了 ' + 图.补上 + ' 张，保住他改过的 ' + 图.保住 + ' 张'); }
 function add(name, src){
   try{ new vm.Script(src, { filename:name }); }
   catch(e){ console.error('SYNTAX FAIL ' + name + ': ' + e.message); process.exit(1); }
