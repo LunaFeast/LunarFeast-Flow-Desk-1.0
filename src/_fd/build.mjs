@@ -42,7 +42,7 @@ const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-p
   '../_shared/sh-ttml.js',
   '../_shared/sh-mus.js',
   '../_shared/sh-icode.js',
-  '../_shared/sh-bank-ui.js','../_shared/sh-log.js'];
+  '../_shared/sh-banks.js','../_shared/sh-bank-ui.js','../_shared/sh-log.js'];
 /* 推演组件定制那四份（词库底层 / 生成器 / 向导 / 改代码）从外39 起不再一份一份拼：
    它们住在 src\_wcustom\src\，由那一棵自己的 build-kernel.mjs 出成上面那一份产物。
    排的位置就是从前 sh-banks 那一格 —— 这四份全是纯声明，落在整页顶层哪一处都不影响求值，
