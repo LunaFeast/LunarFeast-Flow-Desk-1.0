@@ -132,9 +132,6 @@ const WNW_ROOT_CSS = `
 .wnw-root .wnw-panel{background:var(--card-bg);border:var(--bw) solid var(--card-border);border-radius:var(--r-panel);
   max-width:min(820px,92%);max-height:88%;display:flex;flex-direction:column;}
 .wnw-root .wnw-panel.wide{max-width:94%;width:1100px;}
-/* 访问历史 / 收藏那一档：底子那 820 是照着最宽的内容给的，这一张只摆网址和标题，
-   摊到 92% 就贴着所在那一块的边了（外15 第 2 条）—— 收到 560，两边各让出一截。 */
-.wnw-root .wnw-panel.hist{max-width:min(560px,86%);}
 /* 推演组件定制那一张要 1400px：只有它，词库编辑器、推演记录还是原来的宽 */
 .wnw-root .wnw-panel.vwide{max-width:96%;width:min(1400px,96%);}
 /* 设置那一档：1080×680 定死，内容在自己那一栏里滚。
