@@ -91,7 +91,7 @@ if(fs.existsSync(KERNEL)) add('wnw-kernel', fs.readFileSync(KERNEL, 'utf8'));
 else if(不带内核) console.log('这一版不带写作内核：那张启动卡会自己说「但这一版页面里没有写作内核，开不了」');
 else{
   console.error('写作内核那颗产物不在：' + KERNEL
-    + '\n  它由私有那一棵出：node src\\_wnw\\build-kernel.mjs'
+    + '\n  它由这一棵自己出：node src\\_wnw\\build-kernel.mjs'
     + '\n  确实要打一版没有为写的页面（比如只发外壳给别人看）：加 --无内核');
   process.exit(1);
 }
