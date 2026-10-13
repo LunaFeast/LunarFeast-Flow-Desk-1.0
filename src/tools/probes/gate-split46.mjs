@@ -15,6 +15,7 @@ import { rd, 记账, 切 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-split46');
 const 本体 = rd('src/_wnw/src/w8-write.js');
+const 热力 = rd('src/_wnw/src/w21-heat.js');
 const 装配 = rd('src/_wnw/build-kernel.mjs');
 const 页名 = rd('src/pack/uitext.cjs');
 
@@ -64,6 +65,21 @@ function 切render(源){
 }
 
 /* ================== 一、结构：谁住在哪一份 ================== */
+台.题('一、结构 —— 搬出去的那一家自己一份，本体那份里一个符号都不留');
+台.判('1 五维算法、面板、权重框都只在 w21-heat.js 里（HEAT_DIMS / Heat / HeatPanel / heatWDlg 四颗齐）',
+  ['HEAT_DIMS', 'const Heat = {', 'class HeatPanel', 'function heatWDlg'].every(n => 热力.includes(n)));
+台.判('2 本体那份 w8-write.js 里搜不到热力图的任何一颗符号（搬完不留半截，两支才不会撞同一颗文件）',
+  !/HeatPanel|heatWDlg|HEAT_DIMS|heatEl|showHeat\b|\bHeat\./.test(本体),
+  (本体.match(/Heat\w*|heatEl|showHeat/g) || []).slice(0, 4));
+台.判('3 本体那份只留一张名单和一颗登记口（STAT_BLOCKS + StatBlock.reg）',
+  /const STAT_BLOCKS = \[\];/.test(本体) && /const StatBlock = \{ reg\(b\)\{ STAT_BLOCKS\.push\(b\); \} \};/.test(本体));
+台.判('4 登记那份在装配名单里排在本体之后（顶层 const 不提升，早一步就撞 undefined）',
+  装配.indexOf("'w8-write.js'") >= 0 && 装配.indexOf("'w21-heat.js'") > 装配.indexOf("'w8-write.js'"));
+台.判('5 页名那一头认得这一份新文件（文字工具扫到裸文件名会被它自己那条闸拦下）',
+  /'w21-heat\.js':'[^']+'/.test(页名));
+台.判('6 本体那份连「热力图」这三个字都不提（界面上的话和注释都归它自己那份说）', !/热力图/.test(本体));
+
+/* ================== 二、统计那一屏那一半（真跑 render） ================== */
 台.题('二、统计那一屏 —— 名单里登记的块，挂载 / 重画 / 刷新 / 设定项四条口都得走到');
 function 跑本体(砍){
   const { h } = 造树();
@@ -103,6 +119,59 @@ await 假host.全身().find(x => x.字 === '刷新').点();
 台.判('10「选卡」那框给名单里每一块留了设定项这一口：假块那一行进得去（本体不写死别人家的开关）', 一跑.叫.设 === 1);
 
 /* ================== 三、热力图自己登记的那一半（真跑它那句 reg） ================== */
+/* ================== 四、空白网页这一档（＋ 那张清单里的一组） ================== */
+台.题('四、空白网页 —— 主界面那份不再点名它，＋ 那张清单只认名单');
+const 主界面 = rd('src/_wnw/src/w3-shell.js');
+const 皮肤 = rd('src/_wnw/src/w0-skin.js');
+const 网页 = rd('src/_wnw/src/w22-web.js');
+台.判('17 历史收藏那一摊、网页区本体、那一条视图注册都只在 w22-web.js 里',
+  ['const WebHist = {', 'const WebPage = {', "Views.reg('web'"].every(n => 网页.includes(n)));
+台.判('18 主界面与皮肤那两份里搜不到网页的任何一颗符号和任何一个类名（搬完不留半截）',
+  !/WebPage|WebHist|wnw-web|kind:'web'/.test(主界面) && !/wnw-web/.test(皮肤));
+台.判('19 主界面那份连「查资料」这三个字都不提（那一组的组名归它自己那份说）',
+  !/查资料|空白网页/.test(主界面));
+台.判('20 装配名单把这一份排在主界面之后，页名表里也认得它',
+  装配.indexOf("'w22-web.js'") > 装配.indexOf("'w3-shell.js'") && /'w22-web\.js':'[^']+'/.test(页名));
+/* ＋ 那张清单里那一段是真源码：切进干净环境跑一遍，看登记的那一组进不进得来、排在哪儿 */
+function 跑清单(砍, 登记){
+  const 上下文 = {
+    Work:{ cur:null, book:{ chs:[] } }, REL_PICKS:[{ kind:'rel', label:'关系图' }],
+    巡航菜单:[], 巡航拾取:[], 词格档:{ 在:false, paras:c => (c && c.paras) || [] }, LYRIC_MODE:'lyric',
+    cruiseAnyVol:() => 'V1', cruiseBookReady:() => true, CRUISE_BOOK:'CB', Tools:[],
+    PICK_GROUPS:登记 ? [登记] : []
+  };
+  const 源 = 主界面.replace(砍 || '~不可能有的那一行~', '');
+  const i = 源.indexOf('const groups = [') + 'const groups = '.length;
+  const 段 = 到收尾(源, i);
+  if(段[段.length - 1] !== ']') throw new Error('那张清单没切齐');
+  vm.createContext(上下文);
+  new vm.Script('清单 = ' + 段, { filename:'加号那张清单' }).runInContext(上下文);
+  return 上下文.清单;
+}
+const 假登记 = { name:'查资料', items:[{ kind:'web', ref:() => '', label:'空白网页' }] };
+const 清单 = 跑清单(null, 假登记);
+const 序 = 清单.map(g => g.name);
+台.判('21 登记进去的那一组真出现在清单里，位置还在「本书」之后、「辅助功能」之前',
+  序.indexOf('查资料') === 序.indexOf('本书') + 1 && 序[序.length - 1] === '辅助功能', 序.join(' → '));
+台.判('22 名单空着 = 清单里就没有那一组（摘掉一家，本体那份一个字不用改）',
+  !跑清单(null, null).some(g => g.name === '查资料'));
+/* 它自己那份末尾那句登记也真跑一遍 */
+function 跑网页登记(){
+  const 收 = {};
+  const 上下文 = { PickGroup:{ reg(g){ 收.组 = g; } } };
+  vm.createContext(上下文);
+  new vm.Script(到收尾(网页, 网页.lastIndexOf('PickGroup.reg(')), { filename:'网页那一登记' }).runInContext(上下文);
+  return 收;
+}
+const 网页组 = 跑网页登记();
+台.判('23 它登记的那一组组名、条目、那句「空白网页」跟从前写死在主界面里的一字不差',
+  网页组.组 && 网页组.组.name === '查资料' && 网页组.组.items.length === 1
+  && 网页组.组.items[0].kind === 'web' && 网页组.组.items[0].label === '空白网页'
+  && 网页组.组.items[0].ref() === '');
+台.判('24 视图注册那句跟着搬走了（主界面那份没有 Views.reg(\'web\' 这一颗，摘掉这一家就不认得 kind web）',
+  !/Views\.reg\('web'/.test(主界面));
+
+>>>>>>> parent of 1e0e25c ()
 /* ================== 五、负控：每一处登记各砍一刀 ================== */
 台.题('五、负控 —— 这几刀砍下去这台闸必须报红（不然上头那些条是自证的）');
 const 砍一 = 跑本体('    for(const reg of STAT_BLOCKS) blocks.push(reg.mount(host, ctx));\n');

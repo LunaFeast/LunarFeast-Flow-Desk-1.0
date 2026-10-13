@@ -36,16 +36,15 @@ for(const id of 各家){
     份.includes(格 + 'main.js') && 份.includes(格 + 'manifest.json'));
 }
 for(const f of ['src/_build/p1.js', 'src/_build/p6.js', 'src/_build/rp-kernel.mjs', 'src/_build/rp-base.html',
-                 
+                 'src/_wcustom/build-kernel.mjs', 'src/_wcustom/src/sh-code.js',
                  'src/pack/plugin/FlowDeskBridge.cs', 'src/pack/plugin/build-plugin.ps1'])
   台.判(f + ' 进仓了', 跟踪.includes(f));
 
 台.题('二、为写这一家：插件那一格那三件 + 那 22 份内核源码都在这一个仓里（2026-10-13 他一句「怎么会有主仓/私有两个」）');
 台.判('插件那一格里为写那三件在跟踪名单里（启动卡、插件清单、封面）',
   跟踪.includes('data/plugins/why-not-write/main.js') && 跟踪.includes('data/plugins/why-not-write/manifest.json'));
-const 盘内核 = fs.readdirSync(ROOT + 'src/_wnw/src').filter(n => /^w.+\.js$/.test(n)).map(n => 'src/_wnw/src/' + n);
-台.判('src 底下那些内核源码（盘上现在 ' + 盘内核.length + ' 份）一份不落全在跟踪名单里（从前那一棵私有的，现在并进这一个仓）',
-  盘内核.length >= 15 && 盘内核.every(k => 跟踪.includes(k)) &&
+台.判('src 底下那 22 份内核源码与出内核那颗脚本都在跟踪名单里（从前那一棵私有的，现在并进这一个仓）',
+  跟踪.filter(f => f.startsWith('src/_wnw/src/w') && f.endsWith('.js')).length === 22 &&
   跟踪.includes('src/_wnw/build-kernel.mjs'),
   跟踪.filter(f => f.startsWith('src/_wnw/')).length + ' 份在名单里');
 
@@ -54,7 +53,7 @@ for(const q of ['data/plugins/notes/main.js', 'data/plugins/why-not-write/main.j
                 'src/pack/plugin/FlowDeskBridge.cs', 'src/_build/p1.js', 'src/_wnw/src/w1-core.js', 'src/_wnw/build-kernel.mjs'])
   台.判(q + ' 该认（没被排掉）', !成(['check-ignore', '-q', '--', q]));
 for(const q of ['data/plugins/off.json', 'data/plugins-factory/notes/main.js',
-                 'src/_wnw/wnw-kernel.js', 'src/pack/plugin/dist/mb_FlowDesk.dll'])
+                 'src/_wnw/wnw-kernel.js', 'src/_wcustom/wnw-custom-kernel.js', 'src/pack/plugin/dist/mb_FlowDesk.dll'])
   台.判(q + ' 该排掉', 成(['check-ignore', '-q', '--', q]));
 /* 露在外面的只数「没登记过的那一种」（?? 开头那些 = 既不在仓里、也没被 .gitignore 排掉）。
    改过的在册文件（M 那一档）不算「第三种东西」—— 这一条钉的是忽略规则，不是「插件那一格不许有改动」。 */
