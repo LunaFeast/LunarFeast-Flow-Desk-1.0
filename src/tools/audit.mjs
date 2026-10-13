@@ -78,7 +78,7 @@ head('二、同一个名字出现多处 · 只报内容不一样的（一样的�
      fd-serve.mjs 在 src\tools 下那一个是老门牌，整个文件就是一句 import 转发到 src\_fd\ 那一份（它自己写着为什么）；
      拿名字配对比它们就是假报。插件内部的标准名字（main.js / icon.svg / manifest.json / bank.txt /
      recipe.json）也一样：每家都叫这个名，六家凑一起就成了"六个内容一种名字"，那是第一节管的事。
-     build-kernel.mjs 这一颗有两份 —— 为写那一棵（src\_wnw\）和组件定制那一棵（src\_wcustom\）各有一份出
+     build-kernel.mjs 这一颗有两份 —— 为写那一棵（src\_wnw\）和推演组件定制那一棵（src\_wcustom\）各有一份出
      内核的脚本，名字照同一套起（外39 定「照为写那一套分」），各拼各的源码、各出各的产物，内容本来就该不一样。 */
   const SAME_NAME_DIFFERENT_JOB = ['root.json', 'package.json', 'fd-serve.mjs', 'build-kernel.mjs'];
   const PACK_STANDARD_NAMES = ['main.js', 'manifest.json', 'recipe.json', 'bank.txt', 'icon.svg'];
@@ -128,8 +128,8 @@ head('三、四棵源码树里没被生成脚本点名的 .js（拼不进产物�
   const 名单 = s => new Set([...s.matchAll(/['"]([^'"]*?\.js)['"]/g)].map(x => path.basename(x[1]))
     .filter(n => n !== 'wnw-kernel.js' && n !== 'wnw-custom-kernel.js' && n.length > 3));
   const named = 名单(读('src', '_fd', 'build.mjs'));
-  /* 为写那一棵的名单不归 build.mjs 了（同步 GitHub 第 4 条「为写分离」），组件定制那一棵同理
-     （外39「组件定制本身也要分离出来」）：公开这棵只读一颗产物，名单在它们各自的出包脚本里 ——
+  /* 为写那一棵的名单不归 build.mjs 了（同步 GitHub 第 4 条「为写分离」），推演组件定制那一棵同理
+     （外39「推演组件定制本身也要分离出来」）：公开这棵只读一颗产物，名单在它们各自的出包脚本里 ——
      查死源码要跟着换尺，不然那二十份和那四份全会被报成没人名。 */
   const namedW = 名单(读('src', '_wnw', 'build-kernel.mjs'));
   const namedC = 名单(读('src', '_wcustom', 'build-kernel.mjs'));
@@ -149,7 +149,7 @@ head('三、四棵源码树里没被生成脚本点名的 .js（拼不进产物�
       dead++;
     }
   }
-  if(!dead) say('  ✓ 每一份都被点名了（宿主这边 ' + named.size + ' 个名字，为写 ' + namedW.size + ' 个，组件定制 ' + namedC.size + ' 个）');
+  if(!dead) say('  ✓ 每一份都被点名了（宿主这边 ' + named.size + ' 个名字，为写 ' + namedW.size + ' 个，推演组件定制 ' + namedC.size + ' 个）');
 }
 
 /* ---------- 四、插件清单点的随行文件在不在 + 程序那一层干不干净 ---------- */

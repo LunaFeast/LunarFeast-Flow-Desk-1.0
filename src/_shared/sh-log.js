@@ -1,6 +1,6 @@
 /* ============================================================
-   生成库 · WNW 和 FD 共用这一份
-   每个生成器一份明文：生成库\<组件id>.json，一条 = { t, text, sn }
+   推演记录 · WNW 和 FD 共用这一份
+   每个生成器一份明文：推演记录\<组件id>.json，一条 = { t, text, sn }
      t   生成那一刻的时间戳（也是这条的号，删单条按它删）
      text 这一轮出结果的全文
      sn   当时每个控件填着什么（回看时认得出是哪一组输入）
@@ -113,9 +113,9 @@ class GenLogSheet{
     for(const r of recs.slice(0, this.shown)) body.appendChild(this.item(r));
     if(recs.length > this.shown)
       body.appendChild(h('button', { class:'wnw-btn mini', style:'justify-self:start', onclick:() => { this.shown += 20; this.draw(); } }, '再看 20 条（共 ' + recs.length + ' 条）'));
-    H().dlg.open('生成库 · ' + this.name(), body, [
+    H().dlg.open('推演记录 · ' + this.name(), body, [
       h('button', { class:'wnw-btn mini', onclick:async () => {
-        if(!await shAsk('清空「' + this.name() + '」的生成库？这里记着的 ' + recs.length + ' 条会全没，按这些记录生成出去的东西不动。')) return;
+        if(!await shAsk('清空「' + this.name() + '」的推演记录？这里记着的 ' + recs.length + ' 条会全没，按这些记录生成出去的东西不动。')) return;
         await GenLog.clear(this.id); this.draw();
       } }, '清空'),
       h('button', { class:'wnw-btn mini', onclick:() => H().dlg.close() }, '关闭')
@@ -143,8 +143,8 @@ class GenLogSheet{
    FD 是桌面卡片，入口在卡片上的「记录」按钮，这边不硬挤。 */
 if(typeof Views !== 'undefined' && Views.reg){
   Views.reg('panel-genlog', {
-    name:'生成库', icon:'log', dockable:false,
-    title:() => '生成库',
+    name:'推演记录', icon:'log', dockable:false,
+    title:() => '推演记录',
     render(host, ref, ctx){ new GenLogRail(host, ctx); }
   });
 }
@@ -160,7 +160,7 @@ class GenLogRail{
     const list = (typeof Gen !== 'undefined') ? Gen.list() : [];
     for(const R of list) await GenLog.load(R.id);
     this.host.innerHTML = '';
-    const { body } = panelShell(this.host, '生成库', []);
+    const { body } = panelShell(this.host, '推演记录', []);
     if(!list.length){ body.appendChild(h('div', { class:'wnw-hint' }, '还没有生成器')); return; }
     for(const R of list){
       const n = GenLog.count(R.id);

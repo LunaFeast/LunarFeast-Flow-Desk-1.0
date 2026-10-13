@@ -1604,7 +1604,7 @@ const Gen = {
   list(){ return [...GEN_DEFS.values()]; },
   /* ---------- 完全删除 ----------
      这一家自己那一格（data\plugins\<id>\ 里的 main.js、recipe.json、插件清单整个文件夹）、
-     生成库里它的历次记录、这台机器上的 kv 镜像、名单里它那一格，一样都不留。
+     推演记录里它的历次记录、这台机器上的 kv 镜像、名单里它那一格，一样都不留。
      词库问过了才连目录一起删（bank 参数）。 */
   async remove(id, opt){
     const R = this.get(id);
@@ -1677,8 +1677,8 @@ function genDeleteAsk(R, after){
   const cb = h('input', { type:'checkbox' });
   const box = h('div', { class:'wnw-col' });
   box.appendChild(h('div', { class:'wnw-hint' },
-    '「' + R.name + '」是组件定制做出来的配方组件。删除是完全删除：这一家跑的代码、配方、插件清单，'
-    + '生成库里它的历次记录、插件名单里它那一格，一并抹掉，然后刷新这一页。'));
+    '「' + R.name + '」是推演组件定制做出来的配方组件。删除是完全删除：这一家跑的代码、配方、插件清单，'
+    + '推演记录里它的历次记录、插件名单里它那一格，一并抹掉，然后刷新这一页。'));
   if(R.bank && !Banks.isBuiltin(R.bank)){
     const tip = users.length ? '这份词库还有 ' + users.length + ' 个组件在用（' +
       users.map(u => u.name).join('、') + '），删了它们就空了' : '只有这一个组件在用';
@@ -1714,7 +1714,7 @@ async function genManifestFor(R){
   if(!(m.host && m.host.length)) m.host = ['fd', 'wnw'];
   if(typeof m.order !== 'number') m.order = 210;
   if(!m.author) m.author = '本地自制';
-  if(!m.source) m.source = '组件定制向导';
+  if(!m.source) m.source = '推演组件定制向导';
   if(!m.version) m.version = '1.0.0';
   if(!Array.isArray(m.dataKeys)) m.dataKeys = [];
   if(!Array.isArray(m.kvKeys)) m.kvKeys = [];
@@ -1834,7 +1834,7 @@ function genRecipeErr(R){
    JUDGE 或者 GenView 的那一个方法）。所以这一趟只做三件事：
      · 导入配方、导入功能包、改代码存为组件时扫一遍，把陌生的名字连同它在这份组件里带的那一段
        参数、那段代码的原文，记进一份明文清单；
-     · 「组件定制」里留一个查看入口，能看、能整份复制走交给 AI 写实现；
+     · 「推演组件定制」里留一个查看入口，能看、能整份复制走交给 AI 写实现；
      · 等实现真的进了代码（这个版本 CTL 里有了这条方法），清单里那条才允许「导入」成向导可选。
    绝不把清单里的代码当数据塞进解释器跑：配方从头到尾不 eval，这是这个文件头写明的边界。
    ============================================================ */
@@ -1994,7 +1994,7 @@ function pendingOne(it){
   return s;
 }
 function pendingBrief(list){
-  return '这些是组件里用到、但「组件定制」的功能模块 / 判断逻辑库里没有的类型。\n'
+  return '这些是组件里用到、但「推演组件定制」的功能模块 / 判断逻辑库里没有的类型。\n'
     + '请照 Ant Design 那种控件的交互自己写一个实现：功能模块写进 src\\_shared\\sh-gen.js 的 CTL 那张表（建界面 + parts 出值），'
     + '判断逻辑写进同一份文件的 JUDGE 或 GenView 的方法；两边都要在 src\\_shared\\sh-wizard.js 登记'
     + '（功能模块：GW_FNS、GW_T0、GW_NEW、GW_KEYS、控件参数编辑器那串 case；判断逻辑：GW_RULES），'
@@ -2020,7 +2020,7 @@ async function genPendingAsk(found, after){
   const box = h('div', { class:'wnw-col', style:'gap:8px;min-width:min(760px,92vw)' }, [
     h('div', { class:'wnw-hint' }, '这份组件用到了库里没有的类型。勾上的提取进待实现清单：名字、功能描述、'
       + '它在这份组件里带的那一段参数和代码原文一起记进去。复制这份清单交给 AI 就能写出干净的新实现；'
-      + '实现进了代码之后，在「组件定制」的功能模块 / 判断逻辑那一块点导入，它就成可选的一项。'),
+      + '实现进了代码之后，在「推演组件定制」的功能模块 / 判断逻辑那一块点导入，它就成可选的一项。'),
     ...rows
   ]);
   return await new Promise(done => {

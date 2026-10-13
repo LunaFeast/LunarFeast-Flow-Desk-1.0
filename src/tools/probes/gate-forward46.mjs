@@ -19,9 +19,9 @@ const 屏文 = rd('src/_build/push-ui.html');
 const 台文 = rd('src/_build/push-ui.mjs');
 
 台.题('一 · 名单只有一份，八项一项一格（id · 中文名 · 分支 · 摘掉哪几处）');
-台.判('八项齐（词格模式、音乐遥控器停靠、热力图、组件定制、空白网页、双栏停靠、卡片出场权重、生成库）',
-  八项.length === 8 && ['词格模式', '音乐遥控器停靠', '写作统计的热力图', '组件定制',
-    '标签页加号打开空白网页', '双栏停靠', '卡片出场权重', '生成库'].every(n => 八项.some(x => x.中文 === n)),
+台.判('八项齐（词格模式、音乐遥控器停靠、热力图、推演组件定制、空白网页、双栏停靠、卡片出场权重、推演记录）',
+  八项.length === 8 && ['词格模式', '音乐遥控器停靠', '写作统计的热力图', '推演组件定制',
+    '标签页加号打开空白网页', '双栏停靠', '卡片出场权重', '推演记录'].every(n => 八项.some(x => x.中文 === n)),
   八项.map(x => x.中文).join('、'));
 台.判('id 不重复、分支名一律 feature/new/ 起头（前瞻支那一类），一项一条',
   new Set(八项.map(x => x.id)).size === 8 && 八项.every(x => /^feature\/new\/[\w-]+$/.test(x.分支) && x.分支.endsWith(x.id)),
@@ -34,8 +34,8 @@ const 台文 = rd('src/_build/push-ui.mjs');
   八项.filter(x => x.形状 === 'whole-file').every(x => x.摘掉.some(s => /^[\w./-]+/.test(s))),
   'whole-file 4 · switch 4');
 台.判('认这项三种写法都认（id、中文名、整条分支名），认不出回空',
-  认这项('heat-map') === 'heat-map' && 认这项('生成库') === 'gen-log' &&
-  认这项('feature/new/music-dock') === 'music-dock' && 认这项('瞎写') === '' && 中文名('gen-log') === '生成库' &&
+  认这项('heat-map') === 'heat-map' && 认这项('推演记录') === 'gen-log' &&
+  认这项('feature/new/music-dock') === 'music-dock' && 认这项('瞎写') === '' && 中文名('gen-log') === '推演记录' &&
   分支of('card-weight') === 'feature/new/card-weight');
 台.判('这一棵现在带不带是量出来的，不是猜的：整份文件那种看文件在不在',
   现在带不带(ROOT, 八项.find(x => x.id === 'heat-map')).带 === fs.existsSync(ROOT + 'src/_wnw/src/w21-heat.js') &&
@@ -72,7 +72,7 @@ g('checkout', '-q', 'main');
   let 抛 = '';
   try { 合那一棵(仓, 'main', ['gen-log'], path.join(沙, '不该有')); } catch (e) { 抛 = String(e.message); }
   台.判('反向验：分支没起来就抛并点名是哪一项（不拿现在这一棵冒充带上了）',
-    /生成库/.test(抛) && /feature\/new\/gen-log/.test(抛) && !fs.existsSync(path.join(沙, '不该有')), 抛.split('\n')[0]);
+    /推演记录/.test(抛) && /feature\/new\/gen-log/.test(抛) && !fs.existsSync(path.join(沙, '不该有')), 抛.split('\n')[0]);
   let 抛2 = '';
   try { 合那一棵(仓, 'main', ['瞎写一项'], path.join(沙, '不该有2')); } catch (e) { 抛2 = String(e.message); }
   台.判('反向验：名单里没有的那一项当场抛（不静默丢掉）', /名单里没有/.test(抛2) && /forward-features/.test(抛2));

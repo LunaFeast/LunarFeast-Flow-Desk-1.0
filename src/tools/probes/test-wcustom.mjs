@@ -1,4 +1,4 @@
-/* 组件定制分离这一轮的闸（外39 · 2026-10-09 他定「组件定制本身也要分离出来，改名为 wnw-custom」）
+/* 推演组件定制分离这一轮的闸（外39 · 2026-10-09 他定「推演组件定制本身也要分离出来，改名为 wnw-custom」）
    ------------------------------------------------------------
    形状照为写那一套：源码单独一棵（src\_wcustom\src\）→ 自己出一颗产物 → 主程序构建只读那颗产物；
    界面上多一张启动卡，包 id = wnw-custom，仓库对应 Flow-Desk-plugin-WNW-Custom。
@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { ROOT, rd, 记账 } from './lib-slice.mjs';
 
-const 台 = 记账('组件定制分离');
+const 台 = 记账('推演组件定制分离');
 const 棵 = ROOT + 'src/_wcustom/';
 const 包 = ROOT + 'data/plugins/wnw-custom/';
 
@@ -57,8 +57,8 @@ const 缺 = ['manifest.json', 'main.js', 'images/icon.svg'].filter(f => !fs.exis
 台.判('三份一份不缺（插件清单 / 卡 / 自己那张图标）', 缺.length === 0, 缺.join('、') || '齐');
 const 说 = JSON.parse(fs.readFileSync(包 + 'manifest.json', 'utf8'));
 const 卸掉的 = (JSON.parse(fs.readFileSync(ROOT + 'data/plugins/off.json', 'utf8')).off || []).map(String);
-台.判('插件清单里的 id 就是目录名，界面上叫「组件定制」',
-  说.id === 'wnw-custom' && 说.name === '组件定制', 说.id + ' / ' + 说.name);
+台.判('插件清单里的 id 就是目录名，界面上叫「推演组件定制」',
+  说.id === 'wnw-custom' && 说.name === '推演组件定制', 说.id + ' / ' + 说.name);
 /* 「在不在不加载名单里」是他那一格的数据状态，不是代码属性：清完用户数据、或者在「添加插件」里
    把七家都卸掉之后，这张卡本来就不该摆 —— 那种时候这一条没有可判的对象，报一句跳过的原因，
    不许按失败算（2026-10-10 他一句「首次安装就是空的」）。 */
@@ -75,7 +75,7 @@ const 伸手 = ['GenWizard', 'Gen', 'Banks', 'codeEntry', 'PackCode', 'window.']
 const 答 = rd('src/_fd/src/fd5-load.js');
 const 块 = /wcustom:\{[\s\S]*?\n    \}/.exec(答);
 if(!块) throw new Error('没在 fd5-load.js 里找到 wcustom 那一段（换了写法，这台要跟着改）');
-const 造 = new Function('GenWizard', 'FD_VERSION', 'const WCUSTOM_MISSING = ' + JSON.stringify('组件定制的内核还没拼进这一版页面')
+const 造 = new Function('GenWizard', 'FD_VERSION', 'const WCUSTOM_MISSING = ' + JSON.stringify('推演组件定制的内核还没拼进这一版页面')
   + ';\nreturn ' + 块[0].replace(/^wcustom:/, '') + ';');
 const 假内核 = { open(){ 假内核.叫过 = (假内核.叫过 || 0) + 1; }, onSaved:null };
 const 有 = 造(假内核, '1.4.0');

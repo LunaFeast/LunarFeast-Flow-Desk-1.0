@@ -54,7 +54,7 @@ const 名单 = JSON.parse(fs.readFileSync(格 + '/off.json', 'utf8')).off;   /* 
   ['notes','music-remote','singbit-input-practice']
     .every(n => 目录.includes(n) && 插件清单[n] === n)
   && !目录.some(n => 旧名.includes(n)) && !名单.some(n => 旧名.includes(n))
-  /* 家数不钉死：外39 起组件定制也成了一家（wnw-custom），钉死一个数就是每加一家要改一台探针。
+  /* 家数不钉死：外39 起推演组件定制也成了一家（wnw-custom），钉死一个数就是每加一家要改一台探针。
      名单反着记之后要判的是「off 里不许有盘上不存在的家」（卸掉的家必须真在那一格里有名字），
      以及这一棵树至少出厂那几家在。 */
   && 名单.every(x => 目录.includes(String(x))) && 目录.length >= 7,

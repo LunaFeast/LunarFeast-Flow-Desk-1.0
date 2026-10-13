@@ -1400,7 +1400,7 @@ const Modal = {
     /* 先照老规矩把当前这一份（连同它的尺寸档位）收进 stack，再抹掉档位：
        上一次留下的尺寸不抹的话，子对话框（比如从设置里点「色卡图」）会顶着 1080×680 开 */
     const had = { vwide:d.classList.contains('vwide'), set:d.classList.contains('set') };
-    /* redraw：还是这一张面板，只是内容整个重画（组件定制改一下参数就整块重建）。
+    /* redraw：还是这一张面板，只是内容整个重画（推演组件定制改一下参数就整块重建）。
        这种一律不当成「又开了一层」：既不往 stack 里堆那份过期的（不然改几回就要按几回关闭，
        每按一回还退回一张旧草稿），也不许像 replace 那样把底下那层一起扔掉（底下是设置面板）。 */
     const isRedraw = !!(opt && opt.redraw) && !m.hidden && d.childNodes.length;
@@ -1420,7 +1420,7 @@ const Modal = {
     d.classList.remove('vwide', 'set');
     this.after = onClosed || null;
     d.innerHTML = '';
-    /* vwide 只有组件定制用：词库编辑器、生成库那些对话框宽度照旧，别跟着变 */
+    /* vwide 只有推演组件定制用：词库编辑器、推演记录那些对话框宽度照旧，别跟着变 */
     d.classList.toggle('vwide', !!(opt && opt.vwide));
     /* set 只有设置用：定死 1080×680，切标签时窗口不跟着内容长短抖 */
     d.classList.toggle('set', !!(opt && opt.set));
@@ -1811,7 +1811,7 @@ const Shell = {
       h('button', { class:'fd-tool', title:'换强调色', html:icoMarkup('slot'), onclick:() => { it.slot = ((it.slot || 0) + 1) % 5; this.save(); this.render(); } })
     ];
     if(def.expand && !expanded) tools.push(h('button', { class:'fd-tool', title:'放大', html:icoMarkup('expand'), onclick:() => def.expand(this.ctxFor(it)) }));
-    /* 每张卡顶上这几个编辑钮：改代码（铅笔图标，配方开「组件定制」，内置直接改这一家自己的 main.js）、
+    /* 每张卡顶上这几个编辑钮：改代码（铅笔图标，配方开「推演组件定制」，内置直接改这一家自己的 main.js）、
        设置（齿轮图标，只有插件清单点了 settings 的那几家才有 —— 插件的设置回归插件自己，不再垫在「设置 · 组件」那一页）、
        词库（牌堆图标，改这个功能用的词库）。WNW 停靠标题条上同名几个，两端对等。 */
     const cid = String(def.id).startsWith('tool-') ? def.id.slice(5) : def.id;
@@ -2056,7 +2056,7 @@ const Shell = {
       if(typeof GenWizard !== 'undefined' && !showHidden && !kw)
         grid.appendChild(h('div', { class:'fd-additem new' }, [
           h('button', { class:'fd-addpick', onclick:() => { GenWizard.onSaved = () => Shell.pickWidget(); GenWizard.open(''); } },
-            [h('span', { class:'w-mk', html:icoMarkup('plus') }), h('span', {}, '用组件定制做一个新组件')])]));
+            [h('span', { class:'w-mk', html:icoMarkup('plus') }), h('span', {}, '用推演组件定制做一个新组件')])]));
       /* 磁盘上有、名单里没写的那些包：这一栏给的就是「装回来」。
          名单是两边共用的，所以在这儿装上，WNW 停靠那边跟着也有。 */
       if(!showHidden) missingRow(grid, kw);
@@ -2285,7 +2285,7 @@ body.dragging{user-select:none;cursor:grabbing;}
 .fd-imgcell select{width:100%;font-size:.8571rem;padding:3px 5px;}
 .fd-imgcell .fd-row{gap:4px;}
 #toast,.fd-grid::-webkit-scrollbar-thumb,.scroll-y::-webkit-scrollbar-thumb{border-radius:var(--r-pill,5px);}
-/* 组件定制要 1400px：只有它，词库编辑器、生成库那些对话框还是原来的宽 */
+/* 推演组件定制要 1400px：只有它，词库编辑器、推演记录那些对话框还是原来的宽 */
 .fd-dialog.vwide{width:min(1400px,96vw);max-width:96vw;}
 /* 添加插件：面板锁在 560 宽 → 四列正方格，行数和列数差不多，不再摊成一条长带；
    格脚两个小钮分别管隐藏/找回和完全删除，配方组件才有删除那个。 */

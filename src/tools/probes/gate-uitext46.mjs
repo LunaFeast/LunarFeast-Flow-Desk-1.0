@@ -84,7 +84,7 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
     /h\('button', '换成这句'\)/.test(读('data/plugins/demo/main.js')) && /^import x from /.test(读('data/plugins/demo/main.js')));
   台.判('静态 html 里属性上那句也落到了（title 换掉、标签之间那段没动）',
     /<title>换了标题<\/title>/.test(读('src/_fd/template.html')) && /<p>标签之间的一句<\/p>/.test(读('src/_fd/template.html')));
-  台.判('回执给的是重新生成产物那三趟的次序，且顺序是为写内核 → 组件定制内核 → 那一张页面',
+  台.判('回执给的是重新生成产物那三趟的次序，且顺序是为写内核 → 推演组件定制内核 → 那一张页面',
     JSON.stringify(r.builds) === JSON.stringify(['src/_wnw/build-kernel.mjs', 'src/_wcustom/build-kernel.mjs', 'src/_fd/build.mjs']),
     JSON.stringify(r.builds));
   台.判('那三趟住在 uitext 这一份里（artifactBuilds 一颗），别处不抄第二份：界面文字那一屏叫的是它',

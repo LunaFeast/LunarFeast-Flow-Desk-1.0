@@ -5,7 +5,7 @@
      src\_fd\build.mjs            外壳那三十来份（顶层作用域）
      src\_wnw\build-kernel.mjs    为写那二十份（闭包），它的产物落在 src\_wnw\wnw-kernel.js
    整页 = 外壳 + 那颗产物 + 开机那一份，所以这一台还要顺手量一笔「产物落后没落后」。
-   同一天晚些（外39「组件定制本身也要分离出来」）又多一棵：src\_wcustom\build-kernel.mjs
+   同一天晚些（外39「推演组件定制本身也要分离出来」）又多一棵：src\_wcustom\build-kernel.mjs
    出 src\_wcustom\wnw-custom-kernel.js，那份不套闭包、名字照旧落在顶层，产物在不在新不新同一把尺量。 */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -64,7 +64,7 @@ console.log(!盘上 ? '✗ 产物那一颗根本不在：跑 node src\\_wnw\\bui
 /* 整页拿的是盘上那颗（build.mjs 读的就是它），不是现拼的这一份 */
 if(盘上) add('wnw-kernel', 盘上);
 
-/* ---------- 组件定制那颗产物（外39 分离，形状照为写那一套） ----------
+/* ---------- 推演组件定制那颗产物（外39 分离，形状照为写那一套） ----------
    build.mjs 把它当成 parts 里的一份读，所以整页拼的已经是盘上那一颗；这里补两件事：
      ① 那四份源码逐份过一遍语法（只查不拼 —— 拼进顶层会和产物本身撞名）；
      ② 那颗产物和源码还对不对得上 —— 对不上就是改了源码没重跑那一趟，旧字会悄悄进页。
@@ -74,13 +74,13 @@ const 定制棵 = path.join(ROOT, 'src/_wcustom/build-kernel.mjs');
 const 定制产物 = path.join(ROOT, 'src/_wcustom/wnw-custom-kernel.js');
 const 定制在 = fs.existsSync(定制产物);
 const 定制名单 = fs.existsSync(定制棵) ? grab(fs.readFileSync(定制棵, 'utf8'), 'const PARTS = [').map(names) : [];
-for(const p of 定制名单) 查('组件定制/' + p, fs.readFileSync(path.join(ROOT, 'src/_wcustom/src', p), 'utf8'));
+for(const p of 定制名单) 查('推演组件定制/' + p, fs.readFileSync(path.join(ROOT, 'src/_wcustom/src', p), 'utf8'));
 let 定制新 = false, 定制话 = '';
 try{ execFileSync(process.execPath, [定制棵, '--比'], {stdio:'pipe'}); 定制新 = true; }
 catch(e){ 定制话 = String((e.stdout && String(e.stdout)) || (e.stderr && String(e.stderr)) || e.message).split(/\r?\n/)[0]; }
-console.log(!定制在 ? '✗ 组件定制那颗产物不在：跑 node src\\_wcustom\\build-kernel.mjs'
-  : 定制新 ? '✓ 组件定制内核产物是最新的（' + Buffer.byteLength(fs.readFileSync(定制产物)) + ' 字节 · ' + 定制名单.length + ' 份源码）'
-  : '✗ 组件定制内核产物落后于源码：跑 node src\\_wcustom\\build-kernel.mjs —— ' + 定制话);
+console.log(!定制在 ? '✗ 推演组件定制那颗产物不在：跑 node src\\_wcustom\\build-kernel.mjs'
+  : 定制新 ? '✓ 推演组件定制内核产物是最新的（' + Buffer.byteLength(fs.readFileSync(定制产物)) + ' 字节 · ' + 定制名单.length + ' 份源码）'
+  : '✗ 推演组件定制内核产物落后于源码：跑 node src\\_wcustom\\build-kernel.mjs —— ' + 定制话);
 
 add(boot, read(boot));
 

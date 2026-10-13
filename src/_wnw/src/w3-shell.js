@@ -375,8 +375,8 @@ const Desk = {
       { k:'ch', i:'list', t:'章节' }, { k:'card', i:'grid', t:'卡片' }, { k:'insp', i:'idea', t:'灵感' },
       { k:'board', i:'board', t:'看板' }, { k:'tag', i:'tag', t:'标签' }, { k:'find', i:'findBook', t:'查找' }
     ];
-    /* 生成库是中立模块（_shared/sh-log.js）挂进来的那一格，没带它就不多摆 */
-    if(typeof GenLog !== 'undefined') items.push({ k:'genlog', i:'log', t:'生成库' });
+    /* 推演记录是中立模块（_shared/sh-log.js）挂进来的那一格，没带它就不多摆 */
+    if(typeof GenLog !== 'undefined') items.push({ k:'genlog', i:'log', t:'推演记录' });
     /* 图标下面跟两个字：只摆图标他认不出哪格是什么。上面那行照旧留完整提示 */
     const rb = (ico, t, on, fn) => {
       const b = h('button', { class:'wnw-rail-btn' + (on ? ' on' : ''), title:t, 'aria-label':t, onclick:fn });
@@ -1327,7 +1327,7 @@ const Settings = {
     if(typeof GenWizard !== 'undefined'){
       const gen = (typeof Gen !== 'undefined') ? Gen.list() : [];
       box.appendChild(h('button', { class:'wnw-btn mini w-txt', style:'justify-self:start;margin-top:10px',
-        onclick:() => GenWizard.open(''), html:icoMarkup('plus') + '用组件定制做一个插件' }));
+        onclick:() => GenWizard.open(''), html:icoMarkup('plus') + '用推演组件定制做一个插件' }));
       for(const R of gen)
         box.appendChild(h('div', { class:'wnw-ci', title:'改「' + R.name + '」的配方', onclick:() => GenWizard.open(R.id) }, [
           h('span', { class:'nm' }, R.name), h('span', { style:'flex:1' }),
@@ -1771,7 +1771,7 @@ const Overlay = {
   open(title, body, foot, opt){
     if(this.node){
       if(opt && opt.replace){ this.node.remove(); this.below.forEach(n => n.remove()); this.below.length = 0; }
-      /* redraw：还是这一张面板，只是内容整个重画（组件定制改一下参数就整块重建）。
+      /* redraw：还是这一张面板，只是内容整个重画（推演组件定制改一下参数就整块重建）。
          旧的直接扔掉，不藏进 below —— 不然改几回就要按几回关闭，每按一回还退回一张旧草稿。 */
       else if(opt && opt.redraw) this.node.remove();
       else { this.node.style.display = 'none'; this.below.push(this.node); }

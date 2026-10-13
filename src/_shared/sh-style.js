@@ -1,5 +1,5 @@
 /* ============================================================
-   中立工具样式 · 组件定制生成的那些功能在 WNW 和 FD 里长一样
+   中立工具样式 · 推演组件定制生成的那些功能在 WNW 和 FD 里长一样
    这几条规则原来写在 WNW 的外壳和模板里，剥出来只留一份：
      · WNW 侧 w3-shell.js / template.html 不再定义这些类（尺寸与原来逐像素相同）
      · FD 侧卡片要整体等比缩，靠 fd8-tools.js 的 transform 缩放盒，所以这里保持 px
@@ -11,7 +11,7 @@
 .sh-pane > .sh-col{min-width:0;}
 .sh-pane > .sh-form{flex:0 0 var(--sh-form-w,460px);min-width:200px;}
 .sh-pane > .sh-out{flex:1 1 auto;position:sticky;top:0;}
-/* 组件定制：对话框里给一块固定高的地方，左向导右预览各滚各的 */
+/* 推演组件定制：对话框里给一块固定高的地方，左向导右预览各滚各的 */
 .gw-pane{height:74vh;align-items:stretch;}
 .gw-pane > .sh-col{overflow:auto;min-height:0;}
 .gw-pane > .sh-out{position:static;}

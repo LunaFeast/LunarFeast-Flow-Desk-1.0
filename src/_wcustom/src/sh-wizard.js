@@ -1,5 +1,5 @@
 /* ============================================================
-   组件定制 · WNW 和 FD 共用这一份
+   推演组件定制 · WNW 和 FD 共用这一份
    三块：功能模块（界面结构件拼）→ 判断逻辑（生成时怎么挑怎么裁）→ 输出（出法 + 模板）；
    功能模块用五个结构件拼：控件 / 一行并列 / 成组 / 纯文本 / 组循环；出法两选一：列表组合 / 文本组合；
    控件功能十九种（开关 / 滑杆 / 区间随机数 / 生成式下拉 / 格式模板这五种是后补的，
@@ -230,7 +230,7 @@ class GenSheet{
     form.appendChild(this.rulesCard());
     shSplit(pane, form, shSplitKey('wizard'));
     this.outPane(out);
-    H().dlg.open('组件定制' + (this.editing ? ' · ' + this.R.name : ''), pane, [
+    H().dlg.open('推演组件定制' + (this.editing ? ' · ' + this.R.name : ''), pane, [
       h('button', { class:'wnw-btn primary', onclick:() => this.save() }, this.editing ? '保存' : '建这个插件'),
       h('button', { class:'wnw-btn mini', onclick:() => H().dlg.close() }, '关闭')
     ], { wide:true, vwide:true, redraw:true });
@@ -1205,7 +1205,7 @@ class GenSheet{
    （往 plugins\<id>\ 文件夹写这份 main.js 连同 manifest.json / recipe.json 那一步，见「组件装卸即时化」。） */
 function genSource(R){
   return '/* ES module 配方包：加载器 import 本文件、把 default 这份配方交给 Gen.def() 登记成一个功能。\n'
-    + '   改配方走「组件定制」向导（它重写本目录的 main.js 与 recipe.json），或直接改那份 recipe.json；\n'
+    + '   改配方走「推演组件定制」向导（它重写本目录的 main.js 与 recipe.json），或直接改那份 recipe.json；\n'
     + '   手改 main.js 里这一段会在下次保存时被向导覆盖。 */\n'
     + 'export default ' + JSON.stringify(R, null, 2) + ';\n';
 }

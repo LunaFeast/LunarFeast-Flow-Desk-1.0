@@ -6,7 +6,7 @@
    ============================================================ */
 const WNW_MISSING = '写作内核还没拼进这一版页面';
 const RP_MISSING = '声笔输入法练习内核还没拼进这一版页面';
-const WCUSTOM_MISSING = '组件定制的内核还没拼进这一版页面';
+const WCUSTOM_MISSING = '推演组件定制的内核还没拼进这一版页面';
 PackCtx.parts({
   kv:ToolKv,
   settings:Settings,
@@ -47,7 +47,7 @@ PackCtx.parts({
       get version(){ const k = window.RP_KERNEL; return k ? k.version : RP_MISSING; },
       get available(){ return typeof window.RP_KERNEL === 'object' && window.RP_KERNEL !== null; }
     },
-    /* 组件定制内核（外39 分离，形状照为写那一套）：源码住 src\_wcustom\src\ 那四份，
+    /* 推演组件定制内核（外39 分离，形状照为写那一套）：源码住 src\_wcustom\src\ 那四份，
        由那一棵自己的 build-kernel.mjs 出成一颗产物，生成时贴进整页顶层。
        和上面两条不一样的一处：它不套闭包，名字（GenWizard / Gen / codeEntry…）本来就落在顶层，
        外壳那几只入口判的就是「这个名字在不在」—— 理由写在那棵的 build-kernel.mjs 开头。

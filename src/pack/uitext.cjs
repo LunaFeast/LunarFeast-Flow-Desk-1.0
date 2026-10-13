@@ -219,7 +219,7 @@ function fnAt(map, line){
 
 /* ---------- 3. 出处：哪个程序的哪一页 ---------- */
 const P_FD = 'Flow-Desk', P_WNW = '为写', P_RP = '声笔输入法练习',
-  P_MAIN = 'Flow-Desk 主进程', P_SH = '共用模块', P_PACK = '功能包', P_WC = '组件定制',
+  P_MAIN = 'Flow-Desk 主进程', P_SH = '共用模块', P_PACK = '功能包', P_WC = '推演组件定制',
   P_SFX = '首装那一个 exe';
 /* 功能包那几段的名字不在这儿抄第二份：读各包自己那份插件清单（manifest.json 里的 name），
    改名字、装功能、卸功能都跟着真身走。以前这里抄过一份功能包的名字表，包一改名清单上就凭空
@@ -299,8 +299,8 @@ function pageOf(rel, fn, dyn, packs){
   m = f.match(/^src\/_fd\/src\/([^/]+)$/); if(m) return { prog:P_FD, page:FD_CN[m[1]] || m[1] };
   m = f.match(/^src\/_wnw\/src\/([^/]+)$/); if(m) return { prog:P_WNW, page:WNW_CN[m[1]] || m[1] };
   m = f.match(/^src\/_shared\/([^/]+)\.js$/); if(m) return { prog:P_SH, page:SH_CN[m[1]] || m[1] };
-  /* 外39 组件定制分离：那四份搬进 src\_wcustom\src\，一页名字照旧吃上面那张 SH_CN（词库 / 生成器 / 配方向导 / 改代码），
-     只是「哪个程序的哪一份文件」这一栏从「共用模块」换成「组件定制」。 */
+  /* 外39 推演组件定制分离：那四份搬进 src\_wcustom\src\，一页名字照旧吃上面那张 SH_CN（词库 / 生成器 / 配方向导 / 改代码），
+     只是「哪个程序的哪一份文件」这一栏从「共用模块」换成「推演组件定制」。 */
   m = f.match(/^src\/_wcustom\/src\/([^/]+)\.js$/); if(m) return { prog:P_WC, page:SH_CN[m[1]] || m[1] };
   m = f.match(/^src\/_build\/(p\d)\.js$/); if(m) return { prog:P_RP, page:RP_CN[m[1] + '.js'] || m[1] };
   m = f.match(/^data\/plugins\/([^/]+)\//); if(m) return { prog:P_PACK, page:P[m[1]] || m[1] };
@@ -865,7 +865,7 @@ function parse(text){
    改的是源码，所以写完界面上还看不见 —— 得把产物重新生成一遍。这一趟的次序在这一份文件里说一次，
    别处（工具那一屏、发布那一条）都从 artifactBuilds() 取，不抄第二份：
      1 src/_wnw/build-kernel.mjs      私有那一棵自己出为写那颗内核产物
-     2 src/_wcustom/build-kernel.mjs  出组件定制那颗内核产物
+     2 src/_wcustom/build-kernel.mjs  出推演组件定制那颗内核产物
      3 src/_fd/build.mjs              读上面那两颗产物 + 现拼声笔那颗，生成 pages\ 那一张页面
    这三趟都落到他的源码树里，正好是「改动进了源码 → 由分支和 PR 带走」那条路：
    产物里 wnw-kernel.js 与 wnw-custom-kernel.js 已经进了 .gitignore（各仓自己出），
