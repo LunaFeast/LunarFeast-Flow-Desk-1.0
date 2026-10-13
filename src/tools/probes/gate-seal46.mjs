@@ -125,7 +125,7 @@ const 空手 = await 跑(`(() => {
 const 家目录 = ROOT + 'data/plugins';
 const 名单 = fs.readdirSync(家目录).filter(名 => fs.existsSync(家目录 + '/' + 名 + '/manifest.json'));
 台.数('货架上有几家', 名单.length);
-台.判('七家（一家不多一家不少）', 名单.length === 7, 名单);
+台.判('六家（一家不多一家不少）', 名单.length === 6, 名单);
 for(const 名 of 名单){
   const 清单 = JSON.parse(fs.readFileSync(家目录 + '/' + 名 + '/manifest.json', 'utf8'));
   const 量 = 跑('(() => { const m = PackLoader.metaOf(' + JSON.stringify(名) + ', ' + JSON.stringify(清单) + ');'

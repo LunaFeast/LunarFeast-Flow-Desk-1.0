@@ -38,30 +38,11 @@ if(!assertClean(path.join(TREE.data, 'plugins'), '生成 Flow-Desk 页面')) pro
    fd5-load.js 排在 fd8 之后：它要交上去的 DATA_PRE / ToolKv 都在那儿定义；
    从前这里还排着一颗 fd7-help.js，为的是帮助文档能在启动流程跑起来之前挂到顶栏 —— 文档整份撤了（外44 六），它跟着摘掉 */
 const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-packs.js','../_shared/sh-load.js','../_shared/sh-color.js','../_shared/sh-ico.js','../_shared/sh-font.js','fd10-size.js','fd2-store.js','fd3-shell.js','fd3-lib.js','fd11-cards.js','fd12-rime-colors.js','fd13-colour-v1.js','fd9-title.js','fd4-builtin.js','fd8-tools.js','fd5-load.js',
-  '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js','../_wcustom/wnw-custom-kernel.js',
+  '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js',
   '../_shared/sh-ttml.js',
   '../_shared/sh-mus.js',
   '../_shared/sh-icode.js',
   '../_shared/sh-banks.js','../_shared/sh-bank-ui.js','../_shared/sh-log.js'];
-/* 推演组件定制那四份（词库底层 / 生成器 / 向导 / 改代码）从外39 起不再一份一份拼：
-   它们住在 src\_wcustom\src\，由那一棵自己的 build-kernel.mjs 出成上面那一份产物。
-   排的位置就是从前 sh-banks 那一格 —— 这四份全是纯声明，落在整页顶层哪一处都不影响求值，
-   外壳那几只入口（改代码 / 生成向导 / 导入导出组件）判的是「这个名字在不在」，
-   所以这一版没带定制代码时那些入口自己就不摆，不需要另加判空。 */
-/* 推演组件定制那颗产物在不在：缺了就报错退出（和为写那颗同一待遇），
-   加 --无定制 才允许打一版不带定制的页面 —— 那种版本上改代码、生成向导那几只入口自己就不摆。 */
-const 不带定制 = process.argv.indexOf('--无定制') >= 0;
-const CUSTOM = path.join(path.dirname(ROOT), '_wcustom', 'wnw-custom-kernel.js');
-if(!fs.existsSync(CUSTOM)){
-  if(!不带定制){
-    console.error('推演组件定制那颗产物不在：' + CUSTOM
-      + '\n  它由那一棵自己出：node src\\_wcustom\\build-kernel.mjs'
-      + '\n  确实要打一版没有推演组件定制的页面：加 --无定制');
-    process.exit(1);
-  }
-  parts.splice(parts.indexOf('../_wcustom/wnw-custom-kernel.js'), 1);
-  console.log('这一版不带推演组件定制：那几只入口按「名字在不在」判，摆出来就是没有它们');
-}
 
 /* boot 排最后：加载器、注册表、外壳底子都站好了才开机 */
 const BOOT = 'fd6-boot.js';

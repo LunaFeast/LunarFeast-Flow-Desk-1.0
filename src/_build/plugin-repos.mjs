@@ -78,8 +78,6 @@ export const 家 = [
   { id:'singbit-input-practice', 中文:'声笔输入法练习', 支:'plugin/singbit-input-practice',  仓:'', from:[pack('singbit-input-practice'),
       'src/_build/rp-kernel.mjs', 'src/_build/rp-base.html',
       'src/_build/p1.js', 'src/_build/p2.js', 'src/_build/p3.js', 'src/_build/p4.js', 'src/_build/p5.js', 'src/_build/p6.js'] },
-  { id:'wnw-custom',             中文:'推演组件定制',       支:'plugin/wnw-custom',             仓:'', from:[pack('wnw-custom'),
-      'src/_wcustom/build-kernel.mjs', 'src/_wcustom/src/sh-gen.js', 'src/_wcustom/src/sh-wizard.js', 'src/_wcustom/src/sh-code.js'] },
   { id:'why-not-write',          中文:'为写',           支:'plugin/why-not-write',           仓:'', from:[pack('why-not-write')] },
 ];
 

@@ -7,7 +7,7 @@
      二、三种情况各走各自的：真改过代码的补新号 / 还挂着占位死号的补真号 / 号已经是真的一字不碰；
      三、号只有一处真身：清单文件（传进打包的那一串、界面上「关于」读的那一份，都是它）；
      四、tag 钉在代码那一笔上，不钉在「把号写进清单」那一笔上；
-     五、盘上那七份清单现在都带 +build. 尾巴，没有一家还是当初那个占位死号。
+     五、盘上那六份清单现在都带 +build. 尾巴，没有一家还是当初那个占位死号。
    ============================================================ */
 import fs from 'node:fs';
 import { rd, 记账, 切, ROOT } from './lib-slice.mjs';
@@ -39,13 +39,13 @@ const 写号 = 切(rel, '号写回清单');
 
 台.题('四、tag 钉在代码那一笔');
 台.判('打tag 多收一枚「钉在哪一笔」', rel.includes('function 打tag(dir, name, 谁, 钉在)'));
-台.判('每一家把代码那一笔递进去（七家一律报各自那一支，独立仓那一种报名字的写法退了）',
+台.判('每一家把代码那一笔递进去（六家一律报各自那一支，独立仓那一种报名字的写法退了）',
   rel.includes("'v' + r.号, (r.支 || ('main 里的' + r.中文)), r.sha") && !/r\.仓/.test(rel));
 台.判('记号那一笔走「往那一支写」，只点这一家的清单那一份（不切盘上那棵、不叫隔壁那一台）',
   写号.includes('往那一支写(r.支, [{ 份:清单格(r.id)') && 写号.includes('另起一笔记号') && !写号.includes("'--only='"));
 
-台.题('五、盘上那七份清单现在都带真号');
-for(const id of ['notes', 'schedule', 'your-sentences', 'music-remote', 'singbit-input-practice', 'why-not-write', 'wnw-custom']){
+台.题('五、盘上那六份清单现在都带真号');
+for(const id of ['notes', 'schedule', 'your-sentences', 'music-remote', 'singbit-input-practice', 'why-not-write']){
   let v = '';
   try{ v = String(JSON.parse(fs.readFileSync(ROOT + 'data/plugins/' + id + '/manifest.json', 'utf8')).version || ''); }catch(e){ v = '（读不到）'; }
   台.判(id + ' 那一格带 +build. 尾巴（现在：' + v + '）', /\+build\.[0-9a-f]{7}$/.test(v));

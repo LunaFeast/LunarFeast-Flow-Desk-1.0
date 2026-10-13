@@ -4,7 +4,7 @@
      node src/tools/probes/gate-uitext46.mjs
    钉的是这么几件事：
      一 · 界面文字 apply 写回扫描量到的那一份源码（2026-10-13 他定的方案甲），
-          装机那一张页面文件一个字节都不碰；落完笔给的是重新生成产物那三趟的次序；
+          装机那一张页面文件一个字节都不碰；落完笔给的是重新生成产物那两趟的次序；
      二 · 落笔之前那一道语法闸：喂一份「原样读得通 / 改完读不通」的文本必须报红（反向验），
           静态 html 与 ESM 两种形状都量到；
      三 · plan()/apply() 不再收「那一张页面文件」那一个参数（收了就是还留着老那条路）；
@@ -84,10 +84,10 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
     /h\('button', '换成这句'\)/.test(读('data/plugins/demo/main.js')) && /^import x from /.test(读('data/plugins/demo/main.js')));
   台.判('静态 html 里属性上那句也落到了（title 换掉、标签之间那段没动）',
     /<title>换了标题<\/title>/.test(读('src/_fd/template.html')) && /<p>标签之间的一句<\/p>/.test(读('src/_fd/template.html')));
-  台.判('回执给的是重新生成产物那三趟的次序，且顺序是为写内核 → 推演组件定制内核 → 那一张页面',
-    JSON.stringify(r.builds) === JSON.stringify(['src/_wnw/build-kernel.mjs', 'src/_wcustom/build-kernel.mjs', 'src/_fd/build.mjs']),
+  台.判('回执给的是重新生成产物那两趟的次序，且顺序是为写内核 → 那一张页面',
+    JSON.stringify(r.builds) === JSON.stringify(['src/_wnw/build-kernel.mjs', 'src/_fd/build.mjs']),
     JSON.stringify(r.builds));
-  台.判('那三趟住在 uitext 这一份里（artifactBuilds 一颗），别处不抄第二份：界面文字那一屏叫的是它',
+  台.判('那两趟住在 uitext 这一份里（artifactBuilds 一颗），别处不抄第二份：界面文字那一屏叫的是它',
     /function artifactBuilds\(/.test(文UIT) && rd('src/_build/push-ui.mjs').includes('字.artifactBuilds()'));
   台.判('写完刷新清单本身：已经落进源码的那几行不再算「他写的改动」（不然下一趟就成了认不到的孤儿行）',
     /refresh\(TREE, 丢\)/.test(颗(文UIT, 'apply')) && /function refresh\(TREE, 丢掉\)/.test(文UIT));
@@ -202,7 +202,7 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
   台.判('生成那一趟不再把它拼进产物', !/sh-text/.test(rd('src/_fd/build.mjs')));
   const 壳 = ['src/_fd/src/fd3-shell.js', 'src/_fd/src/fd6-boot.js', 'src/_fd/src/fd4-builtin.js',
     'src/_wnw/src/w1-core.js', 'src/_wnw/src/w3-shell.js', 'src/_wnw/src/w6-boot.js', 'src/_wnw/src/w10-cards.js',
-    'src/_wcustom/src/sh-wizard.js', 'src/_build/rp-kernel.mjs', 'data/plugins/music-remote/main.js'];
+    'src/_build/rp-kernel.mjs', 'data/plugins/music-remote/main.js'];
   台.判('那十份壳与内核里再没有一处喊 Txt / Phrase',
     壳.every(f => !/\bTxt\.|\bPhrase\b/.test(rd(f))), 壳.filter(f => /\bTxt\.|\bPhrase\b/.test(rd(f))).join('、'));
   台.判('h() 里那两处查表与 data-txp 那一钉都撤了（title/placeholder 走回原生那一路）',
