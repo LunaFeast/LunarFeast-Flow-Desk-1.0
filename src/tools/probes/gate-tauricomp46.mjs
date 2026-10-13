@@ -5,14 +5,14 @@
    钉的是这么几件事，一条都不许放宽：
      一、这一批 7 颗（comp:read / list / write / delete / restore / factory 加 code:catRename）
         每一颗在壳里都有对应的一颗命令，而且都上了 main.rs 的注册单 —— 没上单等于不存在；
-     二、桥里这 7 颗不再是「这颗通道还没搬进壳」：参表里有名、栏名与顺序对得上 preload 递的实参个数，
+     二、桥里这 7 颗不再是「这颗通道还没搬进壳」：参表里有名、栏名与顺序对得上桥里递的实参个数，
         参数名里一个下划线都没有；
      三、「哪一家允许读 / 改 / 删哪几份」那把尺（原件 src\pack\comp-files.cjs）整个住在纯判断那一格：
         包名白名单、可改后缀那张表、8MB 那道顶、排前那三份、那十几句拒回来的原话 ——
         字面值两头逐条对，动手那一层一个字都没重写（重写就是第二份真身，迟早漂移）；
      四、越界那道判断带测试，且钉住这五条硬样本：本家那几份放行、.. 拒、绝对路径拒、空串拒、改到别人家那一格拒；
-     五、comp:restore 与 comp:factory 取的出厂那一格与 main.cjs 同一处（<树根>\data\plugins-factory）——
-        main.cjs 2088 行顶上那句旧注释写的是 resources\app\data\plugins（外43 就搬走了），闸认代码不认旧话；
+     五、comp:restore 与 comp:factory 取的是原厂那一格（<树根>\data\plugins-factory），
+        不是活的那一格 —— 从前那句旧话写的是 resources\app\data\plugins（外43 就搬走了），闸认代码不认旧话；
      六、comp:write 被挡时回的形状与 Electron 那颗一致：只有 ok + msg 那两格，一句都不许多；
         成了那一支只有 ok + size；
      七、code:catRename 那三种写法、两张后缀表与两个深度、回执那七栏，两头同一份；
@@ -23,8 +23,6 @@ import path from 'node:path';
 import { rd, 记账, 切, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-tauricomp46');
-const main = rd('src/pack/main.cjs');
-const 原身 = rd('src/pack/preload.cjs');
 const 尺 = rd('src/pack/comp-files.cjs');          /* 那把共用的尺的原件 */
 const 桥 = rd('src/_tauri/ui/fd-bridge.js');
 const 壳 = rd('src/_tauri/src/main.rs');
@@ -49,13 +47,6 @@ const 批 = [
 ];
 const 那本 = 名 => (名 === 'comp_cmds' ? 动 : 改);
 
-/* 从主进程那份里切出一颗 handler 的原文：从 ipcMain.handle('<通道>' 起到下一个 ipcMain. 为止 */
-function 那一段(通道) {
-  const 起 = main.indexOf("ipcMain.handle('" + 通道 + "'");
-  if (起 < 0) throw new Error('主进程里找不到这一颗：' + 通道);
-  const 止 = main.indexOf('ipcMain.', 起 + 1);
-  return main.slice(起, 止 < 0 ? main.length : 止);
-}
 /* comp-files.cjs 里那一个方法：方法都是缩进四格的对象成员，切() 那颗只认顶格声明 */
 function 那一颗(方法名) {
   const 起 = 尺.indexOf('\n    ' + 方法名 + '(');
@@ -67,17 +58,17 @@ function 那一颗(方法名) {
 /* 桥的参表（生成物里那一份）；拿不到就当这一批根本没进桥 */
 const 表文 = (桥.match(/const 参表 = (\{[\s\S]*?\});/) || [])[1] || '{}';
 const 表 = JSON.parse(表文);
-/* 页面那一头实参有几栏：从 preload 里 invoke('<通道>' 后面那段按括号层数数一遍顶层逗号 */
+/* 页面那一头实参有几栏：从桥里 invoke('<通道>' 后面那段按括号层数数一遍顶层逗号 */
 function 递了几栏(通道) {
   const 键 = "invoke('" + 通道 + "'";
-  const 次 = 原身.split(键).length - 1;
-  if (次 !== 1) throw new Error('桥的调用点在 preload 里不是唯一的一处：' + 通道 + '（找到 ' + 次 + ' 处）');
-  let k = 原身.indexOf(键) + 键.length, 深 = 0, 出 = '';
-  while (k < 原身.length) {
-    const c = 原身[k];
+  const 次 = 桥.split(键).length - 1;
+  if (次 !== 1) throw new Error('桥的调用点不是唯一的一处：' + 通道 + '（找到 ' + 次 + ' 处）');
+  let k = 桥.indexOf(键) + 键.length, 深 = 0, 出 = '';
+  while (k < 桥.length) {
+    const c = 桥[k];
     if (c === '(' || c === '[' || c === '{') 深++;
     else if (c === ')' || c === ']' || c === '}') { if (深 === 0) break; 深--; }
-    else if (c === '"' || c === "'") { k++; while (k < 原身.length && 原身[k] !== c) k++; }
+    else if (c === '"' || c === "'") { k++; while (k < 桥.length && 桥[k] !== c) k++; }
     出 += c;
     k++;
   }
@@ -119,12 +110,11 @@ function 算式(串) {
   return Function('"use strict";return (' + 净 + ')')();
 }
 
-台.题('一、这一批 7 颗：主进程每一颗，壳里都有一座，且都上了注册单');
+台.题('一、这一批 7 颗：页面请的每一颗，壳里都有一座，且都上了注册单');
 台.数('这一批点名的通道', 批.length + ' 颗 · ' + 批.map(x => x[0]).join(' '));
 台.判('点的就是 7 颗，不多不少', 批.length === 7);
 for (const [通道, 名, 本] of 批) {
   台.判(通道 + ' 的通道名换算过去就是 ' + 名, 换(通道) === 名);
-  台.判(通道 + ' 在主进程里确有这一颗 handler', main.includes("ipcMain.handle('" + 通道 + "'"));
   台.判(通道 + ' 在壳里有对应的一颗（' + 本 + '.rs 里有 pub fn ' + 名 + '）',
     new RegExp('pub (?:async )?fn ' + 名 + '\\s*\\(').test(那本(本)));
   台.判(通道 + ' → ' + 名 + ' 在 main.rs 的注册单上', 壳.includes(本 + '::' + 名));
@@ -155,13 +145,13 @@ const 栏名们 = 批.flatMap(x => 表[x[1]] || []);
 台.判('参数名里一个下划线都没有（Tauri 那头按驼峰认名）', 栏名们.every(n => !n.includes('_')));
 台.判('参数名没有拿 app / 手 / 窗口 / 状态 / 事件 打头的（那种会被当成不是给页面的）',
   栏名们.every(n => !/^(app|手|窗口|状态|事件)/.test(n)));
-台.判('这一批七颗都不收 AppHandle（那一头 comp 那六颗 handler 没朝窗口喊话，refreshLists 是主进程内部的）',
+台.判('这一批七颗都不收 AppHandle（这一摊的七颗都不朝窗口喊话，刷新名单是页面自己那一手）',
   ![动, 改].some(s => /app: AppHandle/.test(s)));
-台.判('read 与 restore 那两颗收的是可空的 rel（preload 传的是 rel === undefined ? null : String(rel)）',
+台.判('read 与 restore 那两颗收的是可空的 rel（桥里递的是 rel === undefined ? null : String(rel)）',
   /pub fn comp_read\(id: String, rel: Option<String>\)/.test(动)
   && /pub fn comp_restore\(id: String, rel: Option<String>\)/.test(动)
-  && 原身.includes("invoke('comp:read', String(id || ''), rel === undefined ? null : String(rel))"));
-台.判('write 那一颗三栏全收字串（preload 那头把 rel 与 text 都拼成了字串，空的那两栏也是字串）',
+  && 桥.includes("invoke('comp:read', String(id || ''), rel === undefined ? null : String(rel))"));
+台.判('write 那一颗三栏全收字串（桥里把 rel 与 text 都拼成了字串，空的那两栏也是字串）',
   /pub fn comp_write\(id: String, rel: String, text: String\)/.test(动));
 
 台.题('三、那把尺整个住在纯判断那一格，字面值两头逐条对（动手那一层一个字都没重写）');
@@ -261,13 +251,7 @@ const 全测试 = fs.readdirSync(path.join(ROOT, 'src', '_tauri', 'src', 'core')
 台.数('全仓纯判断那一格的测试总数', 全测试.length + ' 颗');
 台.判('总数比上一批的 81 颗多了（不许多加不减，也不许把旧的撤掉）', 全测试.length > 81);
 
-台.题('五、comp:restore 与 comp:factory 取的出厂那一格，与 main.cjs 同一处');
-const 主COMP = 切(main, 'COMP');
-台.判('主进程那把尺是这么装的：live = <数据层>\\plugins、factory = ORIG_ROOT',
-  主COMP.includes("live:() => path.join(DATA_ROOT, 'plugins')") && 主COMP.includes('factory:() => ORIG_ROOT'));
-台.判('ORIG_ROOT 就是 <数据层>\\plugins-factory（外43 起原厂底住在数据层）',
-  切(main, 'ORIG_ROOT').includes("path.join(DATA_ROOT, 'plugins-factory')"));
-台.判('DATA_ROOT 就是 <树根>\\data', main.includes("const DATA_ROOT = path.join(TREE, 'data');"));
+台.题('五、comp:restore 与 comp:factory 取的是原厂那一格（<数据层>\\plugins-factory）');
 台.判('壳里那两把格：活的那一格 = 数据层\\plugins、原厂那一格 = 数据层\\plugins-factory',
   /fn 活的那一格\(\) -> String \{[\s\S]*?\.join\("plugins"\)/.test(动) && /fn 原厂那一格\(\) -> String \{[\s\S]*?\.join\("plugins-factory"\)/.test(动));
 台.判('数据层那一格与 data_cmds 共用一颗（不另起第二份口径，备份那一摊也用它）',
@@ -275,10 +259,11 @@ const 主COMP = 切(main, 'COMP');
   && /pub\(crate\) fn 数据层格\(\) -> PathBuf \{ crate::tree_root\(\)\.join\("data"\) \}/.test(rd('src/_tauri/src/tauri_bind/data_cmds.rs')));
 台.判('那一颗 restore 取的是出厂那一格（原件走 factFile，壳走 出厂落点），不是活的那一格',
   那一颗('restore').includes('factFile(L.id, segsOf(r))') && 动.includes('出厂落点(&原厂, &落.包名, &要恢复)'));
-台.判('那一颗 factory 报的是出厂那一格里这一家（原件 factoryFiles / hasFactory，壳 原厂那一家）',
-  那一段('comp:factory').includes('files:COMP.factoryFiles(id), has:COMP.hasFactory(id)') && 动.includes('原厂那一家(&原厂, &id)'));
-台.判('main.cjs 2088 行顶上那句旧注释还写着 resources 那一层（外43 就搬走了），壳照的是代码不是旧话',
-  main.includes('出厂原文取 resources') && !那两层码.includes('resources') && !纯.includes('resources'));
+台.判('那一颗 factory 报的是出厂那一格里这一家（原件 factoryFiles / hasFactory 都从原厂那一格取，壳里是 原厂那一家）',
+  那一颗('factoryFiles').includes('FACT()') && 那一颗('hasFactory').includes('FACT()')
+  && 动.includes('原厂那一家(&原厂, &id)'));
+台.判('原厂这一格不写 resources 那层那句旧话（壳里两本与纯判断那一格都不认那一层）',
+  !那两层码.includes('resources') && !纯.includes('resources'));
 /* 壳里那一颗 restore 的原文（这一颗自己的那一段，到顶格的 } 为止）—— 只看它自己用没用链接 */
 const 壳恢复颗 = (() => {
   const 起 = 动.indexOf('pub fn comp_restore');
@@ -313,8 +298,8 @@ const 壳写 = 壳字段(动, '一个回执');
   && 纯.includes('format!("这份文件 {}MB，太大不走这条路"') && 纯.includes('format!("这份 {}MB，太大不走这条路"'));
 台.判('写下去报的 size 是字节数（buf.length 那一手），不是字符数',
   动.includes('let 节 = text.as_bytes();') && 动.includes('一个回执::成了(节.len() as u64)'));
-台.判('主进程那三颗（write / delete / restore）成了之后不再叫任何重扫（那两台清单都不再由程序重扫），这一层顶上也不挂「已知缺口」那一段',
-  !/refreshLists/.test(那一段('comp:write')) && !/refreshLists/.test(动) && !动.includes('已知缺口'));
+台.判('壳里那三颗（write / delete / restore）成了之后不再叫任何重扫（两本 Rust 里都没有 refreshLists 这一手），这一层顶上也不挂「已知缺口」那一段',
+  !/refreshLists/.test(动 + 改) && !动.includes('已知缺口'));
 台.判('那一层任何一步都不抛给页面（六颗返回的类型都不是 Result）',
   !/pub fn comp_\w+\([^)]*\) -> Result/.test(动));
 
@@ -345,53 +330,42 @@ const 主删支 = [...那一颗('remove').matchAll(/return (\{[^}]*\})/g)].map(m
 台.判('抹着的两样东西：那一格目录与那颗同名 zip，两处都算进 removed（写法也照原件：<包名>/ 与 <包名>.zip）',
   那一颗('remove').includes("gone.push(L.id + '/')") && 那一颗('remove').includes("gone.push(L.id + '.zip')")
   && 动.includes('format!("{}/", 落.包名)') && 动.includes('format!("{}.zip", 落.包名)'));
-台.判('comp:factory 那一颗永远 ok:true 且带 files + has 两栏（那一头没套 try）',
-  那一段('comp:factory').includes('{ ok:true, files:COMP.factoryFiles(id), has:COMP.hasFactory(id) }')
-  && JSON.stringify(壳字段(动, '一份原厂')) === JSON.stringify(['ok', 'files', 'has']));
-台.判('comp:read 那一头 handler 的兜底是「抛了回 { ok:false, msg }」，壳里那句错也是回 msg 不是抛',
-  那一段('comp:read').includes('catch(err){ return { ok:false, msg:String((err && err.message) || err) }; }'));
+台.判('comp:factory 那一颗永远 ok:true 且带 files + has 两栏（不套 try，读不出来也回空的那一串）',
+  JSON.stringify(壳字段(动, '一份原厂')) === JSON.stringify(['ok', 'files', 'has'])
+  && 动.includes('pub fn comp_factory'));
+台.判('comp:read 出错是回一格给页面（不成 / 没有 那两支），不是把错抛到页面上',
+  /pub fn comp_read\(id: String, rel: Option<String>\) -> 一份原文/.test(动)
+  && 动.includes('一份原文::不成(那句)') && !/pub fn comp_read[\s\S]{0,80}-> Result/.test(动));
 
 台.题('八、code:catRename：三种写法、两张表与回执那七栏');
-const 主hits = 切(main, 'catRenameHits');
 台.判('那三种写法都在（整串等于旧名 / 整串以旧名 + . 开头 / 前缀那一半自己就是一串）',
-  主hits.includes('if(body === from)') && 主hits.includes("if(body.startsWith(from + '.'))")
-  && 主hits.includes("if(body.endsWith('.') && body.slice(0, -1) === from)")
-  && 名.includes('if 串 == 旧名') && 名.includes('if 串.starts_with(旧带点.as_str())') && 名.includes('if 串.ends_with(\'.\')'));
-台.判('第二条切的是旧名那一截、尾点留着（body.slice(from.length) 那一手，不是切掉点）',
-  主hits.includes('to + body.slice(from.length)') && 名.includes('&串[旧名.len()..]'));
+  名.includes('if 串 == 旧名') && 名.includes('if 串.starts_with(旧带点.as_str())') && 名.includes('if 串.ends_with(\'.\')'));
+台.判('第二条切的是旧名那一截、尾点留着',
+  名.includes('&串[旧名.len()..]'));
 台.判('串里有反斜杠或整串是空的就原样退回（界面文字里那些不碰）',
-  主hits.includes("if(body.indexOf('\\\\') >= 0 || !body) return s;") && 名.includes('if 串.is_empty() || 串.contains(\'\\\\\')'));
+  名.includes('if 串.is_empty() || 串.contains(\'\\\\\')'));
 台.判('认的是那三枚引号（双引号、单引号、反引号），不多认一种',
-  主hits.includes('/(["\'`])(?:\\\\.|(?!\\1)[\\s\\S])*?\\1/g') && /c == '"' \|\| c == '\\'' \|\| c == '`'/.test(名));
-台.判('旧名新名那两道停下回来的句子与原件同字',
-  那一段('code:catRename').includes("msg:'旧名新名得不一样'") && 名.includes('pub const 不一样那句: &str = "旧名新名得不一样";')
-  && 那一段('code:catRename').includes("msg:'这台机器没记下源码在哪儿，代码引用改不了'")
+  /c == '"' \|\| c == '\\'' \|\| c == '`'/.test(名));
+台.判('旧名新名那两道停下回来的句子逐字钉住',
+  名.includes('pub const 不一样那句: &str = "旧名新名得不一样";')
   && 名.includes('pub const 没记源码那句: &str = "这台机器没记下源码在哪儿，代码引用改不了";'));
-台.判('两处两张后缀表与两个深度照原件（源码格只看 .js 不钻，本家那一格看 .js 与 .json 往里钻）',
-  那一段('code:catRename').includes("collect(path.join(ROOTS.src, '_shared'), ['.js'], false)")
-  && 那一段('code:catRename').includes("collect(path.join(TREE, 'data', 'plugins'), ['.js', '.json'], true)")
-  && 名.includes('pub const 源码那种后缀: [&str; 1] = [".js"];') && 名.includes('pub const 插件那两种后缀: [&str; 2] = [".js", ".json"];')
+台.判('两张后缀表与两个深度钉住（源码格只看 .js 不钻，本家那一格看 .js 与 .json 往里钻）',
+  名.includes('pub const 源码那种后缀: [&str; 1] = [".js"];') && 名.includes('pub const 插件那两种后缀: [&str; 2] = [".js", ".json"];')
   && 改.includes('收那几份(&源码那一格, &源码那种后缀, false, 0, &mut 那几份)')
   && 改.includes('收那几份(&插件那格, &插件那两种后缀, true, 0, &mut 那几份)'));
-台.判('顶上那一句两种写法与原件同字',
-  那一段('code:catRename').includes("('改了 ' + hits.length + ' 个文件 · 共 ' + hits.reduce((x, y) => x + y.n, 0) + ' 处')")
-  && 那一段('code:catRename').includes("'代码里没有引用【' + a + '】的地方'")
-  && 名.includes('format!("改了 {} 个文件 · 共 {} 处"') && 名.includes('format!("代码里没有引用【{}】的地方"'));
+台.判('顶上那一句两种写法逐字钉住',
+  名.includes('format!("改了 {} 个文件 · 共 {} 处"') && 名.includes('format!("代码里没有引用【{}】的地方"'));
 const 壳改 = 壳字段(改, '一份改名');
 台.数('壳里 一份改名 有哪几栏', 壳改.join(' '));
 台.判('回执那七栏同一串（ok hits bad packs src comp msg，一格不多一格不少）',
   JSON.stringify(壳改) === JSON.stringify(['ok', 'hits', 'bad', 'packs', 'src', 'comp', 'msg'])
   && JSON.stringify(壳字段(改, '一处命中')) === JSON.stringify(['file', 'n']));
-台.判('bad 那两句写法照原件（「：读不出」不带系统那句，「：写不进去（…）」带）',
-  那一段('code:catRename').includes("bad.push(nm + '：读不出')") && 改.includes('坏.push(format!("{}：读不出", 名))')
-  && 那一段('code:catRename').includes("'：写不进去（' + String((err && err.message) || err) + '）'")
-  && 改.includes('坏.push(format!("{}：写不进去（{}）", 名, e))'));
-台.判('packs 那一栏：写不进去的那一份也照样算动到（原件那一行写在 try/catch 之后），且 .. 不算一家',
-  (() => { const 段 = 那一段('code:catRename'); const 写 = 段.indexOf("catch(err){ bad.push(nm + '：写不进去"); const 家 = 段.indexOf('const inPack ='); return 写 > 0 && 家 > 写; })()
-  && 那一段('code:catRename').includes("if(inPack && inPack !== '..') packs.add") && 名.includes('段 == ".."'));
-台.判('src 与 comp 两栏按「在不在 <源码格>\\_shared 里面」分，两头同一式',
-  那一段('code:catRename').includes("src:hits.filter(x => String(x.file).startsWith(SRC_DIR)).length")
-  && 改.includes('是共用底子(&源码那一格, &x.file)') && 名.includes('落点.starts_with(去尾分隔(源码那一格).as_str())'));
+台.判('bad 那两句写法钉住（「：读不出」不带系统那句，「：写不进去（…）」带）',
+  改.includes('坏.push(format!("{}：读不出", 名))') && 改.includes('坏.push(format!("{}：写不进去（{}）", 名, e))'));
+台.判('packs 那一栏：写不进去的那一份也照样算动到，且 .. 不算一家',
+  改.indexOf('坏.push(format!("{}：写不进去') < 改.indexOf('哪一家(') && 名.includes('段 == ".."'));
+台.判('src 与 comp 两栏按「在不在 <源码格>\\_shared 里面」分',
+  改.includes('是共用底子(&源码那一格, &x.file)') && 名.includes('落点.starts_with(去尾分隔(源码那一格).as_str())'));
 台.判('源码格那一颗与 sys:rebuild 共用（认 FD_SRC，没指看树里那一格），不另起第二份认法',
   /pub\(crate\) fn 源码格\(树: &str\) -> Option<String>/.test(rd('src/_tauri/src/tauri_bind/sys_cmds.rs'))
   && 改码.includes('源码格(&树)') && !改码.includes('FD_SRC'));
