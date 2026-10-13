@@ -24,8 +24,8 @@ ok('1 进的那道线是 ' + IN + ' 像素、出的是 ' + OUT + ' 像素（跟�
   IN === 300 && OUT === 240);
 ok('2 观察器里吃的是这两个名字，源码里再没有第二处写着 240 / 300 那两个裸数',
   /hh >= MUS_OUT : hh >= MUS_IN/.test(SRC) && !/hh >= (240|300)\b/.test(SRC));
-ok('3 观察器管的宿主两家：为写右栏停靠（where 是 dock）和 FD 桌面上那一张（where 根本没写）',
-  /const 看大小 = \(ctx\.where === 'dock' \|\| ctx\.where === undefined\);/.test(SRC));
+ok('3 观察器只管 FD 桌面上那一张（where 根本没写）：停靠那一档 2026-10-13 拆基础版时撤了',
+  /const 看大小 = \(ctx\.where === undefined\);/.test(SRC) && !/ctx\.where === 'dock'/.test(SRC));
 ok('4 撤卡时观察器跟着断掉，不留下没人认账的那一趟',
   /if\(this\.ro\)\{ try\{ this\.ro\.disconnect/.test(SRC));
 
@@ -53,7 +53,7 @@ ok('8 按卡高定档这一条只归桌面上那一张：源码里两处认 wher
 
 /* ---------- 三、字号那两根滑杆跟着档走 ---------- */
 ok('9 摊开就放开手动字号、粗细那两根，收回小卡又自动缩：两处写的是同一句（构造函数一处、观察器一处）',
-  (SRC.match(/this\.typed = this\.full \|\| ctx\.where === 'dock';/g) || []).length === 2);
+  (SRC.match(/this\.typed = this\.full;/g) || []).length === 2);
 
 console.log('\n' + pass + ' 过 ' + fail + ' 不过');
 console.log('真拖那一下我自己开探针浏览器做（绝不动他正开着那一家）：这台窗口是隐藏态，' +

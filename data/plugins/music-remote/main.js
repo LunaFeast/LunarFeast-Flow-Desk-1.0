@@ -1265,15 +1265,12 @@ class MusicView{
     /* 这一句内已经走到哪儿的记号：换段或换基准才重摆，时间被校准往回拽时不带着它退 */
     this.crawlKey = ''; this.crawlP = 0;
     this.cover = null; this.artUrl = '';
-    /* 丙：手动字号/粗细只放开展屏那一屏和为写右栏停靠那一档 —— Flow-Desk 桌面上那一张小卡
+    /* 丙：手动字号/粗细只放开展屏那一屏 —— Flow-Desk 桌面上那一张小卡
        维持「照卡片大小自动缩」，不给他手动调（2026-10-05 他定的：「算了，卡片就用现在的确定大小吧」）。
        这一位不成立时 typeVars 一个变量都不写，CSS 里那些 var(--mu-fs-*,1) 就全按 1 落回原样。
        外32 图9 之后桌面上这一张拖过线会原地摊开成整页那一副 —— 那一副就是 full，那两根跟着放开，
        收回小卡又照自动缩，跟这一条不冲突。 */
-    this.typed = this.full || ctx.where === 'dock';
-    /* ③ 记一笔「这一张是挂在为写右栏停靠里的」：那一栏多宽归停靠自己定，窄的时候整页那一套
-       为封面列做的居中补偿会把歌词挤扁，CSS 要按这一位分档。 */
-    this.inDock = ctx.where === 'dock';
+    this.typed = this.full;
     /* 丁-2 立的是停靠那一条：缩到哪一档由面板高度说 —— 拖高了就摊开成整页那一副
        （歌词一列一列往下摆、打字机那一趟跟着走），拖矮了收回小卡。
        外32 图9 把同一条规矩也交给 FD 桌面上那一张（作者：「音乐遥控器拖大就在首页原地摊开」）：
@@ -1283,7 +1280,7 @@ class MusicView{
        拖这一趟外壳会整屏重画、把这一张重新挂一遍，所以顶上那句先照此刻卡高把档定对，
        这里只管挂上之后的增减。 */
     this.ro = null;
-    const 看大小 = (ctx.where === 'dock' || ctx.where === undefined);
+    const 看大小 = (ctx.where === undefined);
     if(看大小 && typeof ResizeObserver !== 'undefined'){
       this.ro = new ResizeObserver(() => {
         const hh = this.host.clientHeight;
@@ -1291,7 +1288,7 @@ class MusicView{
         if(want === this.full) return;
         this.full = want;
         /* 手动字号那一档跟着 full 走：桌面上这张一摊开就是整页那一副，该给得动那两根滑杆 */
-        this.typed = this.full || ctx.where === 'dock';
+        this.typed = this.full;
         this.lyKey = '';
         this.draw();
       });
@@ -1339,7 +1336,7 @@ class MusicView{
        可这一趟的 .mu 是新的，那些 --mu-fs-* 落不到它身上 —— 重画一次，手动调过的三档字号当场回到默认。 */
     this.typeSig = '';
     host.innerHTML = '';
-    const wrap = h('div', { class:'mu' + (this.full ? ' mu-full' : ' mu-mini') + (this.inDock ? ' mu-dock' : '') });
+    const wrap = h('div', { class:'mu' + (this.full ? ' mu-full' : ' mu-mini') });
     /* 专辑封面：方形，占一整列摆在这一块的最左边，顶到歌名那一行。三种长相共用这一个摆法
        （FD 桌面小卡和为写右栏停靠都走 .mu-mini，整页走 .mu-full，大小各跟各那一档的字号）
        一开始只摆那张音符，不摆一块灰 —— 内嵌图认回来才换上，换歌先撤掉 */
@@ -1413,7 +1410,7 @@ class MusicView{
     this.srcEl = h('div', { class:'mu-src' });
     wrap.appendChild(this.srcEl);
     /* 外面这一层只管横着排：左边封面一整列，右边还是原来那一竖列，一个字没动 */
-    this.shell = h('div', { class:'mu-shell' + (this.full ? ' mu-shell-full' : '') + (this.inDock ? ' mu-dock-shell' : '') }, [this.cover, wrap]);
+    this.shell = h('div', { class:'mu-shell' + (this.full ? ' mu-shell-full' : '') }, [this.cover, wrap]);
     host.appendChild(this.shell);
     this.wrap = wrap;
     this.lyKey = null;
@@ -2553,8 +2550,6 @@ const MUS_CSS = `
 /* ③ 停靠那一栏本来就窄：上面那两条为「左边压着封面一整列」做的居中补偿（6em + .5em 再补一份），
    在这一栏里会把歌词挤成一小条 —— 320 像素宽的栏算下来字面只剩七十来像素，就是他说的「太窄」。
    这一档封面那一列整个不占位，歌词撑满栏宽、左右只留一线缝；整页那一屏不受牵连，补偿照旧。 */
-.mu-shell-full.mu-dock-shell .mu-cover{display:none}
-.mu-full.mu-dock .mu-list{max-width:100%;padding-left:2px;padding-right:2px}
 `;
 
 /* 原来「十、设置 · 组件」里垫的那三行（指定播放器 / 音乐文件夹 / 监听插件）
