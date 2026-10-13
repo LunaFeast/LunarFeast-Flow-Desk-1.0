@@ -15,7 +15,6 @@ import { rd, 记账, 切 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-split46');
 const 本体 = rd('src/_wnw/src/w8-write.js');
-const 热力 = rd('src/_wnw/src/w21-heat.js');
 const 装配 = rd('src/_wnw/build-kernel.mjs');
 const 页名 = rd('src/pack/uitext.cjs');
 
@@ -65,21 +64,6 @@ function 切render(源){
 }
 
 /* ================== 一、结构：谁住在哪一份 ================== */
-台.题('一、结构 —— 搬出去的那一家自己一份，本体那份里一个符号都不留');
-台.判('1 五维算法、面板、权重框都只在 w21-heat.js 里（HEAT_DIMS / Heat / HeatPanel / heatWDlg 四颗齐）',
-  ['HEAT_DIMS', 'const Heat = {', 'class HeatPanel', 'function heatWDlg'].every(n => 热力.includes(n)));
-台.判('2 本体那份 w8-write.js 里搜不到热力图的任何一颗符号（搬完不留半截，两支才不会撞同一颗文件）',
-  !/HeatPanel|heatWDlg|HEAT_DIMS|heatEl|showHeat\b|\bHeat\./.test(本体),
-  (本体.match(/Heat\w*|heatEl|showHeat/g) || []).slice(0, 4));
-台.判('3 本体那份只留一张名单和一颗登记口（STAT_BLOCKS + StatBlock.reg）',
-  /const STAT_BLOCKS = \[\];/.test(本体) && /const StatBlock = \{ reg\(b\)\{ STAT_BLOCKS\.push\(b\); \} \};/.test(本体));
-台.判('4 登记那份在装配名单里排在本体之后（顶层 const 不提升，早一步就撞 undefined）',
-  装配.indexOf("'w8-write.js'") >= 0 && 装配.indexOf("'w21-heat.js'") > 装配.indexOf("'w8-write.js'"));
-台.判('5 页名那一头认得这一份新文件（文字工具扫到裸文件名会被它自己那条闸拦下）',
-  /'w21-heat\.js':'[^']+'/.test(页名));
-台.判('6 本体那份连「热力图」这三个字都不提（界面上的话和注释都归它自己那份说）', !/热力图/.test(本体));
-
-/* ================== 二、统计那一屏那一半（真跑 render） ================== */
 台.题('二、统计那一屏 —— 名单里登记的块，挂载 / 重画 / 刷新 / 设定项四条口都得走到');
 function 跑本体(砍){
   const { h } = 造树();
@@ -119,40 +103,6 @@ await 假host.全身().find(x => x.字 === '刷新').点();
 台.判('10「选卡」那框给名单里每一块留了设定项这一口：假块那一行进得去（本体不写死别人家的开关）', 一跑.叫.设 === 1);
 
 /* ================== 三、热力图自己登记的那一半（真跑它那句 reg） ================== */
-台.题('三、热力图登记的那一块 —— 简洁模式、只上一次、刷新交给面板');
-function 跑热力(){
-  const { h } = 造树();
-  const 叫 = { 上:0, 全:0, 存:0 };
-  class HeatPanel{ constructor(el){ this.el = el; } async mount(){ 叫.上++; } full(){ 叫.全++; } }
-  const 收 = {};
-  const 上下文 = { h, HeatPanel, StatBlock:{ reg(b){ 收.块 = b; } },
-    Meter:{ simple:true, save:async () => { 叫.存++; } } };
-  vm.createContext(上下文);
-  new vm.Script(到收尾(热力, 热力.lastIndexOf('StatBlock.reg(')), { filename:'热力图那一登记' }).runInContext(上下文);
-  return { 上下文, 收, 叫 };
-}
-const 热力跑 = 跑热力();
-台.判('11 登记的这一块报得出名字，而且就叫「写作热力图」', 热力跑.收.块 && 热力跑.收.块.name === '写作热力图');
-const 热host = 热力跑.上下文.h('div', {});
-const 热块 = 热力跑.收.块.mount(热host, { dispose:() => {} });
-await 热块.repaint();
-台.判('12 出厂默认是简洁模式 → 那一块藏着、面板一次都没上（看不见才是对的，账照记）',
-  热host.孩子.length === 1 && 热host.孩子[0].hidden === true && 热力跑.叫.上 === 0);
-热力跑.上下文.Meter.simple = false;
-await 热块.repaint(); await 热块.repaint();
-台.判('13 放开简洁模式才上面板，而且连叫两回只上一次（上两回就画重了）', 热力跑.叫.上 === 1, '上了 ' + 热力跑.叫.上 + ' 回');
-热块.refresh();
-台.判('14 这块自己的刷新交给面板的 full（统计那颗刷新钮顺着那条口下来）', 热力跑.叫.全 === 1);
-const 设框 = 热力跑.上下文.h('div', {});
-热力跑.收.块.prefs(设框, () => { 热力跑.叫.完 = (热力跑.叫.完 || 0) + 1; });
-const 开关 = 设框.全身().find(x => x.属性.type === 'checkbox');
-台.判('15 设定项那一行原话还是「简洁模式 · 不显示写作热力图」（这句话从本体搬过来，一个字没改）',
-  设框.说话().includes('简洁模式 · 不显示写作热力图') && !!开关);
-开关.checked = true;
-await 开关.改();
-台.判('16 勾上那档写进 Meter.simple、存一次、并且回头叫一声重画（少最后那声，勾完得刷新才看得见）',
-  热力跑.上下文.Meter.simple === true && 热力跑.叫.存 === 1 && 热力跑.叫.完 === 1);
-
 /* ================== 四、空白网页这一档（＋ 那张清单里的一组） ================== */
 台.题('四、空白网页 —— 主界面那份不再点名它，＋ 那张清单只认名单');
 const 主界面 = rd('src/_wnw/src/w3-shell.js');

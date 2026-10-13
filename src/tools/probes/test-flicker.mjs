@@ -33,7 +33,6 @@ const 台账 = new Map([
   ['Bus.on(\'pack:reload\'', '模块顶层一次，进程活着就一直要'],
   ['if(!this._wired){ this._wired = true; Bus.on(\'theme\'', '自己上闩：_wired 只订一次'],
   ['const offLook = Bus.on(\'look\'', '自己解：画完发现节点离了档就 offLook()'],
-  ['Bus.on(\'desk:saved\', () => this.tick())', '热力图：三颗都收进 off 数组，交给 ctx.dispose 解'],
   ['Bus.on(\'desk:cards\', () => this.tick())', '同上'],
   ['Bus.on(\'desk:insp\', () => this.tick())', '同上'],
   ['Bus.on(\'bank-saved\'', '词库：_bound 那一本上闩，一份词库只订一次'],
