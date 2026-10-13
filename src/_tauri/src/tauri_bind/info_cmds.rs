@@ -30,7 +30,7 @@ use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
-use tauri::State;
+use tauri::{Emitter, State};
 use windows::core::{BOOL, HSTRING, Interface, PCWSTR};
 use windows::Graphics::Imaging::{
     BitmapAlphaMode, BitmapDecoder, BitmapInterpolationMode, BitmapPixelFormat, BitmapTransform, ColorManagementMode,
@@ -183,7 +183,7 @@ struct 一份缓存<'a> {
 }
 
 #[tauri::command]
-pub async fn font_list(force: Option<bool>) -> 字体::一张字体表 {
+pub async fn font_list(app: tauri::AppHandle, force: Option<bool>) -> 字体::一张字体表 {
     if !force.unwrap_or(false) {
         if let Some(存) = 读字体缓存() {
             return 存;
@@ -192,6 +192,9 @@ pub async fn font_list(force: Option<bool>) -> 字体::一张字体表 {
     match 数系统字体() {
         Some(表) if !表.fonts.is_empty() => {
             写字体缓存(&表);
+            /* 数完推给每一扇窗：页面那一路听的是 font:changed（桥里 onFontList 登记的就是这一颗）。
+               不推的话新装的字体现在这一扇看得到、别的那几扇要等下一次重开才现身。 */
+            let _ = app.emit("font:changed", 表.clone());
             表
         }
         /* 数不动就当没读到：回缓存那份，缓存也没有就回 { fonts:[], faces:{} } —— 那一头同一退法 */

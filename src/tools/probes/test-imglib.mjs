@@ -20,7 +20,9 @@ const LIB = rd('src/_fd/src/fd3-lib.js');
 const SHL = rd('src/_fd/src/fd3-shell.js');
 const UI = rd('src/_fd/src/fd4-builtin.js');
 const LOOK = rd('src/_shared/sh-look.js');
-const MAIN = rd('src/pack/main.cjs');
+const 壳扫 = rd('src/_tauri/src/core/icon_scan.rs');
+const 壳信 = rd('src/_tauri/src/tauri_bind/info_cmds.rs');
+const 壳表 = rd('src/_tauri/src/core/data_path.rs');
 const SERVE = rd('src/_fd/fd-serve.mjs');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (extra ? ' · ' + extra : '')); } };
@@ -175,7 +177,7 @@ ok('12 第 4 页那几颗导入按钮走同一颗函数：IMG_USES 筛出来的�
   && 空话段.length > 100 && (空话段.match(/还没有/g) || []).length === 3);
 const 旧件 = ['function texImport(', 'function texAccept(', 'function texRemove(', 'TexLib.', 'function texKey(', 'const TexLib =',
   'TEX_FILE', "'textures.yaml'", "'textures-'"];
-const 剩 = 旧件.filter(s => [LIB, SHL, UI, LOOK, MAIN, SERVE].some(t => t.includes(s)));
+const 剩 = 旧件.filter(s => [LIB, SHL, UI, LOOK, 壳扫, SERVE].some(t => t.includes(s)));
 ok('13 从前纹理那一摊的旧件全清：' + 旧件.length + ' 样里还剩 ' + 剩.length + ' 样' + (剩.length ? '（' + 剩.join(' / ') + '）' : '') + ' —— 薄皮 TexLib / texKey 也撤干净了，界面上不再有第二条来路',
   剩.length === 0);
 const 挑两头 = /ImgLib\.byUse\('纹理·四方连续图'\)/.test(UI) && /ImgLib\.byUse\('背景图'\)/.test(UI);
@@ -212,18 +214,18 @@ ok('19 第 4 页四块齐（色卡 / 图片 / 纹理 / 字体）并排挂在 p4b
 ok('20 恢复出厂那一路把卡片间距也算进数值里（set(间距, f.间距) 真跑了），弹框正文、按钮悬停说明、那一行小字三处都提「两档圆角 + 卡片间距」',
   /set\('间距', f\.间距, false\)/.test(UI) && (UI.match(/两档圆角和卡片间距|两档圆角回到出厂那一档、卡片间距回到自动|两档圆角 \+ 卡片间距/g) || []).length >= 3
   && /出厂数值只读外壳层那一份默认值/.test(UI));
-ok('21 运行时那一头收得到这一格：main.cjs 的库文件白名单里有 images.yaml、扫图标时把 data\\images\\ 念作 images-<文件名> 且排在内置之后；开发那台服务器有 /_img 那一条 POST（同一个落点）',
-  MAIN.includes("'images.yaml'") && /take\(DATA_IMG_DIR, 'images-', true\)/.test(MAIN)
-  && /path\.join\(DATA_ROOT, 'images'\)/.test(MAIN) && /if\(url === '\/_img'\) return imgReq\(req, res\)/.test(SERVE)
+ok('21 运行时那一头收得到这一格：壳里那份库文件名单有 images.yaml、扫图标时把图片库那一格念作 images-<文件名> 且已有名字不抢；开发那台服务器有 /_img 那一条 POST（同一个落点）',
+  壳表.includes('"images.yaml"') && /图片库那一格/.test(壳信)
+  && /join\("images"\)/.test(壳信) && /if\(url === '\/_img'\) return imgReq\(req, res\)/.test(SERVE)
   && /fs\.mkdirSync\(DATA_IMG_DIR, \{ recursive:true \}\)/.test(SERVE));
 ok('22 开发服务器那一条也认名字闸（和页面上 putBytes 那一句同一个式子，两边不各写一套），后缀不认的一律不落盘',
   SERVE.includes("/^[A-Za-z0-9._-]{1,64}$/.test(q) || q.includes('..') || !IMG_EXT.includes(path.extname(q).toLowerCase())"));
 /* 收一张图标那一层取不到地址的图进图库 = 摆一条点得动的假图：三处后缀名单必须对得上（页面挑的 ⊆ 开发服务器收的 ⊆ 主进程扫的） */
 const 页收 = (UI.match(/const IMG_PICK = \{[^}]*\}/)[0].match(/\.[a-z]+/g) || []).map(x => x.toLowerCase());
 const 服收 = (/const IMG_EXT = \[[^\]]*\]/.exec(SERVE)[0].match(/\.[a-z]+/g) || []);
-const 扫得 = (/const ICON_EXT = \[[^\]]*\]/.exec(MAIN)[0].match(/\.[a-z]+/g) || []);
+const 扫得 = (/pub const 图标后缀: \[&str; 6\] = \[([^\]]*)\]/.exec(壳扫)[1].match(/"[^"]+"/g) || []).map(s => s.slice(1, -1));
 const 越界 = 页收.filter(x => !服收.includes(x) || !扫得.includes(x));
-ok('23 三处后缀名单对得上：页面收 ' + 页收.join(',') + ' 个后缀，开发服务器收 ' + 服收.length + ' 个、主进程扫 ' + 扫得.length +
+ok('23 三处后缀名单对得上：页面收 ' + 页收.join(',') + ' 个后缀，开发服务器收 ' + 服收.length + ' 个、壳里扫 ' + 扫得.length +
    ' 个 —— 页面那一份不在另两头之内的有 ' + 越界.length + ' 个' + (越界.length ? '（' + 越界.join(',') + '）' : ''),
   页收.length === 5 && 越界.length === 0);
 let 咬后缀 = false;
@@ -233,14 +235,14 @@ try{
   咬后缀 = b.filter(x => !扫得.includes(x)).join(',') === '.bmp';
 }
 catch(e){ 咬后缀 = false; }
-ok('24 这一条咬得住：把页面那份名单换成只收 .bmp（主进程那一层不扫它），判法立刻报出越界', 咬后缀);
-/* 键名这一步两边各写一遍（页面这边对着清单里写的文件名，主进程那边对着真文件名），式子必须一模一样，差一点就两头认不到同一张图 */
+ok('24 这一条咬得住：把页面那份名单换成只收 .bmp（壳里那六个后缀没有它），判法立刻报出越界', 咬后缀);
+/* 键名这一步两边各写一遍（页面这边对着清单里写的文件名，壳里那边对着真文件名），认的字符集必须一样，差一点就两头认不到同一张图 */
 const 页式 = (/function imgKey\(file\)\{[\s\S]*?\n\}/.exec(LIB) || [''])[0];
-const 主式 = (/function iconKey\(n\)\{[^\n]*\n/.exec(MAIN) || [''])[0];
-const 洗 = s => ((s.match(/replace\((\/[^/]+\/g), '-'\)/) || [])[1] || '');
-ok('25 两边清洗式子逐字对上：页面 imgKey 用 ' + 洗(页式) + '，主进程 iconKey 用 ' + 洗(主式) +
-   '；两边都是「先去掉后缀、再洗这一串」（主进程那一句还带着「和页面那侧 cssName 同一个换算」的说明）',
-  洗(页式) !== '' && 洗(页式) === 洗(主式) && 页式.includes('lastIndexOf') && 主式.includes('String(n)'));
+const 壳式 = ((/pub fn 名换算\(串: &str\) -> String \{([\s\S]*?)\n\}/.exec(壳扫) || [''])[0]);
+ok('25 两边清洗认的是同一个字符集：页面 imgKey 用 replace(/[^a-zA-Z0-9_-]/g,\'-\')，壳里 名换算 只留 ASCII 字母数字、下划线、横杠，其余换成横杠',
+  /replace\(\/\[\^a-zA-Z0-9_-\]\/g,\s*'-'\)/.test(页式) && 页式.includes('lastIndexOf')
+  && 壳式.includes("if c.is_ascii_alphanumeric() || c == '_' || c == '-' { c } else { '-' }")
+  && 壳扫.includes("replace(/[^a-zA-Z0-9_-]/g,'-')"));
 
 /* ---------- 三、咬一口：把第 5 条依赖的承重墙各改坏一遍，那条判法必须不过 ---------- */
 let 咬块 = false, 咬喂 = false;

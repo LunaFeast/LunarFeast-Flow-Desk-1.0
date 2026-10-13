@@ -103,16 +103,19 @@ ok('18 这两条跟着撤干净（都是被这一批断了来路的）：lookTex
 /* ---------- 五、2026-10-08 作者的话：「说了纹理全删」—— 残片一头不许留（上一轮我只撤了名单，图和文件都留着） ----------
    数的是「代码里还在不在走那一条路」，认的是带引号的那一种写法（源码里那些「从前这儿有一条 /_tex」之类的话是留给人看的来路记录，
    程序读不到它们，所以这一台不按「这两个字出现过没有」判 —— 那样判会把说明也判成毛病，将来谁也不敢写注释）。 */
-const MAIN = rd('src/pack/main.cjs');
+const 壳扫 = rd('src/_tauri/src/core/icon_scan.rs');
+const 壳信 = rd('src/_tauri/src/tauri_bind/info_cmds.rs');
+const 壳表 = rd('src/_tauri/src/core/data_path.rs');
 const SERVE = rd('src/_fd/fd-serve.mjs');
-const PRELOAD = rd('src/pack/preload.cjs');
+const 桥 = rd('src/_tauri/ui/fd-bridge.js');
 const ICO = rd('src/_shared/sh-ico.js');
-const 六份 = { 'src\\pack\\main.cjs':MAIN, 'src\\_fd\\fd-serve.mjs':SERVE, 'src\\pack\\preload.cjs':PRELOAD,
+const 六份 = { 'src\\_tauri\\src\\core\\icon_scan.rs':壳扫, 'src\\_tauri\\src\\tauri_bind\\info_cmds.rs':壳信,
+  'src\\_tauri\\src\\core\\data_path.rs':壳表, 'src\\_fd\\fd-serve.mjs':SERVE, 'src\\_tauri\\ui\\fd-bridge.js':桥,
   'src\\_shared\\sh-ico.js':ICO, 'src\\_fd\\src\\fd3-lib.js':LIB, 'src\\_shared\\sh-look.js':LOOK };
 const 码名 = ["'textures.yaml'", "'textures'", 'TEX_FILE', 'DATA_TEX_DIR', 'texReq', 'TEX_EXT', "'/_tex'", "'textures-'"];
 const 还在 = [];
 for(const n of 码名) for(const [f, s] of Object.entries(六份)) if(s.includes(n)) 还在.push(n + '（在 ' + f + '）');
-ok('19 那七个旧写法在六份源码里一个不剩（' + 码名.join(' / ') + '）—— 现在还剩 ' + 还在.length + ' 处' + (还在.length ? '：' + 还在.join('、') : ''),
+ok('19 那七个旧写法在这八份源码里一个不剩（' + 码名.join(' / ') + '）—— 现在还剩 ' + 还在.length + ' 处' + (还在.length ? '：' + 还在.join('、') : ''),
   还在.length === 0);
 const 路 = ['icons/textures', 'src/pack/icons/textures', 'data/textures.yaml', 'data/textures', 'src/_build/tex-gen.mjs'];
 const 存 = 路.filter(p => fs.existsSync(ROOT + p));
@@ -124,10 +127,11 @@ ok('21 图标那一格里再也没有叫 textures 的东西（数到 ' + (图剩
 const 张数 = fs.readdirSync(ROOT + 'icons').filter(n => /\.(svg|png|jpg|jpeg|webp|gif)$/i.test(n)).length;
 ok('22 图标那一层还在使（顶层 ' + 张数 + ' 张，界面上那些正经图标一张没被牵连），只是往里那一层现在空的或者根本没有',
   张数 > 60 && !fs.existsSync(ROOT + 'icons/textures'));
-ok('23 两头扫图标都只剩一条数据层那一路：主进程 take(DATA_IMG_DIR, images-, true)、开发那台 take(..., images-, /images/, true)，' +
-   '两头都不再拼 textures- 那一个前缀（数到 ' + ((MAIN + SERVE + ICO).match(/textures-/g) || []).length + ' 处）',
-  /take\(DATA_IMG_DIR, 'images-', true\)/.test(MAIN) && /take\(DATA_IMG_DIR, 'images-', '\/images\/', true\)/.test(SERVE)
-  && !/textures-/.test(MAIN) && !/textures-/.test(SERVE) && !/textures-/.test(ICO));
+ok('23 两头扫图标都只剩一条数据层那一路：壳里 收一格(图片库那一格, "images-", true)、开发那台 take(..., images-, /images/, true)，' +
+   '两头都不再拼 textures- 那一个前缀（数到 ' + ((壳扫 + 壳信 + SERVE + ICO).match(/textures-/g) || []).length + ' 处）',
+  /收一格\(&mut 表, &Path::new\(数\)\.join\("images"\), "images-", true/.test(壳信)
+  && /take\(DATA_IMG_DIR, 'images-', '\/images\/', true\)/.test(SERVE)
+  && !/textures-/.test(壳扫 + 壳信) && !/textures-/.test(SERVE) && !/textures-/.test(ICO));
 const 图身 = (/function imgUrl\(t\)\{[\s\S]*?\n\}/.exec(LIB) || [''])[0];
 ok('24 地址那一路只问图片库那一头（旧那份清单的图留在原地、两头都问那一句已经作废）：' +
    ((图身.match(/Ico\.url\([^)]*\)/g) || []).join(' + ') || '一句也没有'),
@@ -139,11 +143,12 @@ const 开身 = (/async boot\(\)\{[\s\S]*?\n  \},/.exec(LIB) || [''])[0];
 ok('26 开机那一路不再搬旧清单：ImgLib.boot 的函数体里 fetchRaw 只叫 ' + ((开身.match(/fetchRaw/g) || []).length) +
    ' 回（认 images.yaml 那一句），TEX_FILE 那一个 const 整个不在',
   !/TEX_FILE/.test(LIB) && (开身.match(/fetchRaw/g) || []).length === 1);
-const 主名 = /const LIB_NAMES = \[[^\]]*\]/.exec(MAIN)[0];
-const 服名 = /const LIB_NAMES = \[[^\]]*\]/.exec(SERVE)[0];
-ok('27 开发那台服务器的写名单和主进程那一条现在一字不差（' + 主名 + '）—— 从前那一份写着 textures.yaml、不收 images.yaml，' +
+const 抽名 = (文, 样) => ((样.exec(文) || ['', ''])[1].match(/["'][^"']+["']/g) || []).map(s => s.slice(1, -1));
+const 壳名 = 抽名(壳表, /pub const 库名单: \[&str; \d+\] = \[([\s\S]*?)\];/);
+const 服名 = 抽名(SERVE, /const LIB_NAMES = \[([^\]]*)\]/);
+ok('27 开发那台服务器的写名单和壳里那一条现在一份不差（' + 壳名.join(',') + '）—— 从前那一份写着 textures.yaml、不收 images.yaml，' +
    '图库清单在开发浏览器里存不下去、在程序里存得下去，两头各一套',
-  主名 === 服名);
+  壳名.join(',') === 服名.join(',') && !壳名.includes('textures.yaml') && 壳名.includes('images.yaml'));
 ok('28 图标索引那台生成脚本里也不再拼 textures- 那一串（texDesc 那一段整块撤了 —— 它切的 LOOK_TEXTURES 早就没了，只是一直没人跑它）',
   !/function texDesc/.test(rd('src/_build/ico-index.mjs'))
   && !rd('src/_build/ico-index.mjs').includes("m['textures-'")

@@ -210,7 +210,7 @@ function compReq(req, res){
 /* ---------- /_lib：库文件的存盘（#291 色卡两套 / #292 外观方案 / #298 待实现清单 / 外29 丁组 图片库） ----------
    读那一路不用新通道：GET /palettes.yaml 由下面的「页面层没有就往数据层再找一次」直接送到。
    写只认这几个名字，落在 数据\ 里同一个文件上 —— 和 Flow-Desk.exe 里 lib:write 那一条同一把尺
-   （那一条认的是 src\pack\main.cjs 的 LIB_NAMES，这一份跟着它，少一个名字就是「开发浏览器里存不下去、程序里存得下去」两套真相）。
+   （那一条认的是 src\_tauri\src\core\data_path.rs 的 库名单，这一份跟着它，少一个名字就是「开发浏览器里存不下去、程序里存得下去」两套真相）。
    色卡那一份（cards.yaml）漏登记过一整轮，界面上表现为「存不进文件：只认这几份库文件」—— 加一份库文件要两边各登记一次，
    src\tools\probes\test-libnames.mjs 每台核这一条。 */
 const LIB_NAMES = ['palettes.yaml', 'cards.yaml', 'looks.yaml', 'lib-pending.json', 'images.yaml'];
