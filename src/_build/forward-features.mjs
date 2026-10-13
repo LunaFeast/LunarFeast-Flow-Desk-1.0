@@ -1,5 +1,5 @@
 /* ============================================================
-   八项前瞻功能：哪一项、住哪一份文件、摘掉是哪些处、加回来是哪一条分支
+   八项前瞻功能：哪一项、住哪一份文件、在自己那条分支上动的是哪几处、分支叫什么名
    ------------------------------------------------------------
      node src/_build/forward-features.mjs            列一遍：八项各自带不带、分支起没起
      node src/_build/forward-features.mjs --查分支    只问 git：这八条分支哪几条已经在仓里
@@ -27,67 +27,66 @@ export const TREE = path.resolve(HERE, '..', '..');
    id      分支尾巴那一段（feature/new/<id>），也是命令行与屏上认的那个名
    中文     屏上与他看得见的那句名字
    住在哪   这一项的代码主要在哪一层（为写内核 / 某一家插件 / 主程序 / 共用模块）
-   摘掉     基础那一支上要拿掉的哪几处（一份一份写全，不写「等等」）
-   形状     whole-file = 整份文件加装配名单那种（摘与回都干净）；switch = 一家里的某个开关，要在几处各开口子
-   已拆     2026-10-13 量到的现场：这两项在私有那一棵里已经拆完（分支跟着源码一起并进这一个仓） */
+   动的地方  这一项在它自己那条分支上占的是哪几处（一份一份写全，不写「等等」）
+   形状     whole-file = 整份文件加装配名单那种（合进来与不合都干净）；switch = 一家里的某个开关，要在几处各开口子 */
 export const 八项 = [
-  { id: 'lyric-grid', 中文: '词格模式', 住在哪: '为写内核 + 共用模块', 形状: 'switch', 已拆: false,
+  { id: 'lyric-grid', 中文: '词格模式', 住在哪: '为写内核 + 共用模块', 形状: 'switch',
     量这份: ['src/_wnw/src/w18-lyric.js', 'src/_wnw/src/w19-cruise.js'],
     分支: 'feature/new/lyric-grid',
-    /* 2026-10-13 在仓外那一格真做过一遍的摘法（15 处改 + 装配名单少两行 + 删那两份，产物 1,171,113 → 990,794 字节、
+    /* 这一项拆开的形状（2026-10-13 在仓外那一格真做过一遍：15 处改 + 装配名单少两行 + 删那两份，产物 1,171,113 → 990,794 字节、
        那 38 颗符号一处不剩）：基础版留一格开关与两张空名单 ——
          w7-data.js 顶上：const LYRIC_MODE='lyric'、const 词格档={在:false,paras:…}、const 巡航菜单=[]、const 巡航拾取=[]
        别处那一档全走这一格（模式下拉里那一档、章与卷右键那几项巡航、＋ 那张清单那两条、章上那个图标）；
        老章目录上 mode 还写着 lyric 的按正文那一档摆，c.lyric 与 lyrics\ 那个明文文件一个字不动。
-       加回来那一支要写的只有四行登记：w18 末尾 词格档.在=true、词格档.paras=lyricParas、CH_MODE_ICO 那项由开关自己长回来；
+       那条分支上多出来的只有四行登记：w18 末尾 词格档.在=true、词格档.paras=lyricParas、CH_MODE_ICO 那项由开关自己长回来；
        w19 末尾 巡航菜单.push(卷巡航/书巡航那两条)、巡航拾取.push(＋ 清单那两条)。 */
-    摘掉: ['src/_wnw/src/w18-lyric.js（词格本体）', 'src/_wnw/src/w19-cruise.js（词巡航、书巡航）',
+    动的地方: ['src/_wnw/src/w18-lyric.js（词格本体）', 'src/_wnw/src/w19-cruise.js（词巡航、书巡航）',
       'src/_wnw/build-kernel.mjs 装配名单里那两行',
       'src/_wnw/src/w8-write.js 那 13 处：模式下拉那一档、工具条与版式那一行的开关、批注与修订那一栏、页脚那一句、' +
         '章上图标、卷上与章上右键那几项巡航',
       'src/_wnw/src/w3-shell.js ＋ 那张清单里那两条巡航（词巡航、书巡航）',
       'src/_wnw/src/w7-data.js 整本导出读正文那一处（词格那份正文不住在 c.paras）',
       '公开的 src/_shared/sh-mus.js、sh-ttml.js 只在词格里被叫（那两份自己不进装配名单，留着不动）'] },
-  { id: 'music-dock', 中文: '音乐遥控器停靠', 住在哪: '音乐遥控器那一家 + 为写停靠栏', 形状: 'switch', 已拆: false,
+  { id: 'music-dock', 中文: '音乐遥控器停靠', 住在哪: '音乐遥控器那一家 + 为写停靠栏', 形状: 'switch',
     量这句: [['data/plugins/music-remote/manifest.json', '"wnw"']],
     分支: 'feature/new/music-dock',
-    摘掉: ['data/plugins/music-remote/manifest.json 的 host 里那一格 "wnw"（基础版只留 "fd"：首页那张卡照用，为写那一侧不摆它）',
+    动的地方: ['data/plugins/music-remote/manifest.json 的 host 里那一格 "wnw"（基础版只留 "fd"：首页那张卡照用，为写那一侧不摆它）',
       'data/plugins/music-remote/main.js 里挂进为写右栏停靠那一段（第 1268、1274、1277 行那三处注释标着的档）'] },
-  { id: 'heat-map', 中文: '写作统计的热力图', 住在哪: '为写内核', 形状: 'whole-file', 已拆: true,
+  { id: 'heat-map', 中文: '写作统计的热力图', 住在哪: '为写内核', 形状: 'whole-file',
     量这份: ['src/_wnw/src/w21-heat.js'],
     分支: 'feature/new/heat-map',
-    摘掉: ['src/_wnw/src/w21-heat.js 整份', 'src/_wnw/build-kernel.mjs 装配名单里那一行',
+    动的地方: ['src/_wnw/src/w21-heat.js 整份', 'src/_wnw/build-kernel.mjs 装配名单里那一行',
       '统计那一屏底下那张名单（STAT_BLOCKS）里那一项 —— 名单空着就什么都不摆，界面上不留半个坏口'] },
-  { id: 'wnw-custom', 中文: '推演组件定制', 住在哪: '独立那一家 + 出内核那颗', 形状: 'whole-file', 已拆: false,
+  { id: 'wnw-custom', 中文: '推演组件定制', 住在哪: '独立那一家 + 出内核那颗', 形状: 'whole-file',
     量这份: ['data/plugins/wnw-custom/manifest.json', 'src/_wcustom/build-kernel.mjs'],
     分支: 'feature/new/wnw-custom',
-    摘掉: ['data/plugins/wnw-custom 整格（活的）与 data/plugins-factory/wnw-custom（原版，发布时现拷）',
+    动的地方: ['data/plugins/wnw-custom 整格（活的）与 data/plugins-factory/wnw-custom（原版，发布时现拷）',
       'src/_wcustom/src 那四份源码与 src/_wcustom/build-kernel.mjs',
       'src/_fd/build.mjs 里读推演组件定制那颗产物的那一段',
       'src/_build/plugin-repos.mjs 家表里那一家（七家变六家）'] },
-  { id: 'blank-web', 中文: '标签页加号打开空白网页', 住在哪: '为写内核', 形状: 'whole-file', 已拆: true,
+  { id: 'blank-web', 中文: '标签页加号打开空白网页', 住在哪: '为写内核', 形状: 'whole-file',
     量这份: ['src/_wnw/src/w22-web.js'],
     分支: 'feature/new/blank-web',
-    摘掉: ['src/_wnw/src/w22-web.js 整份', 'src/_wnw/build-kernel.mjs 装配名单里那一行',
+    动的地方: ['src/_wnw/src/w22-web.js 整份', 'src/_wnw/build-kernel.mjs 装配名单里那一行',
       '＋ 那张清单的分组名单（PICK_GROUPS）里那一组 —— 同热力图那一手，空着就不摆',
       'src/pack/main.cjs 里为空白网页开的那一处（一处）'] },
-  { id: 'dock-two-column', 中文: '双栏停靠', 住在哪: '为写停靠栏', 形状: 'switch', 已拆: false,
+  { id: 'dock-two-column', 中文: '双栏停靠', 住在哪: '为写停靠栏', 形状: 'switch',
     量这句: [['src/_wnw/src/w3-shell.js', '停靠两栏']],
     分支: 'feature/new/dock-two-column',
-    摘掉: ['src/_wnw/src/w3-shell.js 里「丙-1 停靠两栏」那一档（含窄到 300 就不许再摆两栏那道限）',
+    动的地方: ['src/_wnw/src/w3-shell.js 里「丙-1 停靠两栏」那一档（含窄到 300 就不许再摆两栏那道限）',
       'src/_wnw/src/w0-skin.js 里「停靠里的长组件：整块不再越拖越长，左右两栏各滚各的」那一段样式',
       '说明：Flow-Desk 那几处「两栏」（src/_fd/src/fd3-lib.js 外观方案、fd8-tools.js 卡片展开、' +
         'src/_shared/sh-look.js 阴影与纸纹）不是这一项，一个字都不动'] },
-  { id: 'card-weight', 中文: '卡片出场权重', 住在哪: '为写卡片那一层', 形状: 'switch', 已拆: false,
+  { id: 'card-weight', 中文: '卡片出场权重', 住在哪: '为写卡片那一层', 形状: 'switch',
     量这句: [['src/_wnw/src/w10-cards.js', '中权重']],
     分支: 'feature/new/card-weight',
-    摘掉: ['src/_wnw/src/w10-cards.js 里中、低权重那两枚可调的数（全局一份、0.1~1、步进 0.1）与调完整圈换算那一颗',
+    动的地方: ['src/_wnw/src/w10-cards.js 里中、低权重那两枚可调的数（全局一份、0.1~1、步进 0.1）与调完整圈换算那一颗',
       '同一份里那两处界面：× 中权重 / × 低权重 那两行提示与「权重」那一栏',
       '基础版照旧计入出场，三种响应一律权重 1、不给调'] },
-  { id: 'gen-log', 中文: '推演记录', 住在哪: '共用模块（为写与 Flow-Desk 共用）', 形状: 'whole-file', 已拆: false,
+  { id: 'gen-log', 中文: '推演记录', 住在哪: '共用模块（为写与 Flow-Desk 共用）', 形状: 'whole-file',
     量这份: ['src/_shared/sh-log.js'],
     分支: 'feature/new/gen-log',
-    摘掉: ['src/_shared/sh-log.js 整份（它自己顶上那行就写着「推演记录 · WNW 和 FD 共用这一份」）',
+    动的地方: ['src/_shared/sh-log.js 整份（它自己顶上那行就写着「推演记录 · WNW 和 FD 共用这一份」）',
       'src/_fd/build.mjs 装配名单里那一句 ../_shared/sh-log.js（第 45 行）',
       'src/_wnw/src/w3-shell.js、src/_wnw/src/w0-skin.js 里进推演记录那一页的入口',
       'src/_wcustom/src/sh-gen.js 里往推演记录记一笔的那几处（推演组件定制自己那本记录不动）'] },
@@ -95,7 +94,6 @@ export const 八项 = [
 
 export const 八项表 = () => Object.fromEntries(八项.map(x => [x.id, x]));
 export const 分支名单 = () => 八项.map(x => x.分支);
-export const 摘掉形状 = id => { const x = 八项表()[id]; return x ? x.形状 : ''; };
 /* 屏上那一行要说人话：id 与分支名是一回事的两面，名字只在这一份里有一份 */
 export const 中文名 = id => (八项表()[id] || {}).中文 || id;
 export const 分支of = id => (八项表()[id] || {}).分支 || '';
@@ -131,7 +129,7 @@ export function 现在带不带(在, 项) {
     const 中 = 句.filter(([p, 串]) => { try { return fs.readFileSync(path.join(根, p), 'utf8').includes(串); } catch (e) { return false; } });
     return { 带: 中.length > 0, 话: 中.length + '/' + 句.length + ' 句还在源码里' };
   }
-  return { 带: null, 话: '这一项还没登记怎么量（不当它带着，也不当它已摘）' };
+  return { 带: null, 话: '这一项还没登记怎么量（不当它带着，也不当它没有）' };
 }
 
 /* 把一棵里那些「不进仓、但跑那三趟要」的格子（node_modules 那一种）用硬链接铺过去：
@@ -226,8 +224,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     const 起 = 分支在不在(TREE, x.分支);
     const 带 = 现在带不带(TREE, x);
     console.log('  ' + x.中文.padEnd(12, '　') + ' ' + x.分支 + '  分支：' + (起 || '没起来') +
-      (查分支 ? '' : '  这一棵：' + (带.带 ? '带着' : '已摘') + '（' + 带.话 + '）') +
-      '  ' + (x.已拆 ? '私有那一棵里已拆，分支跟着源码并进这一个仓' : '还没拆'));
+      (查分支 ? '' : '  这一棵：' + (带.带 ? '带着' : '没有') + '（' + 带.话 + '）'));
   }
   const 起了 = 八项.filter(x => 分支在不在(TREE, x.分支)).length;
   console.log('\n  八条分支里起来了 ' + 起了 + ' 条；没起来的那几项，打包勾了会当场停下来等那一笔。');

@@ -327,7 +327,7 @@ function 画前瞻(列){
 function 勾中(){ return [...document.querySelectorAll('#只在 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['支']); }
 function 数勾(){ const n = 勾中().length; 取('集成').disabled = n === 0 || 跑着 || git坏; }
 /* 那八项功能（名单在 src\_build\forward-features.mjs 那一份里，这一屏只读不抄第二份）：
-   一条一格，标它那条分支起没起、现在这一棵带不带、摘掉要动的是哪几处。
+   一条一格，标它那条分支起没起、现在这一棵带不带、这一项动的是哪几处。
    勾上的那几项 = 「打本地自测包」要把它们合进这一枚（合到一棵临时的，工作树那一棵不动）。
    分支还没起来的那一条勾了会当场停下来 —— 那一笔还欠着，不拿现在这一棵冒充带上了。 */
 function 画八项(列){
@@ -338,10 +338,9 @@ function 画八项(列){
     '装好的软件里不出现这一栏的任何字）· 八条分支起来了 ' + 起了 + ' 条</div>' +
     列.map(x => '<div class="条"><label><input type="checkbox" data-项="' + 编(x.id) + '"' + (x.起 ? '' : ' disabled') + '>带上</label> ' +
       '<b>' + 文(x.中文) + '</b> · ' + 文(x.分支) + ' · ' +
-      (x.起 ? '<b>分支那一笔 ' + 文(x.起) + '</b>' : '<b class="坏">分支还没起来</b>（这一项还没拆）') +
-      ' · 这一棵：' + (x.带 ? '带着' : '已摘') + '（' + 文(x.话) + '）' +
-      (x.已拆 ? ' · <b>私有那一棵里已拆，分支跟着源码并进这一个仓</b>' : '') +
-      '<details><summary>摘掉要动的是哪几处</summary><ul class="份">' + x.摘掉.map(f => '<li>' + 文(f) + '</li>').join('') + '</ul></details></div>').join('');
+      (x.起 ? '<b>分支那一笔 ' + 文(x.起) + '</b>' : '<b class="坏">分支还没起来</b>') +
+      ' · 这一棵：' + (x.带 ? '带着' : '没有') + '（' + 文(x.话) + '）' +
+      '<details><summary>这一项动的是哪几处</summary><ul class="份">' + x.动的地方.map(f => '<li>' + 文(f) + '</li>').join('') + '</ul></details></div>').join('');
 }
 function 带中(){ return [...document.querySelectorAll('#八项 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['项']); }
 /* 插件那七家：一家一格，格上写的是它的中文名（从前那一格要手打内部名字，他指着问「这个是什么！！！」）。

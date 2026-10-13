@@ -18,7 +18,7 @@ const 发布文 = rd('src/_build/release.mjs');
 const 屏文 = rd('src/_build/push-ui.html');
 const 台文 = rd('src/_build/push-ui.mjs');
 
-台.题('一 · 名单只有一份，八项一项一格（id · 中文名 · 分支 · 摘掉哪几处）');
+台.题('一 · 名单只有一份，八项一项一格（id · 中文名 · 分支 · 动的地方哪几处）');
 台.判('八项齐（词格模式、音乐遥控器停靠、热力图、推演组件定制、空白网页、双栏停靠、卡片出场权重、推演记录）',
   八项.length === 8 && ['词格模式', '音乐遥控器停靠', '写作统计的热力图', '推演组件定制',
     '标签页加号打开空白网页', '双栏停靠', '卡片出场权重', '推演记录'].every(n => 八项.some(x => x.中文 === n)),
@@ -26,12 +26,12 @@ const 台文 = rd('src/_build/push-ui.mjs');
 台.判('id 不重复、分支名一律 feature/new/ 起头（前瞻支那一类），一项一条',
   new Set(八项.map(x => x.id)).size === 8 && 八项.every(x => /^feature\/new\/[\w-]+$/.test(x.分支) && x.分支.endsWith(x.id)),
   八项.map(x => x.分支).join(' '));
-台.判('每一格都写了摘掉哪几处（不写「等等」，也不留空）',
-  八项.every(x => Array.isArray(x.摘掉) && x.摘掉.length >= 1 && x.摘掉.every(s => s.length > 3 && !/等[等]$/.test(s))),
-  八项.map(x => x.中文 + x.摘掉.length).join('、'));
+台.判('每一格都写了这一项动的是哪几处（不写「等等」，也不留空）',
+  八项.every(x => Array.isArray(x.动的地方) && x.动的地方.length >= 1 && x.动的地方.every(s => s.length > 3 && !/等[等]$/.test(s))),
+  八项.map(x => x.中文 + x.动的地方.length).join('、'));
 台.判('两种形状各归各：整份文件那种写了路径，开关那种写明是要在几处开口子',
   八项.filter(x => x.形状 === 'whole-file').length === 4 && 八项.filter(x => x.形状 === 'switch').length === 4 &&
-  八项.filter(x => x.形状 === 'whole-file').every(x => x.摘掉.some(s => /^[\w./-]+/.test(s))),
+  八项.filter(x => x.形状 === 'whole-file').every(x => x.动的地方.some(s => /^[\w./-]+/.test(s))),
   'whole-file 4 · switch 4');
 台.判('认这项三种写法都认（id、中文名、整条分支名），认不出回空',
   认这项('heat-map') === 'heat-map' && 认这项('推演记录') === 'gen-log' &&
@@ -100,17 +100,26 @@ g('checkout', '-q', 'main');
 try { fs.rmSync(沙, { recursive: true, force: true }); } catch (e) {}
 
 台.题('三 · 命令行那两道闸（喂真命令，跑任何一趟之前就停）');
-const 砸 = (参数) => { try { const out = execFileSync(process.execPath, ['src/_build/release.mjs'].concat(参数),
-    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return { 码: 0, 文: out }; }
+/* 反向验「那一条分支还没起来」要有这么一棵：单支克隆只带走 main，八条前瞻支一条都没有。
+   克隆落在仓外那一格临时目录，跑完连格一起收 —— 他那一棵一个字节不动，仓里也不留影子。 */
+const 单沙 = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-forward46-单-'));
+const 只main = path.join(单沙, 'clone');
+const 有克隆 = (() => {
+  try{ execFileSync('git', ['clone', '-q', '--single-branch', '-b', 'main', ROOT, 只main],
+    { encoding:'utf8', stdio:['ignore','pipe','pipe'] }); return true; }
+  catch(e){ return false; }
+})();
+const 砸 = (参数, 在) => { try { const out = execFileSync(process.execPath, ['src/_build/release.mjs'].concat(参数),
+    { cwd: 在 || ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return { 码: 0, 文: out }; }
   catch (e) { return { 码: e.status, 文: String((e && (e.stderr || e.stdout)) || (e && e.message) || e) }; } };
 const 甲 = 砸(['--打自测包', '--带=瞎写']);
 台.判('1 --带 里点了名单没有的那一项就停，并把八项的 id·中文名全报出来 · 退出码 ' + 甲.码,
   甲.码 === 1 && /名单里没有/.test(甲.文) && /lyric-grid·词格模式/.test(甲.文) && !/\$ node /.test(甲.文),
   甲.文.split(/\r?\n/).find(l => l.includes('停下来')) || '');
-const 乙 = 砸(['--打自测包', '--带=heat-map']);
-台.判('2 反向验：勾了但那条分支还没起来 —— 停在那一句上，一个字节都不打 · 退出码 ' + 乙.码,
-  乙.码 === 1 && /还没起来/.test(乙.文) && !/\$ node /.test(乙.文),
-  乙.文.split(/\r?\n/).filter(l => l.includes('停下来')).join(''));
+const 乙 = 砸(['--打自测包', '--带=heat-map'], 只main);
+台.判('2 反向验（在那一棵只有 main 的克隆里跑）：勾了而那条分支还没起来 —— 停在那一句上，一个字节都不打 · 退出码 ' + 乙.码,
+  有克隆 && 乙.码 === 1 && /还没起来/.test(乙.文) && !/\$ node /.test(乙.文) && !/合上 /.test(乙.文) && !/摊到/.test(乙.文),
+  乙.文.split(/\r?\n/).filter(l => l.includes('停下来')).join('') || '克隆那一棵没起来（git 用不了？）');
 const 丙 = 砸(['--看', '--带=heat-map']);
 台.判('3 反向验：--带 没配 --打自测包 就停（别在量清单那一趟里合树）· 退出码 ' + 丙.码,
   丙.码 === 1 && /只在 --打自测包 那一档有用/.test(丙.文), 丙.文.split(/\r?\n/).find(l => l.includes('停下来')) || '');
@@ -122,9 +131,13 @@ const 丙 = 砸(['--看', '--带=heat-map']);
 台.判('1 那一栏八行从名单那一份读，屏上不抄第二份名单',
   台文.includes("from './forward-features.mjs'") && 台文.includes('八项: 问脏.好 ? 八项名单.map') &&
   !/词格模式/.test(屏文) && 屏文.includes('画八项(对.八项)'));
-台.判('2 一条一格：那颗勾、分支起没起、这一棵带不带、摘掉要动哪几处（details 摊开）',
-  屏文.includes("data-项=") && 屏文.includes('分支还没起来') && 屏文.includes('摘掉要动的是哪几处') &&
+台.判('2 一条一格：那颗勾、分支起没起、这一棵带不带、这一项动的是哪几处（details 摊开）',
+  屏文.includes("data-项=") && 屏文.includes('分支还没起来') && 屏文.includes('这一项动的是哪几处') &&
   屏文.includes('function 带中()'));
+台.判('2b 那一格不再说"摘"与"已拆"（新仓里没勾的那几条分支不参与合并，屏上不许留旧模型的说法）',
+  !/摘/.test(屏文 + 台文 + 名单文) && !/已拆/.test(屏文 + 台文 + 名单文) &&
+  !/摘掉没勾的|有改法|strips\.mjs/.test(发布文),
+  ((屏文 + 台文 + 名单文 + 发布文).match(/.{0,12}摘.{0,12}/g) || []).slice(0, 3).join(' ⹂ '));
 台.判('3 分支没起来的那一条勾都点不动；点打包把勾中的那几项递给 --带',
   屏文.includes("' disabled'") && 屏文.includes('带: 带的.join') && 台文.includes("身.带"));
 台.判('4 那一栏只在这台开发用的屏上，装好的软件里读不到它（走的是本地那一屏，不进 pages\\）',
@@ -161,14 +174,16 @@ const 手文 = rd('src/_build/pr.mjs');
   屏文.includes('id="推项"') && 屏文.includes('function 画推项') && 台文.includes("'/api/推项'") &&
   台文.includes("'--推前瞻支'"));
 {
-  const 推 = (参数) => { try { const out = execFileSync(process.execPath, ['src/_build/pr.mjs'].concat(参数),
-      { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return { 码: 0, 文: out }; }
+  const 推 = (参数, 在) => { try { const out = execFileSync(process.execPath, ['src/_build/pr.mjs'].concat(参数),
+      { cwd: 在 || ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return { 码: 0, 文: out }; }
     catch (e) { return { 码: e.status, 文: String((e && (e.stderr || e.stdout)) || (e && e.message) || e) }; } };
   const 一 = 推(['--推前瞻支']);
-  const 二 = 推(['--推前瞻支', '--推=heat-map']);
-  台.判('13 反向验真跑：一颗都没勾就停（不拿"全推"当默认）· 退出码 ' + 一.码 + '；分支还没起来的那一项也停（不推一条不存在的支）· 退出码 ' + 二.码,
-    一.码 === 1 && /一颗都没勾/.test(一.文) && 二.码 === 1 && /还没起来/.test(二.文) && !/push/.test(一.文 + 二.文),
+  const 二 = 推(['--推前瞻支', '--推=heat-map'], 只main);
+  台.判('13 反向验真跑：一颗都没勾就停（不拿"全推"当默认）· 退出码 ' + 一.码 +
+    '；那条分支还没起来的那一项也停（在那一棵只有 main 的克隆里跑，不推一条不存在的支）· 退出码 ' + 二.码,
+    一.码 === 1 && /一颗都没勾/.test(一.文) && 有克隆 && 二.码 === 1 && /还没起来/.test(二.文) && !/push/.test(一.文 + 二.文),
     (一.文.split(/\r?\n/).find(l => l.includes('停下来')) || '') + ' ⹂ ' + (二.文.split(/\r?\n/).find(l => l.includes('停下来')) || ''));
+  try{ fs.rmSync(单沙, { recursive: true, force: true }); }catch(e){}
 }
 台.判('11 第 4 步那两栏全是勾，没有一处要他手打内部名字（插件那七家一家一格、名字从家表取；内部 id 只在递给命令那一刻出现）',
   屏文.includes('function 画七家') && 台文.includes('七家: 家表.map') && 屏文.includes('data-家=') &&
