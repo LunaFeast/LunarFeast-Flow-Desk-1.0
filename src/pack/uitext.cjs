@@ -633,10 +633,10 @@ function treeOf(from){
 const SKIP_REL = new Set();
 const SKIP_NAME = new Set(['uitext.cjs', 'wnw-kernel.js']);
 /* 只认 .js / .cjs，不跟着收 .mjs —— 这是量过的，不是漏的：
-   这六棵被扫的树里 .mjs 一共九份（src/_fd：build / fd-serve / grad-survey / look-check，
-   src/pack：build-app / mirror / publish，src/_wnw 与 src/_wcustom 各一颗 build-kernel），全是敲命令行跑的构建脚本，
-   嘴里念的是打包进度，界面上一个字都不显示；收进来就成了清单里的脏行（和 uitext.cjs 同一类）。
-   src/tools/ 底下那些 .mjs 是自检台，压根不在这五棵树的射程里。
+   被扫的那几棵树里每一份 .mjs 都是敲命令行跑的构建脚本（生成页面、本地那台服务器、量色表、
+   出内核、铺出厂镜像、出发布物），嘴里念的是打包进度，界面上一个字都不显示；
+   收进来就成了清单里的脏行（和 uitext.cjs 同一类）。
+   src/tools/ 底下那些 .mjs 是自检台，压根不在这几棵树的射程里。
    哪天新增了往界面上说话的一份，给它在这一行加一个名或者在 pageOf 里加一页，别放开这个口子。 */
 function listFiles(TREE){
   const out = [];

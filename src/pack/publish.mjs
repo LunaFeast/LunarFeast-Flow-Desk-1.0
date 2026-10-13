@@ -9,8 +9,8 @@
      node src/pack/publish.mjs --out=<目录>   产物落到别处（默认 Flow-Desk\dist\tauri）
      node src/pack/publish.mjs --壳件=<目录>  那颗编好的壳住在哪一格（默认取本地登记里的「编译缓存」）
 
-   这一颗只出 Tauri 那一枚壳（Electron 那一棵整层退了：主进程、preload、resources\app 那层镜像、
-   铺那层的 build-app 都不在这个仓里了 —— 桥、命令表、硬地板那份名单都编在 exe 里面）。
+   这一颗只出 Tauri 那一枚壳：桥、命令表、硬地板那份名单都编在 exe 里面，
+   没有 Electron 那一份 resources\app 镜像要铺，运行时就是那颗 exe 加旁边那颗加载器。
 
    三份产物：
      dist\tauri\plugins\<id>.zip                 一个包一包，货架上摆的零卖货（解开文件夹 → 压平，插件清单重新序列化一遍）

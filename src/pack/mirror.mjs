@@ -141,7 +141,7 @@ function jobs(){
      现在原版住在 data\plugins-factory\，导入那一下由 main.cjs 的 keepOriginal() 留，恢复出厂取那一格。
      词库底本那一段跟着一起撤：它的来源本来就是这里的插件包，包里没插件了也就没有底本可落
      （撤之前那一趟也是空转 —— 七家插件清单里没一家写 bank）。 */
-  /* 图标这一层分两处看：树根 icons\ 是给用户换的（build-app 那边 keepExisting，他换过的图不许被出包吃掉），
+  /* 图标这一层分两处看：树根 icons\ 是给用户换的（生成页面那一趟由 src\_build\ico-dump.mjs 补，已有的不动，他换过的图不许被吃掉），
      镜像这一层是"自带的默认"，就该和 src\pack\icons\ 一模一样 —— 所以先抹后铺（tree），不保留。
      外20 之前这里是"已有的不动"，结果源码 Oct 2 撤掉的名字在镜像里活到了今天：
      resources\app\icons\seam.svg（276 字节）两份源码层都没有它，它跟着每一个更新包往下发。 */
@@ -151,8 +151,8 @@ function jobs(){
      ① fdapp:// 那套映射只按四个门牌找文件（页面层 → 树根 → 自带的 pages → 自带的 data，main.cjs 的 serve），
         resources\app\material 这一格页面根本取不到，铺在这儿就是一份没人认的字节；
      ② 送出去那一颗 exe 是把 resources\app 整层塞进包的，铺进来等于每一颗包多背 24 MB。
-     所以这一层只有一个铺点：build-app.mjs 从 src\pack\material 铺到 Flow-Desk\material（树根那一层，页面按相对地址取，
-     和根上 icons\ 同一待遇 —— 用户那一格 keepExisting，他自己换的图不被出包吃掉）。
+     所以这一层只有一个铺点：生成页面那一趟（src\_fd\build.mjs）从 src\pack\material 铺到 Flow-Desk\material（树根那一层，页面按相对地址取，
+     和根上 icons\ 同一待遇 —— 用户那一格已有的不动，他自己换的图不被这一趟吃掉）。
      要撤这一条得先把 main.cjs 的门牌加上第五个，再想包体积的事，别只在这儿补一颗 job。 */
   out.push({ k:'gen', text:distRootJson(RES), note:'树根位置', to:path.join(RES, 'root.json') });
   /* 这份 package.json 三个 exe 共用，里面不能写 fdApp 是哪一个：入口由 exe 的文件名决定。
@@ -310,9 +310,8 @@ function refuseRunning(who){
     '。\n  先关掉它们（托盘里右键退出），或者加环境变量 FD_IGNORE_RUNNING=1 硬来。');
 }
 
-/* 这一层的目录形状要能跟别人对齐着看，所以把三个根也露出去；
-   那几份小工具函数（walk / copyInto / copyDir / pickLatest）build-app 铺运行时要再用一遍，
-   不再抄第二份 —— 抄一份就会有一处忘了改。 */
-export { jobs, plan, apply, walk, copyInto, copyDir, pickLatest, running, refuseRunning,
+/* 这一层的目录形状要能跟别人对齐着看，所以把几个根也露出去（audit 那一台拿它们对账）；
+   铺的那几颗小工具函数不外露 —— 这一层只剩这一条道，露出去就是留着让人误以为还有第二处会铺它。 */
+export { jobs, plan, apply,
   RES as MIRROR, OUT as TREE_ROOT, SRC_DATA, SRC_PAGES, HERE as PACK_DIR };
 export default { jobs, plan, apply };

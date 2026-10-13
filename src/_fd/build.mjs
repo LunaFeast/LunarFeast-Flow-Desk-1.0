@@ -9,7 +9,7 @@ import { icodeEmbed } from '../_vendor/icode/embed.mjs';
 import tree from '../_build/tree.cjs';
 import { assertClean } from '../_build/scan-packs.mjs';
 import uitext from '../pack/uitext.cjs';
-import { 铺图标一层 } from '../_build/ico-dump.mjs';
+import { 铺图标一层, 铺素材一层 } from '../_build/ico-dump.mjs';
 import { rpKernelSource } from '../_build/rp-kernel.mjs';
 import { 号, 页名 } from '../_build/version.mjs';
 import { PACK_RENAME } from '../_build/pack-rename.mjs';
@@ -72,6 +72,11 @@ uitext.refresh(TREE.tree);
    （FD_Icon.png、索引.txt）照同名补过去，他换过的图不动 —— 新克隆的一棵跑这一趟就齐了。 */
 { const 图 = 铺图标一层(TREE.tree);
   console.log('图标：出厂 ' + 图.出厂 + ' 张重画 · 树根 icons\\ 补了 ' + 图.补上 + ' 张，保住他改过的 ' + 图.保住 + ' 张'); }
+/* 随包素材那一层（material\ 底下那几张纹理）：页面写的是相对地址 material/文件名，
+   本地协议按树根去找，所以这一格要落在树根底下；已有的不覆盖（他自己换的图不被这一趟吃掉）。
+   写盘收在 ico-dump 那一颗里，这一趟自己不直接写树根那两格。 */
+{ const 素 = 铺素材一层(TREE.tree);
+  console.log('随包素材：树根 material\\ 补了 ' + 素.补上 + ' 张，保住他换过的 ' + 素.保住 + ' 张'); }
 function add(name, src){
   try{ new vm.Script(src, { filename:name }); }
   catch(e){ console.error('SYNTAX FAIL ' + name + ': ' + e.message); process.exit(1); }

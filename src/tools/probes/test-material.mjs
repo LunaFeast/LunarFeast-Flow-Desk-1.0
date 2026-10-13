@@ -10,7 +10,7 @@
      三 两颗按钮：光造出来没摆进那一排 = 代码在、没人点得到（外29 第 40 轮那条教训），所以两处接线都钉；
         还有「不许开机自动灌进用户那一层」—— COLOUR_V1、MATERIAL_TEXTURES 这两个名字只许出现在那份产物和那颗按钮里。
      四 随包 6 张图的字节：表里那一行和目录里那张一一对上（没缺张、也没人往里塞一张没人认的孤儿），字节和他本机那一格的原件一字不差（那一格的路径在 src\tools\本地路径.cjs，那颗不进仓）。
-     五 登记的那几处：build.mjs 拼页名单、uitext.cjs 那块中文名片、build-app 铺 Flow-Desk\material、
+     五 登记的那几处：build.mjs 拼页名单、uitext.cjs 那块中文名片、build.mjs 生成那一趟铺树根 material\、
         fd-serve 那条 /material/ 路由、主进程 fdapp:// 的门牌、出厂镜像「这一层不铺」这个决定 —— 漏一处就是「源码里跑得好、程序里取不到」。
    跑法：node src\tools\probes\test-material.mjs */
 import fs from 'node:fs';
@@ -306,8 +306,10 @@ R.判('build.mjs 拼页名单点到了这份产物（漏了它，产物页面里
   /'fd13-colour-v1\.js'/.test(rd('src/_fd/build.mjs')), '');
 R.判('uitext.cjs 那张中文名片里有它（改页面文字那台报出处时报得出「内置配色与随包纹理」，不是一串英文文件名）',
   /'fd13-colour-v1\.js':'内置配色与随包纹理'/.test(rd('src/pack/uitext.cjs')), '');
-R.判('build-app 把随包素材铺到 Flow-Desk\\material（树根那一份，页面按相对地址取的就是它），keepExisting —— 他自己换过的图不被出包吃掉',
-  /copyDir\(path\.join\(PACK_DIR, 'material'\), path\.join\(OUT, 'material'\), true\)/.test(rd('src/pack/build-app.mjs')), '');
+R.判('生成页面那一趟把随包素材铺到树根 material\\（页面按相对地址取的就是那一格），已有的不覆盖 —— 他自己换过的图不被这一趟吃掉',
+  rd('src/_build/ico-dump.mjs').includes('export function 铺素材一层') &&
+  rd('src/_build/ico-dump.mjs').includes('if(fs.existsSync(d)){ 保++; continue; }') &&
+  rd('src/_fd/build.mjs').includes('铺素材一层(TREE.tree)'), '');
 {
   const 镜 = rd('src/pack/mirror.mjs');
   R.判('出厂镜像那一层「不铺 material」是定过的、不是漏的：没有这一颗 job，原因写在镜像那一段里',
@@ -329,7 +331,7 @@ R.判('build-app 把随包素材铺到 Flow-Desk\\material（树根那一份，�
   R.判('拿真的树根实算一遍这一条门牌：树根拼 material/textures/cotton.png 落在树以内（不越界、也不绕到树以外那一格 —— 主进程 inside() 那道闸认的就是这个形状）',
     落.toLowerCase().startsWith(树根.toLowerCase() + path.sep) && !落.includes('..'), 落);
   R.数('Flow-Desk\\material\\textures\\cotton.png 铺了没有', fs.existsSync(落) ? '铺了，字节和原件一样：' +
-    fs.readFileSync(落).equals(fs.readFileSync(目录 + '/cotton.png')) : '还没铺 —— 这一格由 node src\\pack\\build-app.mjs 铺（关掉程序跑那一步）');
+    fs.readFileSync(落).equals(fs.readFileSync(目录 + '/cotton.png')) : '还没铺 —— 这一格由 node src\\_fd\\build.mjs 顺手铺（生成一趟跑完就有）');
 }
 R.判('生成那台工具在仓里，产物头顶写了这一句（node src\\tools\\colour-v1.mjs 重生成一份）',
   fs.existsSync(ROOT + TOOL) && /node src\\tools\\colour-v1\.mjs 重生成一份/.test(rd(GEN)), '');
@@ -370,12 +372,11 @@ R.题('六、咬口（确认上面那些判法真咬得住）');
     /'fd13-colour-v1\.js'/.test(rd('src/_fd/build.mjs')) && !/'fd13-colour-v1\.js'/.test(改), '');
 }
 {
-  const 改 = rd('src/pack/build-app.mjs').replace(/copyDir\(path\.join\(PACK_DIR, 'material'\)[^\n]*/, '');
+  const 改 = rd('src/_build/ico-dump.mjs').replace('if(fs.existsSync(从)) 走(从, 到);', '');
   const 改2 = rd('src/_fd/fd-serve.mjs').replace(/if\(url\.startsWith\('\/material\/'\)\)\{/, 'if(false){');
   const 改3 = rd('src/pack/mirror.mjs') + "\nout.push({ k:'tree', mode:'flat', note:'补上', from:path.join(HERE, 'material'), to:path.join(RES, 'material') });\n";
-  R.判('咬口六：出包那一句删掉 / 开发服务器那条路由改死 / 镜像那一层又冒出一颗 material 的 job → 对应三条判法各自当场失效',
-    !/path\.join\(OUT, 'material'\)/.test(改) && !/url\.startsWith\('\/material\/'\)/.test(改2) &&
-      /to:path\.join\(RES, 'material'\)/.test(改3), '');
+  R.判('咬口六：生成那一趟里铺 material 的一句删掉 / 开发服务器那条路由改死 / 镜像那一层又冒出一颗 material 的 job → 对应三条判法各自当场失效',
+    !改.includes('走(从, 到);') && !/url\.startsWith\('\/material\/'\)/.test(改2) &&      /to:path\.join\(RES, 'material'\)/.test(改3), '');
 }
 {
   const 改 = rd(GEN).replace("{ 名字:'棉纸', 文件:'cotton.png'", "{ 名字:'棉纸', 文件:'cotton-v2.png'");
