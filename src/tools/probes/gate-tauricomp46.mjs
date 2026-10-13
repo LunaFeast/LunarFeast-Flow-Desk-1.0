@@ -20,7 +20,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { rd, 记账, 切, ROOT } from './lib-slice.mjs';
+import { rd, 记账, 切, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-tauricomp46');
 const main = rd('src/pack/main.cjs');
@@ -406,25 +406,18 @@ for (const 禁 of ['std::fs', 'File::open', 'File::create', 'fs::write', 'read_t
 台.判('那两层里读的是 core 那一颗，没把判断重写一遍（不出现 拆段 之外的第二份白名单）',
   动.includes('use crate::fd_core::comp_rule::') && 改.includes('use crate::fd_core::cat_rename::'));
 
-台.题('十、这一批的账');
-const 电 = [...new Set((main.match(/ipcMain\.handle\(\s*['"]([^'"]+)['"]/g) || [])
-  .map(s => (s.match(/['"]([^'"]+)['"]/) || [])[1]))];
-const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n)));
-台.数('覆盖率那一句', '已搬 ' + 已搬.length + ' / ' + 电.length);
-台.判('这一批 7 颗全在已搬名单里', 批.every(x => 已搬.includes(x[0])));
-台.判('已搬总数到了 63（这一批那七颗在里头，往后音乐遥控器那九颗、批五那四颗、批六那两颗与批七那三颗也已经跟上：30 + 8 + 7 + 9 + 4 + 2 + 3）', 已搬.length === 63);
-台.判('两头一颗不差：主进程那 ' + 电.length + ' 颗通道全在壳的注册单上', 电.length === 已搬.length && 电.length === 63);
-台.判('三处账目撞得上：另两道闸里那句已搬数与本道同一个现场数（不是一处改了别处还写着旧数）',
-  rd('src/tools/probes/gate-tauridata46.mjs').includes('已搬.length === 63')
-  && rd('src/tools/probes/gate-tauribackup46.mjs').includes('已搬.length === 63')
-  && rd('src/tools/probes/gate-tauridata46.mjs').includes('已搬.length === 60') === false
-  && rd('src/tools/probes/gate-tauridata46.mjs').includes('已搬.length === 58') === false
-  && rd('src/tools/probes/gate-tauridata46.mjs').includes('已搬.length === 45') === false
-  && rd('src/tools/probes/gate-tauridata46.mjs').includes('已搬.length === 54') === false
-  && rd('src/tools/probes/gate-tauribackup46.mjs').includes('已搬.length === 60') === false
-  && rd('src/tools/probes/gate-tauribackup46.mjs').includes('已搬.length === 58') === false
-  && rd('src/tools/probes/gate-tauribackup46.mjs').includes('已搬.length === 45') === false
-  && rd('src/tools/probes/gate-tauribackup46.mjs').includes('已搬.length === 54') === false
-  && rd('src/tools/probes/gate-taurimedia46.mjs').includes('已搬.length === 63'));
+台.题('十、这一批的账（拿桥那一份与壳的注册单对，不再拿 Electron 主进程当标准答案）');
+const 这批 = 批.map(x => x[0]);
+const 缺 = 对名单(这批, 桥, 壳注册单());
+台.数('这一批几颗', 这批.length + ' 颗：' + 这批.join(' '));
+台.判('这一批每一颗桥都请得到（页面上喊得出来这一颗）', 缺.桥没请.length === 0, 缺.桥没请);
+台.判('这一批每一颗都在壳的注册单上（搬齐了，不留半截桥）', 缺.单没注册.length === 0, 缺.单没注册);
+/* 从前这一段是「本道数一遍 63，另四道也各数一遍，再互相核对五本里的数字别留旧数」——
+   一把尺分成五处就是这种账的来处：搬完一颗要改五本，改漏一本就假绿。
+   总账现在只有一处：桥请的一颗都不许在单外，钉在 gate-bridge46 第三节；这五道只管自己那一批在不在名单上。 */
+台.判('五道同族闸都不再自己数总账（那一把尺只有一处）',
+  ['gate-tauridata46', 'gate-tauribackup46', 'gate-taurimedia46', 'gate-tauripack46'].every(名 =>
+    !/已搬\.length ===/.test(rd('src/tools/probes/' + 名 + '.mjs'))) &&
+  rd('src/tools/probes/gate-bridge46.mjs').includes('请壳的一颗都不许在单外'));
 台.判('主.rs 顶上那句「还剩几颗没搬」整句撤了（壳里一颗不差，不许留着一句旧账当已实现）', !/还没搬|剩下的 4 颗/.test(壳));
 台.收尾();

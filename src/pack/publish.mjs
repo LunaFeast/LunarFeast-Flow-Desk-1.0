@@ -21,9 +21,10 @@
      进：运行时（那颗 exe 改名叫整棵树唯一的门牌 + WebView2 那颗加载器）、
          pages\ 只带当前这一支号那一张（老版本一张都不带）和非产物文件、
          src\（重新生成页面要用，node_modules 不带）、
+         icons\ 与 material\（取 src\pack\ 里出厂那一份，铺到树根同名那一格 —— 运行时只认树根那一层）、
          data\plugins\<id>\ 与 data\plugins-factory\<id>\（外46：七家插件跟着本体一起出门，活的与原版各一份）
      不进：data\ 里除上面那两格以外的一切（用户写的书、词库副本、userdata-*、日志、这台机器的 off.json —— 私密，也不该跟着版本走）、
-           update\（那是一台机器自己的更新账）、根上 icons\（给用户换的，出厂那一份在 src\pack\icons\ 里，铺树那一趟长回来）、
+           update\（那是一台机器自己的更新账）、树根现在那两格 icons\ 与 material\（是他自己换过的图，出厂那一份另走一路）、
            老版本的 html（用户那棵树里想留几份留几份，发布物只带当前这一版）
    ============================================================ */
 import fs from 'node:fs';
@@ -130,7 +131,13 @@ const inNodeModules = rel => rel.split('/').includes('node_modules');
 addLayer('pages/', PAGES, rel => superseded(rel));
 /* 三、源码：重新生成页面要读的（node_modules 一个字节都不带 —— 生成页面只用 node 自带模块） */
 addLayer('src/', path.join(TREE, 'src'), rel => inNodeModules(rel) || /(^|\/)\.[^/]/.test(rel));
-/* 四、插件：外46 起七家跟着本体一起进这一棵树（他 2026-10-10 定：取消发布物零插件）。
+/* 四、图标与随包素材那两格：取的是出厂那一份（src\pack\icons\、src\pack\material\），铺到树根同名那一格。
+   运行时只认树根这一层 —— 图标那张表（info_cmds 收 icons\ 顶上与往下一层子格）、
+   页面里 material/textures\ 那些相对地址，都从 <树根>\ 取；少了这两层，图标那一屏是空的、内置纹理取不到。
+   树根现在那一格不直接取：里面是他自己换过的图，出厂那一份才跟着版本走（覆盖升级也不盖他的，见 sfx 的 KeepUserFile）。 */
+addLayer('icons/', path.join(TREE, 'src', 'pack', 'icons'));
+addLayer('material/', path.join(TREE, 'src', 'pack', 'material'));
+/* 五、插件：外46 起七家跟着本体一起进这一棵树（他 2026-10-10 定：取消发布物零插件）。
    活的铺到 data\plugins\<id>\、开机就能跑；原版铺到 data\plugins-factory\<id>\、「恢复出厂」取它。
    两格都取自下面「货架」那一段压零卖包的同一批字节（包内件），所以四处一个号、一份字节。
    卸没卸过那一格（off.json）不进包 —— 那是每台机器自己的状态，不在发布物里带。 */
@@ -278,6 +285,12 @@ for(const buf of made.values()){ n++; bytes += buf.length; }
 const packBytes = shelf.reduce((s, p) => s + p.bytes, 0);
 console.log('发布清单：一棵树 ' + n + ' 个文件 · 展开 ' + (bytes / 1048576).toFixed(1) + 'MB' +
   ' · 货架 ' + shelf.length + ' 个包 · ' + (packBytes / 1024).toFixed(1) + ' KB');
+/* 顶层每一格几个文件：少一格就是装完那棵树缺东西（icons\ 空 = 图标那一屏没图，material\ 空 = 内置纹理取不到） */
+{
+  const 格 = {};
+  for(const k of [...files.keys(), ...made.keys()]){ const 顶 = k.split('/')[0]; 格[顶] = (格[顶] || 0) + 1; }
+  console.log('  顶层每一格：' + Object.entries(格).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + ' ' + v).join(' · '));
+}
 console.log('  版本 ' + JSON.stringify(VER) + ' · 最低外壳 ' + minShell);
 console.log('  产物在 ' + OUT_DIR);
 if(DRY){

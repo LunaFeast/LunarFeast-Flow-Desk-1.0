@@ -36,7 +36,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { rd, 记账, 切, ROOT } from './lib-slice.mjs';
+import { rd, 记账, 切, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-tauripack46');
 const main = rd('src/pack/main.cjs');
@@ -713,34 +713,24 @@ const 列通道 = [...new Set((main.match(/ipcMain\.handle\(\s*'pack:[^']+'/g) |
   && !动码.includes('ipcMain'));
 
 台.题('十三、这一批的账');
-const 电 = [...new Set((main.match(/ipcMain\.handle\(\s*['"]([^'"]+)['"]/g) || [])
-  .map(s => (s.match(/['"]([^'"]+)['"]/) || [])[1]))];
-const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n)));
-台.数('覆盖率那一句', '已搬 ' + 已搬.length + ' / ' + 电.length);
-台.判('这一批 5 颗全在已搬名单里', 批.every(x => 已搬.includes(x[0])));
-台.判('插件那一列这五颗全搬齐了（这一列剩零颗没搬）',
-  ['pack:list', 'pack:file', 'pack:set', 'pack:import', 'pack:wipe'].every(c => 已搬.includes(c)));
-台.判('已搬总数到了 63（批六那 60 颗 + 批七这三颗：30 + 8 + 7 + 9 + 4 + 2 + 3）', 已搬.length === 63);
-台.判('两头一颗不差：主进程那 ' + 电.length + ' 颗通道全在壳的注册单上', 电.length === 已搬.length && 电.length === 63);
+const 这批 = 批.map(x => x[0]);
+const 缺 = 对名单(这批, 桥, 壳注册单());
+台.数('这一批几颗', 这批.length + ' 颗：' + 这批.join(' '));
+台.判('这一批每一颗桥都请得到（页面上喊得出来这一颗）', 缺.桥没请.length === 0, 缺.桥没请);
+台.判('这一批每一颗都在壳的注册单上（搬齐了，不留半截桥）', 缺.单没注册.length === 0, 缺.单没注册);
+台.判('壳的注册单上 pack_ 打头的就这一列这五颗（壳里没多造第六颗，这一列也剩零颗没搬）',
+  壳注册单().filter(n => n.startsWith('pack_')).sort().join(' ') === 批.map(x => x[1]).sort().join(' '));
+/* 总账只在一处数：桥请的一颗都不许在单外，那条钉在 gate-bridge46 第三节 ——
+   从前这五道各自数一遍「已搬 63 / 63」再互相核对数字，搬完一颗要在五本里改五个数，改漏一本就是假绿 */
+台.判('那把总账的尺只有一把（这一台不再自己数已搬多少颗）',
+  rd('src/tools/probes/gate-bridge46.mjs').includes('请壳的一颗都不许在单外') &&
+  !/已搬\.length ===/.test(rd('src/tools/probes/gate-tauripack46.mjs')));
 台.判('main.rs 顶上那句「还剩几颗没搬」整句撤了（壳里一颗不差，不许留着一句旧账当已实现）', !/还没搬|剩下的 4 颗/.test(壳));
 台.判('main.rs 顶上那句也点了这一批那三颗（⑪ 那一段），不是只改了个数',
   壳.includes('⑪ 插件那一列剩下那三颗') && 壳.includes('pack:set / pack:import / pack:wipe'));
 台.判('main.rs 的注册单上这三颗排在 ⑪ 那一段后面（一格一段，不是散着塞的）',
   壳.indexOf('⑪ 插件那一列剩下那三颗') < 壳.indexOf('pack_cmds::pack_set')
   && 壳.includes('tauri_bind::pack_cmds::pack_import') && 壳.includes('tauri_bind::pack_cmds::pack_wipe'));
-台.判('五处账目撞得上：另四道闸里那句已搬数与本道同一个现场数，旧数一处不留',
-  ['gate-tauridata46', 'gate-tauribackup46', 'gate-tauricomp46', 'gate-taurimedia46'].every(名 => {
-    /* 只扫它们代码里那句真判断：那几道里有的也在查「别的闸不许留旧数」，
-       引号里念着旧数字的那一串是它的检查用语，不是它落的账 —— 先把字串剥掉再比 */
-    const 它 = rd('src/tools/probes/' + 名 + '.mjs')
-      .replace(/'(?:[^'\\\n]|\\.)*'/g, "''").replace(/"(?:[^"\\\n]|\\.)*"/g, '""');
-    return 它.includes('已搬.length === 63') && 它.includes('已搬.length === 60') === false
-      && 它.includes('已搬.length === 58') === false && 它.includes('已搬.length === 54') === false
-      && 它.includes('已搬.length === 45') === false && 它.includes('已搬.length === 13') === false;
-  }) && rd('src/tools/probes/gate-tauricomp46.mjs').includes('整句撤了'));
-台.判('另四道同族闸那句「还剩几颗没搬」的账也一起撤了（一处旧账都不留）',
-  ['gate-tauridata46', 'gate-tauribackup46', 'gate-tauricomp46', 'gate-taurimedia46'].every(名 =>
-    !rd('src/tools/probes/' + 名 + '.mjs').replace(/'(?:[^'\\\n]|\\.)*'/g, "''").includes('=== 4)')));
 台.判('跑测试那一道此刻是全绿 233 颗零警告（212 → 219 运行日志那 7 颗 → 220 本地协议类型表那 1 颗 → 233 批九网格吸附那 13 颗），与本道数的字数同一现场',
   全测试数() === 233);
 台.判('媒体那一道闸数的字数与本道同一现场（两道闸数的是同一棵树，不许各说各话）',

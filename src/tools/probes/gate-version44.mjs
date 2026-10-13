@@ -33,23 +33,24 @@ const 生 = rd('src/_fd/build.mjs');
 
 /* ---------- 三 · 不许再挑「号最大的那一张」 ---------- */
 台.题('三 · 挑页那几处按什么认');
-const 主 = rd('src/pack/main.cjs'), 镜 = rd('src/pack/mirror.mjs'),
+const 主 = rd('src/pack/main.cjs'), 壳页 = rd('src/_tauri/src/core/page_pick.rs'),
       发 = rd('src/pack/publish.mjs'), 服 = rd('src/_fd/fd-serve.mjs');
 台.判('主进程挑入口页按文件时间认（号回跳之后「最大」会挑回旧页）',
   /mt - best\.mt \|\| cmpVer/.test(主) && /statSync\(path\.join\(dir, n\)\)\.mtimeMs/.test(主));
 台.判('开发服务器那一处同一条规矩', /mt - best\.mt \|\| cmpVer/.test(服));
-台.判('出厂镜像认当前号那一张页（不是 pages\\ 里最大的）', /页名\(\)/.test(镜));
+台.判('壳里那一格挑页也是先认最近写过的那一张（版本号只在时间打平时才用）',
+  /b\s*\.\s*改过/.test(壳页) && /then_with\(\|\| 比版本\(&b\.版本, &a\.版本\)/.test(壳页));
 台.判('发布那一头也认当前号，并且页不在就停下', /const VER = \{ fd: 号\(\) \}/.test(发) && /没有当前这一支号的页/.test(发));
-台.判('四处都不留 pickLatest 挑页那一手（镜像那一颗留给别处用，但不再挑页）',
-  !/pickLatest\(PAGES/.test(主) && !/pickLatest\(PAGES/.test(发) && !/pickLatest\(SRC_PAGES, 'Flow_Desk_\*\.html'\);$/.test(镜.split('const 当前')[1] || ''));
+台.判('哪一头都不留 pickLatest 挑页那一手',
+  !/pickLatest\(PAGES/.test(主) && !/pickLatest\(PAGES/.test(发) && !/pickLatest/.test(服) && !/pickLatest/.test(壳页));
 
 /* ---------- 四 · 短哈希不参与比大小 ---------- */
 台.题('四 · 比大小的那几把尺');
 const 切 = s => (s.match(/function verNum\(raw\)\{ return ([^\n]+)\n/g) || []);
-for(const [名, 文] of [['主进程', 主], ['出厂镜像', 镜], ['发布', 发], ['开发服务器', 服]]){
+for(const [名, 文] of [['主进程', 主], ['发布', 发], ['开发服务器', 服]]){
   const 有 = /split\('\+'\)\[0\]/.test(文) || /raw\.split\('\+'\)\[0\]/.test(文);
   台.判(名 + '那一处先把 +build 之后切掉再取数字段', 有);
 }
-台.数('四把尺都在', 切(主).length + 切(镜).length + 切(发).length + 切(服).length + ' 处 verNum');
+台.数('三把 JS 那头的尺都在', 切(主).length + 切(发).length + 切(服).length + ' 处 verNum');
 台.判('比大小只看数字段（短哈希不参与）', 底号().split('+').length === 1);
 台.收尾();

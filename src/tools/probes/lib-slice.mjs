@@ -82,6 +82,27 @@ export function 切方法(src, 头, 起 = 0, 止 = src.length){
   throw new Error(头.trim() + ' 没收尾');
 }
 
+/* ---------- 桥与壳的那一把尺（六道闸共用一份，别处不再抄第二份） ----------
+   从前这几台各自拿 Electron 主进程那份 `src\pack\main.cjs` 里的 ipcMain.handle 当"该有哪些通道"的标准答案，
+   五道各数一遍、还互相核对数字别对不上 —— 那一层已经不进产品链了，标准答案换成真在跑的这两份：
+     · 桥（src\_tauri\ui\fd-bridge.js）请了哪几颗 —— 页面上真喊得出的名字；
+     · 壳（src\_tauri\src\main.rs 的 invoke_handler 那张注册单）注册了哪几颗。
+   通道名到 Rust 函数名的换算（冒号与连字符都变下划线、驼峰变下划线）也只在这一处说一次。 */
+export const 桥原文 = () => rd('src/_tauri/ui/fd-bridge.js');
+export const 名换算 = n => n.replace(/[-:]/g, '_').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+/* 通道名里有带连字符的那一族 —— 名段漏掉 '-' 就整族逃过（2026-10-13 头一版就是这么漏的） */
+const 抓通道 = (s, 只请壳) => [...new Set([...s.matchAll(
+  new RegExp(只请壳 ? /(?:invoke|send)\('([a-z][a-z-]*:[A-Za-z][A-Za-z]*)'/g : /(?:invoke|send|on)\('([a-z][a-z-]*:[A-Za-z][A-Za-z]*)'/g, 'g')
+)].map(m => m[1]))].sort();
+export const 桥请壳 = s => 抓通道(s, true);
+export const 桥全部 = s => 抓通道(s, false);
+export const 壳注册单 = () => [...rd('src/_tauri/src/main.rs').matchAll(/tauri_bind::\w+::(\w+)/g)].map(m => m[1]);
+/* 一批通道在不在「桥请得到 + 壳也注册了」这两张名单上（缺一处就是那一批没搬齐） */
+export function 对名单(批, 桥, 单){
+  const 请 = new Set(桥请壳(桥).map(名换算));
+  return { 桥没请: 批.filter(n => !请.has(名换算(n))), 单没注册: 批.filter(n => !单.includes(名换算(n))) };
+}
+
 /* 一台结果账：判() 每条都要报数，最后 收尾() 打印并退出码 */
 export function 记账(台名){
   let pass = 0, fail = 0;

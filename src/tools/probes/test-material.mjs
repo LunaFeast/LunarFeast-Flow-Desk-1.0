@@ -11,7 +11,8 @@
         还有「不许开机自动灌进用户那一层」—— COLOUR_V1、MATERIAL_TEXTURES 这两个名字只许出现在那份产物和那颗按钮里。
      四 随包 6 张图的字节：表里那一行和目录里那张一一对上（没缺张、也没人往里塞一张没人认的孤儿），字节和他本机那一格的原件一字不差（那一格的路径在 src\tools\本地路径.cjs，那颗不进仓）。
      五 登记的那几处：build.mjs 拼页名单、uitext.cjs 那块中文名片、build.mjs 生成那一趟铺树根 material\、
-        fd-serve 那条 /material/ 路由、主进程 fdapp:// 的门牌、出厂镜像「这一层不铺」这个决定 —— 漏一处就是「源码里跑得好、程序里取不到」。
+        fd-serve 那条 /material/ 路由、壳里 fdapp:// 找文件那一手（page_cmds 里有「树根」那一条候选）、
+        发布那一趟把 src\pack\material 那一份原件铺成树根 material\ —— 漏一处就是「源码里跑得好、程序里取不到」。
    跑法：node src\tools\probes\test-material.mjs */
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -311,9 +312,10 @@ R.判('生成页面那一趟把随包素材铺到树根 material\\（页面按�
   rd('src/_build/ico-dump.mjs').includes('if(fs.existsSync(d)){ 保++; continue; }') &&
   rd('src/_fd/build.mjs').includes('铺素材一层(TREE.tree)'), '');
 {
-  const 镜 = rd('src/pack/mirror.mjs');
-  R.判('出厂镜像那一层「不铺 material」是定过的、不是漏的：没有这一颗 job，原因写在镜像那一段里',
-    !/to:path\.join\(RES, 'material'\)/.test(镜) && /不在这里铺/.test(镜) && /fdapp/.test(镜) && /更新包/.test(镜), '');
+  const 包 = rd('src/pack/publish.mjs');
+  R.判('发布那一趟带着 material 这一格出门，而且取的是 src\\pack\\material 那份原件（不是开发这棵树里他自己换过的那一层）',
+    /addLayer\('material\/', path\.join\(TREE, 'src', 'pack', 'material'\)\)/.test(包)
+    && !/addLayer\('material\/', path\.join\(TREE, 'material'\)\)/.test(包), '');
 }
 {
   const 服 = rd('src/_fd/fd-serve.mjs');
@@ -323,12 +325,12 @@ R.判('生成页面那一趟把随包素材铺到树根 material\\（页面按�
     /if\(!abs\.startsWith\(path\.resolve\(b\)\)\) return send\(res, 403/.test(服), '');
 }
 {
-  const 主 = rd('src/pack/main.cjs');
-  R.判('主进程 fdapp:// 那四个门牌里有「树根」那一条，所以 material/textures/xxx.png 不用新增门牌就到得了',
-    /const cands = \[path\.resolve\(PAGES_ROOT, rel\), path\.resolve\(TREE, rel\)/.test(主) && /inside\(p, TREE\)/.test(主), '');
+  const 壳页 = rd('src/_tauri/src/tauri_bind/page_cmds.rs');
+  R.判('壳里 fdapp:// 那一手找文件有一条「落到树根」的兜底（页面层与数据层都没有才算树根那一格），所以 material/textures/xxx.png 不用新增门牌就到得了',
+    /\.or_else\(\|\| 试\(路::归一\(树, 相\)\)\)/.test(壳页) && /路::在根内\(树, &候\)/.test(壳页), '');
   const 树根 = path.resolve(ROOT.replace(/\/$/, ''));
   const 落 = path.resolve(树根, 'material/textures/cotton.png');
-  R.判('拿真的树根实算一遍这一条门牌：树根拼 material/textures/cotton.png 落在树以内（不越界、也不绕到树以外那一格 —— 主进程 inside() 那道闸认的就是这个形状）',
+  R.判('拿真的树根实算一遍这一条门牌：树根拼 material/textures/cotton.png 落在树以内（不越界、也不绕到树以外那一格 —— 壳里 在根内() 那道闸认的就是这个形状）',
     落.toLowerCase().startsWith(树根.toLowerCase() + path.sep) && !落.includes('..'), 落);
   R.数('Flow-Desk\\material\\textures\\cotton.png 铺了没有', fs.existsSync(落) ? '铺了，字节和原件一样：' +
     fs.readFileSync(落).equals(fs.readFileSync(目录 + '/cotton.png')) : '还没铺 —— 这一格由 node src\\_fd\\build.mjs 顺手铺（生成一趟跑完就有）');
@@ -374,9 +376,14 @@ R.题('六、咬口（确认上面那些判法真咬得住）');
 {
   const 改 = rd('src/_build/ico-dump.mjs').replace('if(fs.existsSync(从)) 走(从, 到);', '');
   const 改2 = rd('src/_fd/fd-serve.mjs').replace(/if\(url\.startsWith\('\/material\/'\)\)\{/, 'if(false){');
-  const 改3 = rd('src/pack/mirror.mjs') + "\nout.push({ k:'tree', mode:'flat', note:'补上', from:path.join(HERE, 'material'), to:path.join(RES, 'material') });\n";
-  R.判('咬口六：生成那一趟里铺 material 的一句删掉 / 开发服务器那条路由改死 / 镜像那一层又冒出一颗 material 的 job → 对应三条判法各自当场失效',
-    !改.includes('走(从, 到);') && !/url\.startsWith\('\/material\/'\)/.test(改2) &&      /to:path\.join\(RES, 'material'\)/.test(改3), '');
+  const 包 = rd('src/pack/publish.mjs');
+  const 改3 = 包.replace("addLayer('material/', path.join(TREE, 'src', 'pack', 'material'));", '');
+  const 页 = rd('src/_tauri/src/tauri_bind/page_cmds.rs');
+  const 改4 = 页.replace('.or_else(|| 试(路::归一(树, 相)))', '');
+  R.判('咬口六：生成那一趟里铺 material 的一句删掉 / 开发服务器那条路由改死 / 发布那一趟不带 material 那一格 / 壳里那条「树根」候选撤掉 → 对应四条判法各自当场失效',
+    !改.includes('走(从, 到);') && !/url\.startsWith\('\/material\/'\)/.test(改2)
+    && 改3 !== 包 && !/addLayer\('material\//.test(改3)
+    && 改4 !== 页 && !/\.or_else\(\|\| 试\(路::归一\(树, 相\)\)\)/.test(改4), '');
 }
 {
   const 改 = rd(GEN).replace("{ 名字:'棉纸', 文件:'cotton.png'", "{ 名字:'棉纸', 文件:'cotton-v2.png'");

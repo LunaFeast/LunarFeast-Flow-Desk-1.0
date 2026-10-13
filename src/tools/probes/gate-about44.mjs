@@ -14,7 +14,7 @@ const 在 = 相 => fs.existsSync(path.join(ROOT, 相));
 const 主 = rd('src/pack/main.cjs'), 发 = rd('src/_build/release.mjs'), 壳 = rd('src/pack/sfx.cs'),
       预 = rd('src/pack/preload.cjs'), 桥 = rd('src/_shared/sh-load.js'),
       页 = rd('src/_fd/src/fd4-builtin.js'), 拼 = rd('src/_fd/build.mjs'),
-      顶 = rd('src/_fd/src/fd9-title.js'), 镜 = rd('src/pack/mirror.mjs'),
+      顶 = rd('src/_fd/src/fd9-title.js'),
       公 = rd('src/pack/publish.mjs'), 单 = rd('src/pack/uitext.cjs');
 /* 整棵源码扫一遍（node_modules 不算：那是 electron 自带的东西，改不了也不该改；
    这台探针自己也不算：它嘴里念的就是那些要撤干净的名字，算进去就成了自己抓自己） */
@@ -71,10 +71,8 @@ function 全扫(认){
 台.判('页面里那一颗 fd7-help.js 没了', !在('src/_fd/src/fd7-help.js'));
 台.判('拼页面的名单里不再点它（顶上那句历史账本提一句不算）', !拼.includes("'fd7-help.js'"));
 台.判('主进程不再往 data\\ 铺工作副本（syncHelp 一处不剩）', 全扫(s => /syncHelp/.test(s)).length === 0, 全扫(s => /syncHelp/.test(s)).join(' | '));
-台.判('出厂镜像不再把帮助当底本取件', !镜.includes("'help.md'"));
 台.判('顶栏菜单里那一项没了（也没有 Ctrl H 那条快捷键）', !顶.includes('帮助文档') && !页.includes('打开帮助'));
 台.判('主进程不再拦 Ctrl+H、不再往页面递 fd:help', !/winCtl\('help'\)/.test(主) && !/fd:help/.test(主) && !/fd:help/.test(预));
-台.判('出厂那一层里也没有帮助的一份', !在('resources/app/data/help.md') || !镜.includes('help.md'));
 台.判('源码里不再有「help.md」这个名（改名表那类历史账本除外）',
   全扫(s => /help\.md/.test(s)).length === 0, 全扫(s => /help\.md/.test(s)).join(' | '));
 

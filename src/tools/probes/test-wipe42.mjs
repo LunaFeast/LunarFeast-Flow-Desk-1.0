@@ -107,25 +107,29 @@ const 补铺 = (main.slice(main.indexOf('const WIPE = userWipe();')).match(/^if\
 台.判('补铺排在清理那一趟后面（顺序反了等于没清）', main.indexOf('const WIPE = userWipe();') < main.indexOf('if(WIPE.deleted.length)'));
 台.判('开机把出厂清单补铺到数据层那一整台撤了（那两份清单都不再由程序往 data\\ 铺）',
   !/function layList|function syncLists|syncLists\(/.test(main));
-const 镜 = rd('src/pack/mirror.mjs');
-台.判('出厂层里那一份清单也不打进 resources\\app\\data\\（界面文字与卡片大小都不进）',
-  !/card-size|ui-text|出厂清单/.test(镜), (镜.match(/card-size|ui-text|出厂清单/g) || []).join('、'));
-台.判('用户数据详单不进出厂层（它是用户自己写的那一篇，首次安装就没有它）', !/userdata-list/.test(镜));
-台.判('仓里也没有它的一份（不在公开面、也不在镜像取件处）', !fs.existsSync(ROOT + 'src/pack/data/userdata-list.md'));
+const pub = rd('src/pack/publish.mjs');
+台.判('发布那一趟不往产物里铺那两份清单（界面文字与卡片大小的名一处不剩）',
+  !/card-size|ui-text|出厂清单/.test(pub), (pub.match(/card-size|ui-text|出厂清单/g) || []).join('、'));
+台.判('用户数据详单也不由发布铺（它是用户自己写的那一篇，首次安装就没有它）', !/userdata-list/.test(pub));
+台.判('仓里也没有它的一份（不在公开面）', !fs.existsSync(ROOT + 'src/pack/data/userdata-list.md'));
 
 /* ---------- 五 · 插件往发布物里走的三条路：两条仍然堵着，一条外46 又铺开了 ----------
-   ① mirror 往 resources\app\data\plugins\ 铺一份 —— 仍然堵着（程序代码那一层不收插件）。
+   ① 程序代码那一层（发布物里的 src\）不收插件 —— 仍然堵着（Electron 那层 resources\app 已随那颗壳一起撤掉，
+      现在盯的是发布那一趟 addLayer('src/') 那一格和它顶上 data\ 那道闸）。
    ② 开机看见没有插件格就把自带那一层铺出来 —— 仍然堵着（seedMissing 没了）。
    ③ publish 把插件铺进首装树 —— 外43 拆过，外46 又铺开了：他 2026-10-10 定本体和插件一起打包，
       铺进去的是树里的 data\plugins\（活的）和 data\plugins-factory\（原版），不是 app 那一层。
    替代的形状仍在：导入那一下顺手往 data\plugins-factory\ 留一份原版，「恢复出厂」和随行文件兑底取这一格。 */
 台.题('五 · 插件走发布物那三条路（两条堵着、一条外46 铺开）');
-const pub = rd('src/pack/publish.mjs'), comp = rd('src/pack/comp-files.cjs'), serve = rd('src/_fd/fd-serve.mjs');
+const comp = rd('src/pack/comp-files.cjs'), serve = rd('src/_fd/fd-serve.mjs');
 台.判('首装那棵树现在铺插件：活的与原版两处都落地（外46 起本体和插件一起打包）',
   pub.indexOf("made.set('data/plugins/'") >= 0 && pub.indexOf("made.set('data/plugins-factory/'") >= 0);
-台.判('出厂镜像不再铺插件那一格（mode:\'packs\' 和那条 job 都没了）',
-  !/mode:'packs'/.test(镜) && !/'data',\s*'plugins'/.test(镜));
-台.判('镜像那把尺也不再认包（铺不了插件就不用来回扫包）', !/packScan/.test(镜));
+台.判('插件进产物只有 data\\plugins\\ 与 data\\plugins-factory\\ 那两条前缀（程序代码那一层 src\\ 不带插件字节）',
+  /const 放行 = k => k\.startsWith\('data\/plugins\/'\) \|\| k\.startsWith\('data\/plugins-factory\/'\)/.test(pub)
+  && !/addLayer\('src\/',[^)]*packs/.test(pub));
+const 插件落点 = [...pub.matchAll(/made\.set\('([^']+)' \+ m\.id/g)].map(x => x[1]);
+台.判('插件字节只有两个落点（活的与原版各一格），没有第三格（程序代码那一层不收插件）',
+  插件落点.join(' ') === 'data/plugins/ data/plugins-factory/', 插件落点.join(' '));
 台.判('开机不再把自带那一层铺成插件（seedMissing 主进程和那颗定义都没了）',
   !/seedMissing/.test(main) && !/seedMissing/.test(comp));
 台.判('铺插件那一步换成了给老树搬家（从旧位置取过来，目标有了就不动）',

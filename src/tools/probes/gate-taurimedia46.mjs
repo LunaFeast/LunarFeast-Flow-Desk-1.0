@@ -37,7 +37,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { rd, 记账, 切, ROOT } from './lib-slice.mjs';
+import { rd, 记账, 切, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-taurimedia46');
 const main = rd('src/pack/main.cjs');
@@ -713,30 +713,22 @@ const 全测试 = fs.readdirSync(path.join(ROOT, 'src', '_tauri', 'src', 'core')
   动.includes('std::fs::write') && 声.includes('CoCreateInstance') && 动.includes('use windows::Media::Control'));
 
 台.题('十、这两批的账');
-const 电 = [...new Set((main.match(/ipcMain\.handle\(\s*['"]([^\'"]+)['"]/g) || [])
-  .map(s => (s.match(/['"]([^'"]+)['"]/) || [])[1]))];
-const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n)));
-台.数('覆盖率那一句', '已搬 ' + 已搬.length + ' / ' + 电.length);
-台.判('这一批 13 颗全在已搬名单里', 批.every(x => 已搬.includes(x[0])));
-台.判('已搬总数到了 63（批四那九颗把 45 顶到 54，批五这四颗再顶到 58，批六那两颗再顶到 60，批七那三颗再顶到 63）', 已搬.length === 63);
-台.判('两头一颗不差：主进程那 ' + 电.length + ' 颗通道全在壳的注册单上', 电.length === 已搬.length && 电.length === 63);
+const 这批 = 批.map(x => x[0]);
+const 缺 = 对名单(这批, 桥, 壳注册单());
+台.数('这一批几颗', 这批.length + ' 颗：' + 这批.join(' '));
+台.判('这一批每一颗桥都请得到（页面上喊得出来这一颗）', 缺.桥没请.length === 0, 缺.桥没请);
+台.判('这一批每一颗都在壳的注册单上（搬齐了，不留半截桥）', 缺.单没注册.length === 0, 缺.单没注册);
+/* 总账只在一处数：桥请的一颗都不许在单外，那条钉在 gate-bridge46 第三节 ——
+   从前这五道各自数一遍「已搬 63 / 63」再互相核对数字，搬完一颗要在五本里改五个数，改漏一本就是假绿 */
+台.判('那把总账的尺只有一把（这一台不再自己数已搬多少颗）',
+  rd('src/tools/probes/gate-bridge46.mjs').includes('请壳的一颗都不许在单外') &&
+  !/已搬\.length ===/.test(rd('src/tools/probes/gate-taurimedia46.mjs')));
 台.判('主.rs 顶上那句「还剩几颗没搬」整句撤了（壳里一颗不差，不许留着一句旧账当已实现）', !/还没搬|剩下的 4 颗/.test(壳));
 台.判('主.rs 顶上那句也点了这一批那四颗（⑨ 那一段），不是只改了个数',
   壳.includes('⑨ 音乐遥控器那四颗') && 壳.includes('media:dirPick / media:dirSet / media:flag / media:bridge'));
 台.判('主.rs 的注册单上批五那四颗排在 ⑨ 那一段后面（一格一段，不是散着塞的）',
   壳.indexOf('⑨ 音乐遥控器那四颗') < 壳.indexOf('media_cmds::media_dir_pick')
   && 壳.includes('tauri_bind::media_cmds::media_bridge'));
-台.判('四道闸的数撞得上：另三道里那句已搬数与本道同一个现场数，旧数一处不留',
-  ['gate-tauridata46', 'gate-tauribackup46', 'gate-tauricomp46'].every(名 => {
-    /* 只扫它们代码里那句真判断：那三道里有一条自己也在查「别的闸不许留旧数」，
-       引号里念着旧数字的那一串是它的检查用语，不是它落的账 —— 先把字串剥掉再比 */
-    const 它 = rd('src/tools/probes/' + 名 + '.mjs')
-      .replace(/'(?:[^'\\\n]|\\.)*'/g, "''").replace(/"(?:[^"\\\n]|\\.)*"/g, '""');
-    return 它.includes('已搬.length === 63') && 它.includes('已搬.length === 60') === false
-      && 它.includes('已搬.length === 58') === false
-      && 它.includes('已搬.length === 54') === false
-      && 它.includes('已搬.length === 45') === false;
-  }) && rd('src/tools/probes/gate-tauricomp46.mjs').includes('整句撤了'));
 台.判('这两本、那一格与这道闸里，一个字节都没写这台机器的盘符、帐户名、私人目录',
   !/(^|[^A-Za-z0-9])[A-Za-z]:[\\/]/.test(动 + 声 + 纯 + rd('src/tools/probes/gate-taurimedia46.mjs')),
   (动 + 声 + 纯).match(/.{0,20}[A-Za-z]:[\\/].{0,20}/g) || []);

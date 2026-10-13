@@ -15,7 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { rd, 记账, ROOT } from './lib-slice.mjs';
+import { rd, 记账, ROOT, 桥全部, 桥请壳, 名换算, 壳注册单 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-bridge46');
 const 壳根 = path.join(ROOT, 'src', '_tauri');
@@ -44,10 +44,9 @@ for(const 禁 of ['require(', 'process.argv', 'nodePath', 'fsNode', '__dirname']
 
 /* 通道名里有带连字符的那一族（'fs:read' 之外还有别家）—— 名段不许把 '-' 漏掉，漏了整族就逃过这一节
    （2026-10-13 头一版就是这么漏的，当时看着"一颗都不在单外"，其实整族根本被没扫到） */
-const 通道串 = s => [...new Set([...s.matchAll(/(?:invoke|send|on)\('([a-z][a-z-]*:[A-Za-z][A-Za-z]*)'/g)].map(m => m[1]))].sort();
-const 请壳串 = s => [...new Set([...s.matchAll(/(?:invoke|send)\('([a-z][a-z-]*:[A-Za-z][A-Za-z]*)'/g)].map(m => m[1]))].sort();
-const 换算 = n => n.replace(/[-:]/g, '_').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-const 注册 = [...壳.matchAll(/tauri_bind::\w+::(\w+)/g)].map(m => m[1]);
+/* 这几把尺住在 lib-slice 那一份里（五道同族闸共用），这一台不另抄第二份 */
+const 通道串 = 桥全部, 请壳串 = 桥请壳, 换算 = 名换算;
+const 注册 = 壳注册单();
 台.题('三、桥请的每一颗命令都在壳的注册单上（尺子是 Rust 那一头，不再拿 Electron 那份桥比）');
 const 桥通道 = 通道串(桥), 请壳 = 请壳串(桥);
 台.数('桥请壳的通道共几颗', 桥通道.length + ' 颗（请壳与单向送 ' + 请壳.length + ' 颗 · 收消息 ' + (桥通道.length - 请壳.length) + ' 颗）');

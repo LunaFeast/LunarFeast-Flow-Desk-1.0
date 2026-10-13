@@ -19,7 +19,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { rd, 记账, 切, ROOT } from './lib-slice.mjs';
+import { rd, 记账, 切, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-tauridata46');
 const main = rd('src/pack/main.cjs');
@@ -236,13 +236,16 @@ for (const 禁 of ['std::fs', 'fs::', 'File::open', 'File::create', 'read_to_str
     .map(f => fs.readFileSync(path.join(ROOT, 'src', '_tauri', 'src', 'core', f), 'utf8'))
     .join('').match(/#\[test\]/g) || []).length >= 53);
 
-台.题('八、这一批的账');
-const 电 = [...new Set((main.match(/ipcMain\.handle\(\s*['"]([^'"]+)['"]/g) || [])
-  .map(s => (s.match(/['"]([^'"]+)['"]/) || [])[1]))];
-const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n)));
-台.数('覆盖率那一句', '已搬 ' + 已搬.length + ' / ' + 电.length);
-台.判('这一批 11 颗全在已搬名单里', 批.every(x => 已搬.includes(x[0])));
-台.判('已搬总数到了 63（这一批 11 颗在里头，批二那八颗、批三那七颗、批四那九颗、批五那四颗、批六那两颗与批七那三颗也都跟上：30 + 8 + 7 + 9 + 4 + 2 + 3）', 已搬.length === 63);
-台.判('两头一颗不差：主进程那 ' + 电.length + ' 颗通道全在壳的注册单上', 电.length === 已搬.length && 电.length === 63);
+台.题('八、这一批的账（拿桥那一份与壳的注册单对，不再拿 Electron 主进程当标准答案）');
+const 这批 = 批.map(x => x[0]);
+const 缺 = 对名单(这批, 桥, 壳注册单());
+台.数('这一批几颗', 这批.length + ' 颗：' + 这批.join(' '));
+台.判('这一批每一颗桥都请得到（页面上喊得出来这一颗）', 缺.桥没请.length === 0, 缺.桥没请);
+台.判('这一批每一颗都在壳的注册单上（搬齐了，不留半截桥）', 缺.单没注册.length === 0, 缺.单没注册);
+/* 总账只在一处数：桥请的一颗都不许在单外，那条钉在 gate-bridge46 第三节 ——
+   从前这五道各自数一遍「已搬 63 / 63」再互相核对数字，搬完一颗要改五本，改漏一本就是假绿 */
+台.判('那把总账的尺只有一把（这一台不再自己数已搬多少颗）',
+  rd('src/tools/probes/gate-bridge46.mjs').includes('请壳的一颗都不许在单外') &&
+  !/已搬\.length ===/.test(rd('src/tools/probes/gate-tauridata46.mjs')));
 
 台.收尾();

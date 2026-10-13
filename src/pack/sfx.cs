@@ -204,10 +204,12 @@ static class Sfx
     /* 外46：本体带着插件一起出门（他 2026-10-10 定）。活的这一格（data\plugins\）是「改代码」直接改的地方 ——
        目标已经有了同一个名字就不再动它：覆盖升级把用户改过的 main.js 换回出厂那一份就是弄丢他写的东西。
        要换回出厂有那颗「恢复出厂」（取 data\plugins-factory\）。原版那一格不在这条前缀里（斜杠挡着），照旧覆盖。
+       图标与素材那两格（icons\、material\）同一道理：他自己换过的那一张、加进去的那一张，覆盖升级都不许盖 ——
+       和生成页面那一趟铺这两格的规矩一个口径（已有的一律不动）。
        占用检查、旧的搬备份、新的摊出去三处共用这一颗判定 —— 少管一处就是丢东西。 */
     static bool KeepUserFile(string dest, Entry it)
     {
-        if(!it.Name.StartsWith("data/plugins/")) return false;
+        if(!it.Name.StartsWith("data/plugins/") && !it.Name.StartsWith("icons/") && !it.Name.StartsWith("material/")) return false;
         return File.Exists(Path.Combine(dest, it.Name.Replace('/', Path.DirectorySeparatorChar)));
     }
 
