@@ -171,7 +171,7 @@ const 手文 = rd('src/_build/pr.mjs');
     (一.文.split(/\r?\n/).find(l => l.includes('停下来')) || '') + ' ⹂ ' + (二.文.split(/\r?\n/).find(l => l.includes('停下来')) || ''));
 }
 台.判('14 摘法只往一棵临时的树上使：他的开发那一棵八项全在，删代码这一步在打包那一趟里（不勾才摘）',
-  fs.existsSync(ROOT + 'src/_wnw/src/w18-lyric.js') && fs.existsSync(ROOT + 'src/_wnw/src/w21-heat.js') &&
+  fs.existsSync(ROOT + 'src/_wnw/src/w21-heat.js') &&
   rd('src/_build/strips.mjs').includes('仓里、盘上他那一棵一个字节都不动') &&
   发布文.includes('摘掉没勾的(那棵.目录, 没勾)') && 发布文.includes('这几项没勾，但它们的摘法还没登记'));
 台.判('11 第 4 步那两栏全是勾，没有一处要他手打内部名字（插件那七家一家一格、名字从家表取；内部 id 只在递给命令那一刻出现）',

@@ -1,7 +1,7 @@
 /* 外30 己组：「改软件全部页面文字」那台小工具（src\pack\uitext.cjs）的复账。
    这一台只读不写：不碰他那份活的 data\ui-text.yaml（清单本身我已经照他点的跑过一趟刷新了），
    断的是三件他点名的事 ——
-   ① 出处那一栏不许再出现光秃秃的文件名（fd3-lib / w0-skin / w18-lyric / w19-cruise / sh-look / sh-mus / sh-ttml，
+   ① 出处那一栏不许再出现光秃秃的文件名（fd3-lib / w0-skin / sh-look / sh-mus / sh-ttml，
       加这一批新添的 backup.cjs）；
    ② 这一批新加的界面话（定期备份那一块、挑正文自由选字那一框、倍速那一档）扫得到；
    ③ 他写在冒号右边的字不会因为重扫被吃掉（render → parse 在内存里对一遍）；
@@ -28,7 +28,6 @@ Z.判('1 每一份被扫的文件都认得出「哪一页的中文名」：出�
   裸名.length === 0, 裸名);
 const 要点名 = {
   'src/_fd/src/fd3-lib.js':'三份库文件', 'src/_wnw/src/w0-skin.js':'皮肤与骨架',
-  'src/_wnw/src/w18-lyric.js':'词格', 'src/_wnw/src/w19-cruise.js':'词巡航',
   'src/_shared/sh-look.js':'外观这一层', 'src/_shared/sh-mus.js':'播放进度那一条桥',
   'src/_shared/sh-ttml.js':'歌词时间尺', 'src/pack/backup.cjs':'定期备份'
 };

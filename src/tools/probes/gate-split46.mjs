@@ -170,6 +170,7 @@ const 网页 = rd('src/_wnw/src/w22-web.js');
 function 跑清单(砍, 登记){
   const 上下文 = {
     Work:{ cur:null, book:{ chs:[] } }, REL_PICKS:[{ kind:'rel', label:'关系图' }],
+    巡航菜单:[], 巡航拾取:[], 词格档:{ 在:false, paras:c => (c && c.paras) || [] }, LYRIC_MODE:'lyric',
     cruiseAnyVol:() => 'V1', cruiseBookReady:() => true, CRUISE_BOOK:'CB', Tools:[],
     PICK_GROUPS:登记 ? [登记] : []
   };

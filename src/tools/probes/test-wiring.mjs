@@ -16,7 +16,8 @@ let buf = '';
 const FD_APP = { appendPageFile:async(rel, text)=>{ buf += text; }, readPageFile:async()=>buf, pageFileExists:async()=>buf.length > 0 };
 /* 逐字记录问历史那一层要目录（w15-hist.js 的 Hist.dirOf），沙箱照同一个式子给一份 */
 const k = fs.readFileSync(__树根 + '/src/_wnw/src/w20-keystroke.js', "utf8");
-const ctx = { console, DB:{}, Blob, crypto, TextEncoder, WNW_DATA_PRE:'', Img:{ dir:() => '测试书' },
+const ctx = { 词格档:{ 在:false, paras:c => (c && c.paras) || [] }, LYRIC_MODE:'lyric', 巡航菜单:[], 巡航拾取:[],
+  console, DB:{}, Blob, crypto, TextEncoder, WNW_DATA_PRE:'', Img:{ dir:() => '测试书' },
   Hist:{ dirOf:ch => '测试书' + '/history/' + ch },
   Work:{ book:{ id:'bk1' } }, location:{ protocol:'fdapp:' }, FD_APP, window:{ FD_APP }, toast(){}, drawFoot(){},
   LYRIC_MODE:'lyric' };
@@ -25,7 +26,7 @@ vm.runInContext(k + "\n;globalThis.__KLog = KLog;", ctx);
 const KLog = ctx.__KLog;
 /* 把真源码那一段方法体拼成函数跑（只搬自己仓里这个文件，不是外部输入） */
 const 方法体 = body[0].replace(/^\n?  logKeys\(\)\{/, '').replace(/\n  \}$/, '');
-const logKeys = new Function('KLog', 'LYRIC_MODE', 'return async function logKeys(){' + 方法体 + '}')(KLog, 'lyric');
+const logKeys = new Function('KLog', 'LYRIC_MODE', '词格档', 'return async function logKeys(){' + 方法体 + '}')(KLog, 'lyric', ctx.词格档);
 
 /* 假一个 ChView：这一章开着，敲两下、分一段、再来一次撤销 */
 const view = { c:{ id:'ch9', mode:'write', paras:[{ t:'' }] }, kWas:null, drawFoot(m){ console.log('  页脚：' + m); }, logKeys };
