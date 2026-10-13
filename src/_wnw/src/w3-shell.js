@@ -1090,9 +1090,7 @@ const Desk = {
       /* 不占功能位的包：只往设置里垫几行、只加一个快捷键、只带一个后台监听。
          这种在上面那几张组里根本没有行 —— 不补一行，就再也找不到卸掉它的入口了。 */
       if(!showHidden){
-        /* 只列真给这一层用的那几家：清单里没写 wnw 的（比如音乐遥控器只给 Flow-Desk 桌面用）
-           在这一页里点不开任何东西，摆一行就是个空按钮，还等于提前把别家的功能漏在这儿 */
-        const loose = Packs.list().filter(m => PackOps.forHost(m) && (m.host || []).includes('wnw') && !covered.has(m.id) &&
+        const loose = Packs.list().filter(m => PackOps.forHost(m) && !covered.has(m.id) &&
           (!key || (m.name + ' ' + m.id).toLowerCase().includes(key)));
         if(loose.length){
           body.appendChild(h('div', { class:'wnw-pick-h' }, '不占功能位 · 只加设置或后台'));
