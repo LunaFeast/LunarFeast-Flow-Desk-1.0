@@ -300,6 +300,7 @@ function pageOf(rel, fn, dyn, packs){
   m = f.match(/^src\/_shared\/([^/]+)\.js$/); if(m) return { prog:P_SH, page:SH_CN[m[1]] || m[1] };
   /* 外39 推演组件定制分离：那四份搬进 src\_wcustom\src\，一页名字照旧吃上面那张 SH_CN（词库 / 生成器 / 配方向导 / 改代码），
      只是「哪个程序的哪一份文件」这一栏从「共用模块」换成「推演组件定制」。 */
+  m = f.match(/^src\/_wcustom\/src\/([^/]+)\.js$/); if(m) return { prog:P_WC, page:SH_CN[m[1]] || m[1] };
   m = f.match(/^src\/_build\/(p\d)\.js$/); if(m) return { prog:P_RP, page:RP_CN[m[1] + '.js'] || m[1] };
   m = f.match(/^data\/plugins\/([^/]+)\//); if(m) return { prog:P_PACK, page:P[m[1]] || m[1] };
   m = f.match(/^data\/plugins\/([^/]+)\.js$/); if(m) return { prog:P_PACK, page:P[m[1]] || m[1] };
@@ -313,6 +314,7 @@ function pageOf(rel, fn, dyn, packs){
   m = f.match(/^src\/_fd\//);    if(m) return { prog:P_FD,   page:last };
   m = f.match(/^src\/_wnw\//);   if(m) return { prog:P_WNW,  page:last };
   m = f.match(/^src\/_shared\//);if(m) return { prog:P_SH,   page:last };
+  m = f.match(/^src\/_wcustom\//);if(m) return { prog:P_WC,  page:last };
   m = f.match(/^src\/_build\//); if(m) return { prog:P_RP,   page:last };
   return { prog:'别处', page:f };
 }
@@ -631,7 +633,7 @@ function treeOf(from){
    uitext.cjs 是这一份清单的生成器本身：它嘴里念的是"清单怎么写的"说明文字，
    不是界面上的字，扫进去就成了清单里的脏行（出处那一栏还会是个问号）。 */
 const SKIP_REL = new Set();
-const SKIP_NAME = new Set(['uitext.cjs', 'wnw-kernel.js']);
+const SKIP_NAME = new Set(['uitext.cjs', 'wnw-kernel.js', 'wnw-custom-kernel.js']);
 /* 只认 .js / .cjs，不跟着收 .mjs —— 这是量过的，不是漏的：
    这六棵被扫的树里 .mjs 一共九份（src/_fd：build / fd-serve / grad-survey / look-check，
    src/pack：build-app / mirror / publish，src/_wnw 与 src/_wcustom 各一颗 build-kernel），全是敲命令行跑的构建脚本，
@@ -652,7 +654,7 @@ function listFiles(TREE){
       }
     }
   };
-  for(const d of ['src/pack', 'src/_fd', 'src/_wnw', 'src/_shared', 'src/_tauri', 'data/plugins']) walk(path.join(TREE, d));
+  for(const d of ['src/pack', 'src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/_tauri', 'data/plugins']) walk(path.join(TREE, d));
   for(const f of ['src/_build/p1.js','src/_build/p2.js','src/_build/p3.js','src/_build/p4.js','src/_build/p5.js','src/_build/p6.js'])
     if(fs.existsSync(path.join(TREE, f))) out.push(f);
   for(const f of HTML_FILES) if(fs.existsSync(path.join(TREE, f))) out.push(f);
@@ -888,7 +890,7 @@ function 位置对得上(body, pc){
   return 引号(头) && 头 === 尾;
 }
 /* 源码改动要重新生成产物那三趟，次序在这里说一次（工具那一屏、发布那一条都从这一颗取，别处不抄第二份） */
-function artifactBuilds(){ return ['src/_wnw/build-kernel.mjs', 'src/_fd/build.mjs']; }
+function artifactBuilds(){ return ['src/_wnw/build-kernel.mjs', 'src/_wcustom/build-kernel.mjs', 'src/_fd/build.mjs']; }
 function locate(TREE, edits){
   const { src, occ } = collectAll(TREE);
   const groups = groupsOf(occ);

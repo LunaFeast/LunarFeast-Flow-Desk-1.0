@@ -37,7 +37,7 @@ if(!assertClean(path.join(TREE.data, 'plugins'), '生成 Flow-Desk 页面')) pro
    fd5-load.js 排在 fd8 之后：它要交上去的 DATA_PRE / ToolKv 都在那儿定义；
    从前这里还排着一颗 fd7-help.js，为的是帮助文档能在启动流程跑起来之前挂到顶栏 —— 文档整份撤了（外44 六），它跟着摘掉 */
 const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-packs.js','../_shared/sh-load.js','../_shared/sh-color.js','../_shared/sh-ico.js','../_shared/sh-font.js','fd2-store.js','fd3-shell.js','fd3-lib.js','fd11-cards.js','fd12-rime-colors.js','fd13-colour-v1.js','fd9-title.js','fd4-builtin.js','fd8-tools.js','fd5-load.js',
-  '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js',
+  '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js','../_wcustom/wnw-custom-kernel.js',
   '../_shared/sh-ttml.js',
   '../_shared/sh-mus.js',
   '../_shared/sh-icode.js',
