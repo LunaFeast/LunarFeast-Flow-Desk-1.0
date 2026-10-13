@@ -202,8 +202,8 @@ const 门牌 = 壳里('src/tauri_bind/page_cmds.rs');
 台.判('数据层那一串前缀不再只按协议认：协议是 fdapp: 或者壳塞了那份门牌，两种都算在程序里',
   工具.includes("location.protocol === 'fdapp:' || !!window.__FD_BOOT__"));
 台.判('壳塞的那份门牌就叫 __FD_BOOT__（两头同一串名，不是页面自己猜的）', 门牌.includes('window.__FD_BOOT__ ='));
-台.判('这一串前缀还是那三处共用的唯一出处（词库、组件、生成记录都从它拼）',
-  (工具.match(/DATA_PRE/g) || []).length >= 4 && 工具.includes("components:DATA_PRE + 'plugins/'"));
+台.判('这一串前缀还是那两处共用的唯一出处（词库、组件都从它拼，别处不再自己拼一份）',
+  (工具.match(/DATA_PRE/g) || []).length >= 3 && 工具.includes("components:DATA_PRE + 'plugins/'"));
 台.判('注释把为什么认两样说清了（Windows 改写成一串 http://…localhost，光看协议会当成开发那台）',
   /WebView2|改写/.test(工具) && 工具.includes('http://fdapp.localhost'));
 
