@@ -298,10 +298,10 @@ const 造页 = rd('src/_fd/build.mjs'), 打包 = rd('src/pack/publish.mjs');
   Z.判('49 新加的一份源码不用补名单就进得了产物：发布那一趟按层扫（addLayer 走整棵 src\\），没有逐文件的清单',
     /function addLayer\(pre, dir, skip\)/.test(打包) && 打包.includes("addLayer('src/', path.join(TREE, 'src')")
     && !/files\.set\('src\//.test(打包));
-  Z.判('50 主进程那一头默认就数据层一棵（用户配置 data\\userdata-fd 本就在它底下，不并列成第二处、少抄一遍）',
-    /backup:run/.test(rd('src/pack/main.cjs')) && /BACKUP\.run\(/.test(rd('src/pack/main.cjs'))
-    && /label:'数据', dir:DATA_ROOT/.test(rd('src/pack/main.cjs'))
-    && !/label:'用户配置'/.test(rd('src/pack/main.cjs')));
+  Z.判('50 壳那一头默认就数据层一棵（用户配置 data\\userdata-fd 本就在它底下，不并列成第二处、少抄一遍）',
+    rd('src/_tauri/src/tauri_bind/backup_cmds.rs').includes('label: "数据"')
+    && rd('src/_tauri/src/tauri_bind/backup_cmds.rs').includes('data_cmds::数据层格()')
+    && !rd('src/_tauri/src/tauri_bind/backup_cmds.rs').includes('用户配置'));
 }
 
 收场();
