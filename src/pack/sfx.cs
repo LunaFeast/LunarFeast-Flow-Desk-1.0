@@ -10,7 +10,7 @@
    只用 Windows 自带的那点东西：.NET Framework 4 的 csc.exe 编译（Win10/11 就有），
    不引第三方压缩库 —— zip 的目录自己读，压住的那一段交给 DeflateStream。
    这一颗既管首装也管升级：目标那一棵已经在了就照原样覆盖摊一遍，动手之前先把要被换掉的旧的
-   挪进 update\backups\<时间戳>\（resources\app\ 整层挪，别的一个文件挪一份），装完就还是程序本身，
+   挪进 update\backups\<时间戳>\（src\ 那一层整层挪，别的一个文件挪一份），装完就还是程序本身，
    不靠系统里装了什么。data\ 从头到尾不碰 —— 包里一个 data\ 开头的路径都没有（publish 有一道硬闸盯着），
    这一层也就没有被覆盖的机会。
    参数（都是自测和特殊场合用的，双击时一个都不用给）：
@@ -280,28 +280,29 @@ static class Sfx
         return null;
     }
 
-    /* 旧的先去备份，再让新的进来 —— 落点和 updater.cjs 同一格（update\backups\<时间戳>\），
+    /* 旧的先去备份，再让新的进来 —— 落点是一台机器自己的更新账那一格（update\backups\<时间戳>\），
        设置 → 程序 那一屏列的就是这些格子。两档口径是有理由的：
-         resources\app\ 整层挪 —— 那一格里一个用户写的东西都没有，挪干净才不会留下上一版的散文件；
+         src\ 整层挪 —— 那一格是程序自己的源码，装好的那一棵里没有一个用户写的东西，
+                        挪干净才不会留下上一版的散文件；
          别的一个文件挪一份 —— pages\ 同时是他放文稿的地方，整层挪走等于把他的稿子搬空。
        中途挪不动就停下：已经挪走的都在那一格里，照着挪回去就还是上一版。 */
     static Result Stash(string dest, Payload pl, string back)
     {
         Result r = new Result();
-        string app = Path.Combine(Path.Combine(dest, "resources"), "app");
-        if(Directory.Exists(app))
+        string srcLayer = Path.Combine(dest, "src");
+        if(Directory.Exists(srcLayer))
         {
-            string to = Path.Combine(Path.Combine(back, "resources"), "app");
+            string to = Path.Combine(back, "src");
             try{
                 Directory.CreateDirectory(Path.GetDirectoryName(to));
-                Directory.Move(app, to);
+                Directory.Move(srcLayer, to);
                 r.Files++;
-            }catch(Exception e){ r.Error = "旧的 resources\\app\\ 挪不动：" + e.Message; return r; }
+            }catch(Exception e){ r.Error = "旧的 src\\ 那一层挪不动：" + e.Message; return r; }
         }
         foreach(Entry it in pl.Items)
         {
             if(KeepUserFile(dest, it)) continue;   /* 也不把他那一份搬进备份 */
-            if(it.Name.StartsWith("resources/app/")) continue;
+            if(it.Name.StartsWith("src/")) continue;
             string from = Path.Combine(dest, it.Name.Replace('/', Path.DirectorySeparatorChar));
             if(!File.Exists(from)) continue;
             try{
@@ -542,7 +543,9 @@ static class Sfx
 
     static bool IsTree(string dest)
     {
-        return File.Exists(Path.Combine(Path.Combine(dest, "resources"), Path.Combine("app", "main.cjs")));
+        /* 认这一棵是不是「装过的程序」：认那颗门牌 —— 桥与命令都编在这颗 exe 里面，
+           只放稿子的文件夹里没有这一颗，所以不会把他的目录认成程序那一棵。 */
+        return File.Exists(Path.Combine(dest, "Flow-Desk.exe"));
     }
 
     static string MB(long b){ return (b / 1048576.0).ToString("0.#") + " MB"; }

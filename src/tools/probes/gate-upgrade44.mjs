@@ -53,10 +53,10 @@ const Install = 段('Install');
 台.判('程序里那一屏列备份是按名字排的（这一颗起的名字要能插进去，不能自成一套）',
   /\.readdirSync\(dir\)\.filter\(n => !n\.startsWith\('\.'\)\)\.sort\(\)\.reverse\(\)/.test(rd('src/pack/main.cjs')));
 台.判('整层挪只有 resources\\app\\ 这一处（Directory.Move 全文就一次）', (sfx.match(/Directory\.Move/g) || []).length === 1, (sfx.match(/Directory\.Move/g) || []).length);
-台.判('那一处挪的就是 app 这一层，不是页面层', /Directory\.Move\(app, to\)/.test(sfx));
+台.判('那一处整层挪的是 src\\ 那一层（程序自己的源码），不是页面层', /Directory\.Move\(srcLayer, to\)/.test(sfx));
 台.判('pages\\ 不做整层挪（源码里 pages 和 Directory.Move 不沾边）', !/Directory\.Move\([^)]*pages/i.test(sfx));
 台.判('别的是一个一个文件挪（File.Move 在逐条目那一段里）', /File\.Move\(from, to\)/.test(sfx));
-台.判('整层挪过的那些不再重复挪（跳过 resources/app/ 前缀）', /it\.Name\.StartsWith\("resources\/app\/"\)/.test(sfx));
+台.判('整层挪过的那些不再重复挪（跳过 src/ 前缀）', /it\.Name\.StartsWith\("src\/"\)/.test(sfx));
 台.判('挪不动就停下报是哪一份，已挪的把落点报出来（那一句现在住在顶上那一格，装这一趟两条路都取它）',
   /旧的 " \+ it\.Name \+ " 挪不动/.test(sfx) && Install.includes('UiOldAllIn') &&
   (sfx.match(/UiOldAllIn/g) || []).length >= 3 && sfx.includes('已经挪走的旧文件都在'));
@@ -90,7 +90,7 @@ if(csc && 工区){
 }else 台.数('编译那一步', '这台没登记编译器或探针工区（src\\tools\\本地路径.cjs 里那颗「工区」），不在就不量');
 台.判('发布那一头仍会重编：壳比源码旧就再来一遍', /fs\.statSync\(stub\)\.mtimeMs < fs\.statSync\(stubSrc\)\.mtimeMs/.test(pub));
 台.判('首装包的名字带完整号（含 +build.短哈希那一截）', /'Flow_Desk_setup_' \+ VER\.fd \+ '\.exe'/.test(pub) && /const TAG = VER\.fd;/.test(pub));
-台.判('安装说明改口成「再双击一颗 exe 就是覆盖升级」', pub.includes('点「覆盖升级」') && pub.includes('resources\\\\app\\\\ 整层挪'));
+台.判('安装说明改口成「再双击一颗 exe 就是覆盖升级」，整层挪那一格说的是 src\\', pub.includes('点「覆盖升级」') && pub.includes('src\\\\ 那一层整层挪'));
 台.判('安装说明里那条挑 zip 装更新的老路已经撤干净（主程序换版只剩 exe 这一颗）', !pub.includes('老路还在') && !pub.includes('本地更新'));
 
 台.收尾();

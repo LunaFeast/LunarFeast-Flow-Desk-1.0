@@ -6,20 +6,24 @@
      node src/pack/publish.mjs --zip          额外留一份不套壳的 payload zip（自测、看清单用）
      node src/pack/publish.mjs --dry          只报清单和体积，不落盘
      node src/pack/publish.mjs --skip=zzprobe  本地试用的那个包别进发布物（逗号分隔）
-     node src/pack/publish.mjs --out=<目录>   产物落到别处（默认 Flow-Desk\dist）
+     node src/pack/publish.mjs --out=<目录>   产物落到别处（默认 Flow-Desk\dist\tauri）
+     node src/pack/publish.mjs --壳件=<目录>  那颗编好的壳住在哪一格（默认取本地登记里的「编译缓存」）
+
+   这一颗只出 Tauri 那一枚壳（Electron 那一棵整层退了：主进程、preload、resources\app 那层镜像、
+   铺那层的 build-app 都不在这个仓里了 —— 桥、命令表、硬地板那份名单都编在 exe 里面）。
 
    三份产物：
-     dist\plugins\<id>.zip                     一个包一包，货架上摆的零卖货（解开文件夹 → 压平，插件清单重新序列化一遍）
-     dist\index.json                              货架清单：每个包的名字/版本/大小/最低外壳版本/图标/作者来源，页面里挂货架就读它
-     dist\Flow_Desk_setup_<fd>.exe                首装那一个：Windows 自带的 csc 编出来的小壳 + 粘在屁股后面这一整棵树的出厂内容
+     dist\tauri\plugins\<id>.zip                 一个包一包，货架上摆的零卖货（解开文件夹 → 压平，插件清单重新序列化一遍）
+     dist\tauri\index.json                       货架清单：每个包的名字/版本/大小/最低外壳版本/图标/作者来源，页面里挂货架就读它
+     dist\tauri\Flow_Desk_setup_<fd>.exe         首装那一个：Windows 自带的 csc 编出来的小壳 + 粘在屁股后面这一整棵树的出厂内容
 
    这一棵树里进发布物的、和不进的，口径写死在下面几段：
-     进：运行时（跟 electron dist 同名的那批 + 一个 exe + locales）、resources\app 那一层、
+     进：运行时（那颗 exe 改名叫整棵树唯一的门牌 + WebView2 那颗加载器）、
          pages\ 只带当前这一支号那一张（老版本一张都不带）和非产物文件、
          src\（重新生成页面要用，node_modules 不带）、
          data\plugins\<id>\ 与 data\plugins-factory\<id>\（外46：七家插件跟着本体一起出门，活的与原版各一份）
      不进：data\ 里除上面那两格以外的一切（用户写的书、词库副本、userdata-*、日志、这台机器的 off.json —— 私密，也不该跟着版本走）、
-           update\（那是一台机器自己的更新账）、根上 icons\（给用户换的，自带的在 resources\app\icons 里能长回来）、
+           update\（那是一台机器自己的更新账）、根上 icons\（给用户换的，出厂那一份在 src\pack\icons\ 里，铺树那一趟长回来）、
            老版本的 html（用户那棵树里想留几份留几份，发布物只带当前这一版）
    ============================================================ */
 import fs from 'node:fs';
@@ -40,30 +44,28 @@ const DRY = has('--dry');
 const PACKS_ONLY = has('--packs') || has('--no-exe');
 const KEEP_ZIP = has('--zip');
 const SKIP = new Set(val('--skip', '').split(',').map(s => s.trim()).filter(Boolean));
-/* ---------- 壳有两种，差的只有「运行时那一层」 ----------
-   electron = 现在日常那一颗（散件 + Flow-Desk.exe + locales + resources\app 那一层代码）；
-   tauri    = 外46 三这一趟那一颗（编出来的 exe + WebView2 那颗加载器，桥和命令都编在 exe 里面）。
-   页面层、数据层里插件那两格、src 层、货架、首装那颗壳、清单、data 那道闸 —— 两种壳走同一套代码，
-   不出第二份发布脚本（抄一份就有改一处漏一处的账）。 */
-const 壳种 = val('--壳', 'electron');
-if(壳种 !== 'electron' && 壳种 !== 'tauri'){ console.error('--壳 只认 electron / tauri，传进来的是：' + 壳种); process.exit(1); }
-const 新壳 = 壳种 === 'tauri';
-/* 新壳的产物落在 dist\tauri\，两棵永远不混在一格里（号相同、内容不同，混了就会拿错那一颗） */
+/* ---------- 运行时那一层：只有一颗壳 ----------
+   一颗 exe 是整棵树唯一的门牌（为写和声笔输入法练习都在 Flow-Desk 那一张页里就地开，
+   发布物里不带它们的独立页面 —— 要重新生成页面的机器自己跑 node src/_fd/build.mjs），
+   旁边配 WebView2 那颗加载器。没有 locales，也没有 resources\app 那一层：
+   桥、命令表、硬地板那份名单都编在 exe 里面（page_cmds 那句 include_str!），
+   铺一份进去就是留第二份真身，「改了源码忘铺镜像」那种账又会回来。 */
 let 编译缓存 = '';
 try{ 编译缓存 = (await import('../tools/本地路径.mjs')).编译缓存 || ''; }catch(e){}
-const 新壳目录 = (() => {
+const 壳目录 = (() => {
   const 指 = val('--壳件', '');
   if(指) return path.resolve(指);
-  if(!编译缓存) throw new Error('没登记「编译缓存」那格（src\\tools\\本地路径），不知道新壳的 exe 在哪 —— 用 --壳件=<那一格> 指一下');
+  if(!编译缓存) throw new Error('没登记「编译缓存」那格（src\\tools\\本地路径），不知道那颗 exe 在哪 —— 用 --壳件=<那一格> 指一下');
   return path.join(编译缓存, 'flowdesk', 'x86_64-pc-windows-gnu', 'release');
 })();
 /* 三层名字跟着生成页面那把尺：树里可能还是没改完名的老样子 */
 const pickL = list => { for(const p of list){ if(fs.existsSync(p)) return p; } return list[0]; };
 const PAGES = pickL([path.join(TREE, 'pages'), path.join(TREE, '页面')]);
 const DATA = pickL([path.join(TREE, 'data'), path.join(TREE, '数据')]);
-const APP = path.join(TREE, 'resources', 'app');
 const PACKS_DIR = path.join(DATA, 'plugins');
-const OUT_DIR = path.resolve(val('--out', path.join(TREE, 'dist', 新壳 ? 'tauri' : '')));
+/* 产物那一格叫 dist\tauri\ —— 这一棵只剩这一颗壳，这一层名先留着：
+   动它要跟着动「收旧版本」那一块与屏上读产物的那几处，不在这趟顺手改 */
+const OUT_DIR = path.resolve(val('--out', path.join(TREE, 'dist', 'tauri')));
 const EXE_NAME = 'Flow-Desk.exe';
 
 /* ---------- 走目录、比版本号大小：这一份发布脚本到处在用。号本身从 _build/version.mjs 取，见下面 ---------- */
@@ -116,48 +118,19 @@ function addLayer(pre, dir, skip){
 }
 const inNodeModules = rel => rel.split('/').includes('node_modules');
 
-/* 一、运行时：两种壳在这一处才分岔 */
-if(新壳){
-  /* 新壳那一棵的运行时 = 编出来的那颗 exe（进包改名成整棵树唯一的门牌）+ WebView2 那颗加载器。
-     没有 locales、也没有 resources\app 那一层 —— 桥和命令都编在 exe 里面（page_cmds 那句 include_str!）。 */
-  const 件 = path.join(新壳目录, 'flowdesk.exe'), 加载器 = path.join(新壳目录, 'WebView2Loader.dll');
-  if(!fs.existsSync(件)) throw new Error('新壳没编出来：' + 件 + ' —— 先跑 node src\\_tauri\\build.mjs');
-  if(!fs.existsSync(加载器)) throw new Error('新壳旁边没有 WebView2 那颗加载器：' + 加载器);
+/* 一、运行时那一层：编出来的那颗 exe（进包改名成整棵树唯一的门牌）+ WebView2 那颗加载器 */
+{
+  const 件 = path.join(壳目录, 'flowdesk.exe'), 加载器 = path.join(壳目录, 'WebView2Loader.dll');
+  if(!fs.existsSync(件)) throw new Error('那颗壳没编出来：' + 件 + ' —— 先跑 node src\\_tauri\\build.mjs');
+  if(!fs.existsSync(加载器)) throw new Error('那颗壳旁边没有 WebView2 的加载器：' + 加载器);
   files.set(EXE_NAME, 件);
   files.set('WebView2Loader.dll', 加载器);
-}else{
-  /* Electron：根上那批跟 electron dist 同名的散文件（dll / pak / bin / dat / icu / LICENSE / version）。
-     dist 在就照它那一份名单取（最准）；不在（用户那棵树里本来就没有）就退回按扩展名认。 */
-  const DIST = path.join(HERE, 'node_modules', 'electron', 'dist');
-  let distNames = null;
-  try{ distNames = new Set(fs.readdirSync(DIST).filter(n => fs.statSync(path.join(DIST, n)).isFile())); }catch(e){}
-  function isRuntime(n){
-    if(distNames) return distNames.has(n) && n !== 'electron.exe';
-    return /\.(dll|pak|bin|dat|icd\.json)$/i.test(n) || n === 'LICENSE' || n === 'version';
-  }
-  for(const n of fs.readdirSync(TREE)){
-    const abs = path.join(TREE, n);
-    if(!fs.statSync(abs).isFile()) continue;
-    if(isRuntime(n)) files.set(n, abs);
-  }
-  /* 一个 exe 是整棵树唯一的门牌：为写和声笔输入法练习都在 Flow-Desk 那一张页里就地开，
-     发布物里不再带它们的独立页面（要重新生成页面的机器上自己跑 node src/_fd/build.mjs） */
-  if(!fs.existsSync(path.join(TREE, EXE_NAME))) throw new Error('根上没有 ' + EXE_NAME + '，先跑 node src/pack/build-app.mjs');
-  files.set(EXE_NAME, path.join(TREE, EXE_NAME));
-  for(const d of ['locales']){
-    const p = path.join(TREE, d);
-    if(fs.existsSync(p)) addLayer(d + '/', p);
-  }
 }
-/* 二、app 层：外壳读的那一份代码 + 自带的兜底页面/数据 + 默认图标，整层跟着走。
-   新壳没有这一层 —— 桥、命令表、硬地板那份名单都是编进 exe 的（page_cmds 里 include_str!），
-   铺一份进去就是留第二份真身，改了源码忘铺镜像那种账又会回来。 */
-if(!新壳) addLayer('resources/app/', APP);
-/* 三、页面层：当前这一支号那一张页 */
+/* 二、页面层：当前这一支号那一张页 */
 addLayer('pages/', PAGES, rel => superseded(rel));
-/* 四、源码：重新生成页面要读的（node_modules 一个字节都不带 —— 生成页面只用 node 自带模块） */
+/* 三、源码：重新生成页面要读的（node_modules 一个字节都不带 —— 生成页面只用 node 自带模块） */
 addLayer('src/', path.join(TREE, 'src'), rel => inNodeModules(rel) || /(^|\/)\.[^/]/.test(rel));
-/* 五、插件：外46 起七家跟着本体一起进这一棵树（他 2026-10-10 定：取消发布物零插件）。
+/* 四、插件：外46 起七家跟着本体一起进这一棵树（他 2026-10-10 定：取消发布物零插件）。
    活的铺到 data\plugins\<id>\、开机就能跑；原版铺到 data\plugins-factory\<id>\、「恢复出厂」取它。
    两格都取自下面「货架」那一段压零卖包的同一批字节（包内件），所以四处一个号、一份字节。
    卸没卸过那一格（off.json）不进包 —— 那是每台机器自己的状态，不在发布物里带。 */
@@ -220,7 +193,7 @@ const minShell = shelf.reduce((a, x) => (!a || cmpVer(verNum(x.minShell), verNum
 const index = {
   kind: 'flow-desk-shelf',
   made: new Date().toISOString(),
-  shell: { fd: VER.fd, minShell: minShell, engine: 新壳 ? 'tauri' : 'electron' },
+  shell: { fd: VER.fd, minShell: minShell, engine: 'tauri' },
   setup: { file: 'Flow_Desk_setup_' + VER.fd + '.exe', bytes: 0, size: '' },
   packs: shelf,
   note: '货架清单：dist\\plugins\\<id>.zip 是零卖的插件，导入用；setup 那一个是首装整棵树。data\\ 里的用户内容从不参与发布。'
@@ -242,16 +215,14 @@ made.set('安装说明.txt', Buffer.from([
   'Flow-Desk · 便携版（首装）',
   '========================================',
   '',
-  '双击 Flow-Desk.exe 就开，不用安装，' + (新壳
-    ? '窗口里用的是系统自带的网页控件（WebView2 Runtime，Windows 10 / 11 一般已经带着；缺它会在启动那一句里说清楚）。'
-    : '也不依赖系统里装了什么别的程序。'),
+  '双击 Flow-Desk.exe 就开，不用安装。窗口里用的是系统自带的网页控件（WebView2 Runtime，Windows 10 / 11 一般已经带着；缺它会在启动那一句里说清楚）。',
   '整个文件夹可以随便改名、挪到别的盘、拷到别的电脑：程序和用户数据分两层放着，路径全按这个文件夹的相对位置找。',
   '',
   '  pages\\    程序读的那一张页面（换新版本见下面「更新」）',
   '  data\\     你自己长出来的东西，更新永远不会碰这一层：',
   '            <书名>\\（正文和它的历史快照）、plugins\\（你装的插件和改过的代码）、',
   '            plugins-factory\\（导入那一下自动留的原版，「恢复出厂」取的就是这一格）、',
-  '            gen-log\\（生成记录）、<包名>-bank\\（组件自带的词库）、logs\\（运行日志）',
+  '            <包名>-bank\\（组件自带的词库）、logs\\（运行日志）',
   '  update\\   覆盖升级那一摊自己待着：backups\\（每一趟换下来的旧东西，照原样挪回去就还是上一版）',
   '  src\\      Flow-Desk 自己的源码：只有改了它才需要重新生成页面（功能模块不在这里，装卸和改功能代码都不用这一趟）',
   '',
@@ -266,7 +237,7 @@ made.set('安装说明.txt', Buffer.from([
   '  每一个组件跑的就是 data\\plugins\\<它>\\main.js，改代码对话框里存了就用新的。',
   '',
   '更新：还是用这一颗 —— 下载新的 Flow_Desk_setup_<版本号>.exe，双击它、把目录指到这一棵上，点「覆盖升级」。',
-  '它会先把要换的旧的挪进 update\\backups\\<时间戳>\\ 再摊新的：resources\\app\\ 整层挪（那一格里没有你写的东西），',
+  '它会先把要换的旧的挪进 update\\backups\\<时间戳>\\ 再摊新的：src\\ 那一层整层挪（那一格里没有你写的东西），',
   'pages\\ 只换这一个包里带的那几个名 —— 你放在那一格里的稿子原地不动；data\\ 从头到尾一个字节不碰。',
   '这一棵正开着的时候它一个字节都不动，会让你先退干净（右下角托盘图标上右键 → 退出）。',
   '<id>.zip 那种包是给插件用的运输件，主程序换版用上面那一颗 exe。',
@@ -426,6 +397,6 @@ index.setup.size = (index.setup.bytes / 1048576).toFixed(1) + ' MB';
 fs.writeFileSync(path.join(OUT_DIR, 'index.json'), JSON.stringify(index, null, 2) + '\n');
 console.log('WROTE ' + out);
 console.log('  壳 ' + (stubBuf.length / 1024).toFixed(0) + 'KB + 树 ' + (copied / 1048576).toFixed(1) + 'MB = ' + index.setup.size);
-/* 那两格落在哪一格，按实际的产物格说 —— 原先写死「dist\」，新壳那棵出到 dist\tauri\ 时这句话就是假的 */
+/* 那两格落在哪一格，按实际的产物格说 —— 原先写死「dist\」，产物出到 dist\tauri\ 时这句话就是假的 */
 console.log('  货架 ' + shelf.length + ' 个包在 ' + path.join(OUT_DIR, 'plugins') + ' · 清单 ' + path.join(OUT_DIR, 'index.json'));
 console.log('  插件跟着本体走：' + shelf.length + ' 家在 data\\plugins\\（活的）与 data\\plugins-factory\\（原版）各一份 · 零卖的包另在产物格那一个 plugins\\ 里');

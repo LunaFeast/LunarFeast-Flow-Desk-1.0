@@ -214,13 +214,13 @@ if(自测){
   let 出事 = '';
   try{
     /* 这一棵只剩 Tauri 那一颗壳，所以这一串是：先按那一棵自己的次序把产物生成齐（为写那颗内核 → 页面，
-       带上推演组件定制那一棵时它也在这串里），再编壳，最后发布那一趟（点名要 tauri 那一颗）。
+       带上推演组件定制那一棵时它也在这串里），再编壳，最后发布那一趟。
        编壳要的那三样环境（Rust 两套工具链的家、齐的一串 binutils、gnu 那三元组）由 src\_tauri\build.mjs
        自己从不进仓那份 本地路径.cjs 里取，这一头不重复一遍；发布那一趟找那颗 exe 也走同一格。 */
     /* 发布那一趟在临时那一棵里跑，产物要落回你这一棵的 dist\ —— 不给它指这一格，
        那一个 setup.exe 就落在临时那一格里，跟着「收格子」那一步一起没了（2026-10-14 真跑这一串时量到的）。 */
     const 三趟 = [...uitext.artifactBuilds().map(趟 => [趟, []]), ['src/_tauri/build.mjs', []],
-      ['src/pack/publish.mjs', ['--壳=tauri', '--out=' + path.join(TREE, 'dist', 'tauri')]
+      ['src/pack/publish.mjs', ['--out=' + path.join(TREE, 'dist', 'tauri')]
         .concat(不带.length ? ['--skip=' + 不带.join(',')] : [])]];
     for(const [趟, 附] of 三趟){
       const 参 = [趟].concat(附);
@@ -496,13 +496,11 @@ const 跑 = (cmd, args) => {
     停('「' + args[0] + '」这一趟没跑成，一律不推。\n' + String((e && (e.stdout || e.stderr)) || (e && e.message) || e).replace(/\r?\n/g, '\n  ').slice(0, 1200));
   }
 };
-/* 发布那一趟也走 Tauri 这一条：先按这一棵自己的次序把产物生成齐（为写那颗内核 → 页面，
+/* 发布那一串：先按这一棵自己的次序把产物生成齐（为写那颗内核 → 页面，
    带上推演组件定制那一棵时它也在这串里 —— 次序只在 uitext.artifactBuilds() 那一份里说一次），
-   再编那颗壳，最后发布那一趟点名要 tauri。
-   从前第二趟跑的是 src\pack\build-app.mjs（铺 Electron 那一份 resources\app 镜像）—— 换成这颗壳之后
-   桥、命令表、硬地板那份名单都编进 exe 里，那一层没有对等的东西要铺。 */
+   再编那颗壳，最后发布那一趟。这一棵只剩这一颗壳，所以这里没有第二种走法。 */
 for(const [趟, 附] of [...uitext.artifactBuilds().map(x => [x, []]),
-                       ['src/_tauri/build.mjs', []], ['src/pack/publish.mjs', ['--壳=tauri']]])
+                       ['src/_tauri/build.mjs', []], ['src/pack/publish.mjs', []]])
   跑(process.execPath, [趟].concat(附));
 
 /* ---------- 旧版本就地收走（他 2026-10-10 两句：「这种多版本的地方都需要定期清理旧版本」+「只留最新，旧版转移到存档那一格」）----------
