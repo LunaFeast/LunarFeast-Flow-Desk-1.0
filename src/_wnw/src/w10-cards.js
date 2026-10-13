@@ -230,12 +230,11 @@ async function linkRows(bookId){
 
 /* ---------- 出场次数：一张卡在全本书里"响应"过多少回 ----------
    高响应：卡名和别名每出现一次算 1，固定不许调；
-   中响应：只算点过「亮」的那几章里的出现，再乘中权重；
-   低响应：只算手动关联进来的那些处，再乘低权重。
-   中、低权重全局一份，0.1~1，步进 0.1。正文一改就重扫，没改就用缓存。
+   中响应：只算点过「亮」的那几章里的出现；
+   低响应：只算手动关联进来的那些处。
+   三档一律 ×1（要能自己调权重的那一档，住在 feature/new/card-weight 那一条上）。正文一改就重扫，没改就用缓存。
    外13-L 再加一条：这一段正文自己挂上来的卡片（段上的 cards），每张各算一次出场，直接加 1、不乘权重；
    取消关联、删段、删卡都从正文那一份数据里现数，挂的笔数少一笔数就跟着少，不会留虚数。 */
-function occW(v){ const n = Math.round((+v || 1) * 10) / 10; return Math.max(.1, Math.min(1, n || .1)); }
 function occNum(n){ return String(Math.round(n * 10) / 10); }
 function occHits(text, re){
   if(!re || !text) return 0;
@@ -244,11 +243,7 @@ function occHits(text, re){
   return n;
 }
 const Occur = {
-  w:{ mid:1, low:1 }, book:'', sig:'', rows:null, job:null, cells:[], 补:0,
-  async weights(){
-    this.w = { mid:occW(await State.get('occur.mid', 1)), low:occW(await State.get('occur.low', 1)) };
-    return this.w;
-  },
+  book:'', sig:'', rows:null, job:null, cells:[], 补:0,
   /* 章的 at 在存章时跟着正文走，拿它当指纹：没改过就不重扫。
      卡那头的改动（响应度、手动关联、别名、删卡）不进章的指纹，所以把 CardHl 自己那份卡指纹一并比进来 */
   sigOf(b){ return (b.chs || []).map(c => c.id + ':' + (c.at || 0)).join('|') + '#' + CardHl.sig; },
@@ -280,12 +275,6 @@ const Occur = {
     });
     return this.job;
   },
-  /* 权重一改就把已经算好的次数换算一遍，不重扫全书（正文挂上来的那些笔不乘权重，原样加回去） */
-  async reweigh(){
-    await this.weights();
-    if(this.rows) for(const r of this.rows.values()) r.v = r.n * (r.resp === 'high' ? 1 : r.resp === 'mid' ? this.w.mid : this.w.low) + (r.a || 0);
-    this.paint();
-  },
   paint(){
     this.cells = this.cells.filter(x => x.el.isConnected);
     if(!this.rows) return;
@@ -310,7 +299,6 @@ const Occur = {
   },
   async scan(b, sig){
     const out = new Map();
-    await this.weights();
     const ms = await Cards.forBook(b.id);
     /* 中响应只认点过「亮」的那些章，所以按章留着，别拼成一整块就没法分章了。
        顺手把每一段自己挂上来的卡（段上的 cards）记一笔：一段挂 5 张卡，这 5 张各多一次出场。
@@ -338,8 +326,8 @@ const Occur = {
       const names = CardHl.names(m), re = names.length ? CardHl.re(names) : null;
       const resp = m.resp || 'high';
       let n = 0, k = 1;
-      if(resp === 'low'){ n = (m.links || []).length; k = this.w.low; }
-      else if(resp === 'mid'){ n = per.reduce((a, x) => a + ((m.ok || {})[x.id] ? occHits(x.text, re) : 0), 0); k = this.w.mid; }
+      if(resp === 'low'){ n = (m.links || []).length; }
+      else if(resp === 'mid'){ n = per.reduce((a, x) => a + ((m.ok || {})[x.id] ? occHits(x.text, re) : 0), 0); }
       else n = per.reduce((a, x) => a + occHits(x.text, re), 0);
       const a = assoc.get(m.id) || 0;
       out.set(m.id, { n, k, resp, a, v: n * k + a });
@@ -1144,29 +1132,16 @@ class CardView{
         c.st ? '自定义' : '跟色位')
     ]);
   }
-  /* 出场次数：高响应固定 ×1；中、低响应各带一个全局权重（0.1~1，步进 0.1） */
+  /* 出场次数：三档都固定 ×1，不给调（调权重那一档在 feature/new/card-weight 那条支上） */
   occurBox(){
     const c = this.c;
     const box = h('div', { class:'wnw-row', style:'gap:8px;align-items:center;padding-top:2px' });
     const fill = async () => {
       box.innerHTML = '';
       const resp = c.resp || 'high';
-      const key = resp === 'mid' ? 'occur.mid' : 'occur.low';
       box.appendChild(h('span', { class:'wnw-hint' }, '出场次数'));
       box.appendChild(Occur.cell(c.id, c.bookId));
-      box.appendChild(h('span', { class:'wnw-hint' }, resp === 'high' ? '×1 固定' : resp === 'mid' ? '× 中权重' : '× 低权重'));
-      if(resp === 'high') return;
-      const w = await Occur.weights();
-      const inp = h('input', { class:'wnw-input wnw-occur-w', type:'number', min:'0.1', max:'1', step:'0.1',
-        value:String(resp === 'mid' ? w.mid : w.low) });
-      inp.addEventListener('change', async () => {
-        const v = occW(inp.value); inp.value = String(v);
-        await State.set(key, v);
-        await Occur.reweigh();
-        fill();
-      });
-      box.appendChild(h('span', { class:'wnw-hint' }, '权重'));
-      box.appendChild(inp);
+      box.appendChild(h('span', { class:'wnw-hint' }, '×1 固定'));
     };
     fill();
     return box;
@@ -2864,7 +2839,6 @@ button.wnw-dot{width:15px;height:15px;}
 /* 一行里卡名和状态档先保住，挤的是后面那条长说明 */
 .wnw-rel-row .wnw-lnk,.wnw-rel-row .wnw-chip{flex:0 0 auto;white-space:nowrap;}
 .wnw-chip.on{background:var(--accent-light);color:var(--accent-text,var(--accent));font-weight:700;}
-.wnw-occur-w{width:5.5em;flex:0 0 auto;}
 .wnw-linklist{padding:2px 0;}
 /* 第 19 条：能拖的那两个字挂着虚线，正被拖走的那份淡掉，接住的那格上沿或整格亮一条 */
 .wnw-grip{cursor:grab;}
