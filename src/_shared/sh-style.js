@@ -36,9 +36,6 @@
    hidden 改成 auto：左右分栏那种撑得下的照旧各滚各的（不溢出就不出条），直排内容溢出的那一截滚得到。 */
 .wnw-root .wnw-dock-body[data-scroll="1"]{display:flex;flex-direction:column;min-height:0;overflow:auto;}
 .wnw-root .wnw-dock-body[data-scroll="1"] > .sh-pane{flex:1 1 auto;min-height:0;}
-/* 丙-1 停靠两栏：两栏等宽靠 flex 分，不写死像素；每栏自己滚，滚的不再是整条列表 */
-.wnw-root .wnw-dock-list.two{flex-direction:row;align-items:stretch;overflow:hidden;}
-.wnw-root .wnw-dock-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:10px;overflow:auto;
   border-radius:var(--r-card,5px);}
 /* 拖拽的落点：从前这三条写在 w10-cards.js 里，选择器少打一个空格（.wnw-root.dnd-out），
    从来没匹配上过，所以换序一直是盲投。这里按停靠这一套补三条真能落地的。 */
@@ -46,8 +43,6 @@
 .wnw-root .wnw-dock-card.dnd-tgt{background:var(--candidate-bg);}
 .wnw-root .wnw-dock-card.dnd-tgt[data-dnpos="before"]{box-shadow:inset 0 3px 0 0 var(--accent);}
 .wnw-root .wnw-dock-card.dnd-tgt[data-dnpos="after"]{box-shadow:inset 0 -3px 0 0 var(--accent);}
-/* 落在哪一栏就整栏亮一圈：光看插入线认不出已经换到另一栏去了 */
-.wnw-root .wnw-dock-col.dnd-col{background:var(--candidate-bg);box-shadow:inset 0 0 0 2px var(--accent);}
 /* 描边口径（2026-10-04，设计债报告 5.3 那一条）：宿主这几处按钮、输入框、标签、分段选择的描边，
    从前写 var(--bw) solid var(--input-border)。
    --input-border 是配色那一份里的 1px 灰线，量出来只有 1.x 的对比，够不着边界对「非文字要 3:1」那条；

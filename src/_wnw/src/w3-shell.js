@@ -228,15 +228,7 @@ const Desk = {
   host:null, root:null, live:new Map(), timer:null, tickTimer:null, bookTimer:null, seq:0,
   /* 中栏底线：模式切换那个按钮（约 230）+ 书名（约 70）+ 正文一列（约 280）+ 批注栏（232）+ 缝和边距 */
   MID_MIN:680,
-  /* 丙-1 停靠两栏：一栏窄到这儿就不许再摆两栏。300 是照现成尺寸加出来的，不是拍的 ——
-     一张停靠卡最宽的标题条（插件带的 改代码 + 设置 + 改词库 + 常驻 + 折叠 + ×）按 w0-skin
-     那几条量：停靠栏基准字 13px，.b/.x 都是 .8571em（≈11.1px），「常驻」两字 22 + padding 14 + 描边 2 ≈ 38，
-     「改代码 / 改词库」三字 ≈ 52，两个折叠叉 ≈ 22×2，图标 16，八道 gap 48，条子左右 padding 20 → 约 292。
-     栏宽低于这条就把这几个切掉一截，所以两栏各自都不许低于 300。 */
-  DOCK_COL_MIN:300,
-  /* dockCols 摆在全局这一层，和 leftW / rightW 同一个口径：几栏是这人怎么摆界面上的偏好，不跟着书走；
-     哪一张卡在哪一栏（it.col）才跟着书，记在下面那份 dock 数组里 */
-  st:{ rail:'ch', leftW:250, rightW:330, leftOn:true, rightOn:true, tree:null, dock:[], dockCols:1 },
+  st:{ rail:'ch', leftW:250, rightW:330, leftOn:true, rightOn:true, tree:null, dock:[], },
   async mount(host, book){
     /* 开书要等一次异步取状态：手快连点两下（或新建作品又点书架）会进来两轮 mount，
        两轮都往下走就是两个桌面叠在一起 —— 章节目录看着多了一份。只让最后一轮落地。 */
@@ -265,6 +257,9 @@ const Desk = {
   },
   /* 这种视图已经没有了的死标签 / 死停靠 / 死面板，加载时直接丢掉 */
   scrub(){
+    /* 2026-10-13 拆基础版：老档里"第几栏"与"摆几栏"这两格没人读了，读档时一并抹掉 */
+    if(this.st) delete this.st.dockCols;
+    for(const it of (this.st && this.st.dock) || []) delete it.col;
     if(this.st.tree) for(const lf of this.leaves(this.st.tree)) lf.tabs = (lf.tabs || []).filter(tb => Views.get(tb.kind));
     this.st.dock = (this.st.dock || []).filter(it => Views.get(it.kind));
     if(!Views.get('panel-' + this.st.rail)) this.st.rail = 'ch';
@@ -762,42 +757,18 @@ const Desk = {
   drawRight(){
     this.dropLive(id => id.startsWith('dock.'));
     const box = this.rightBox; box.innerHTML = '';
-    const cols = this.dockCols();
-    /* 这一栏当下真正摆出来几栏：refitDock 拿它跟实测宽度比，跨了那条线才整栏重画一次 */
-    this.colsShown = cols;
     const head = h('div', { class:'wnw-dock-head' }, [
       h('b', {}, '停靠'), h('span', { style:'flex:1' }),
       h('button', { class:'wnw-btn mini', title:'折叠除「常驻」以外的全部面板', onclick:() => this.foldAll() }, '一键折叠'),
-      /* 丙-1：这个只管「摆几栏」，谁进哪一栏、上下怎么排全是拖出来的（见 dockMoveTo）。
-             字写的是点下去换到的那一档，和「一键折叠」一样是动作口吻 */
-      h('button', { class:'wnw-btn mini', title:cols === 2 ? '改回一栏：面板从上往下叠' : '摆成两栏：左右等宽，抓着面板标题上的名字拖到另一栏',
-        onclick:() => this.setDockCols(cols === 2 ? 1 : 2) }, cols === 2 ? '一栏' : '两栏'),
       h('button', { class:'wnw-btn mini', title:'添加停靠面板', onclick:() => this.pickDlg({ dock:true }), html:icoMarkup('plus') }),
       h('button', { class:'wnw-btn mini', title:'收起停靠栏（顶部「停靠」按钮可以再打开）', onclick:() => this.toggleRight(false) }, '»')
     ]);
     box.appendChild(head);
-    const list = h('div', { class:'wnw-dock-list' + (cols === 2 ? ' two' : '') });
+    const list = h('div', { class:'wnw-dock-list' });
     box.appendChild(list);
-    /* 丙-1：两栏时列只是两个容器，卡片还是 dockCard 现搭那一张 —— 折叠 / 常驻 / × / 拖高度 / 精简
-       全走原来那一路，不另起一套。一栏时结构照旧（卡直接进 list），一个节点都不多塞。 */
-    let colEls = [list];
-    this.colEls = null;
-    if(cols === 2){
-      colEls = [h('div', { class:'wnw-dock-col', 'data-col':'0' }), h('div', { class:'wnw-dock-col', 'data-col':'1' })];
-      for(const el of colEls){ list.appendChild(el); this.dockColDnd(el, Number(el.dataset.col)); }
-      this.colEls = colEls;
-    }
-    const empt = [0, 0];
-    for(const it of this.st.dock) empt[this.dockColOf(it, cols)]++;
-    /* 空着的那一栏给一句话：一栏时没卡还是从前那句「点击 + 号」；两栏时哪一栏空就写上哪一栏，
-       不然右边那栏光秃秃的，看着像这功能没做完，也不知道能往那儿拖 */
-    const noDock = !this.st.dock.length;
-    for(let i = 0; i < colEls.length; i++){
-      const txt = noDock ? (i === 0 ? '点击 + 号，停靠任意内容。' : '这一栏空着 · 抓着面板标题上的名字拖到这里')
-        : (!empt[i] ? '这一栏空着 · 抓着面板标题上的名字拖到这里' : '');
-      if(txt) colEls[i].appendChild(h('div', { class:'wnw-hint', style:'padding:10px 4px' }, txt));
-    }
-    for(const it of this.st.dock) colEls[this.dockColOf(it, cols)].appendChild(this.dockCard(it, list));
+    /* 一栏：卡片直接进这一列，没卡的时候给那一句「点击 + 号」 */
+    if(!this.st.dock.length) list.appendChild(h('div', { class:'wnw-hint', style:'padding:10px 4px' }, '点击 + 号，停靠任意内容。'));
+    for(const it of this.st.dock) list.appendChild(this.dockCard(it, list));
     this.refitDock();
   },
   toggleRight(v){
@@ -811,78 +782,14 @@ const Desk = {
     this.save(); this.drawRight();
     if(got) toast('已折叠，常驻的面板没动');
   },
-  /* ---------- 丙-1：停靠摆几栏、哪一张卡在哪一栏 ----------
-     栏归属记在每张卡自己那条上（it.col = 0 / 1），和 dock 那份数组存在同一格里。
-     数组还是只有一份、顺序还是数组顺序：哪一栏看到的那一摞就是「按 col 筛一遍再照数组顺序排」，
-     所以同栏换序和跨栏换位是同一套挪动，不必各存一份清单，也不动组件递面板的那个口子。 */
-  dockColOf(it, cols){
-    /* 一栏时没有「栏」这回事，全算第 0 栏；老数据没写过 col 的也落在这一栏 */
-    return (cols === undefined ? this.dockCols() : cols) === 2 && it.col === 1 ? 1 : 0;
-  },
-  /* 眼下摆几栏：挑了两栏但右栏实测放不下就先退回一栏，挑的那一份不动 ——
-     把右栏拖宽又是两栏，不用重新点一次这个 */
-  dockCols(){
-    return this.st.dockCols === 2 && this.dockColsFit() ? 2 : 1;
-  },
-  /* 摆得下摆不下照右栏的实测内宽算（clientWidth 已经把右栏那条 hair 描边扣掉了）：
-     列表左右 padding 各 10、两栏中间那道 gap 10，剩下的对半分，每一半都不许窄过 DOCK_COL_MIN */
-  dockColsFit(){
-    if(!this.rightBox || !this.st.rightOn) return false;
-    return this.rightBox.clientWidth - 30 >= this.DOCK_COL_MIN * 2;
-  },
-  /* 顺手把右栏拉到多宽才摆得开两栏：在算式那个数上再垫 8 像素。
-     不垫的话点一下就正好卡在及格线上，抖一抖就又退回一栏，看着像没生效 */
-  dockColsNeed(){ return this.DOCK_COL_MIN * 2 + 30 + 8; },
-  setDockCols(n){
-    this.st.dockCols = n === 2 ? 2 : 1;
-    this.save();
-    if(this.st.dockCols === 2){
-      /* 点两栏可右栏没那么宽：顺手把它拉到放得下那一档。不这么做就是点一下什么也没发生，
-         看着像这个坏了。中栏那条底线在 applySizes 里拦着，抢不过编辑器；真被拦住了就说清楚要多宽。 */
-      if(!this.st.rightOn) this.st.rightOn = true;
-      if(this.st.rightW < this.dockColsNeed()) this.st.rightW = this.dockColsNeed();
-      this.save(); this.applySizes();
-      if(!this.dockColsFit()) toast('窗口不够宽 · 右栏摆不下两栏（要 ' + this.dockColsNeed() + ' 像素宽）');
-    }
-    this.drawRight();
-  },
-  /* 把一张卡挪到「哪一栏 · 挨着谁」：tgt 给了就插到它前面 / 后面，没给就是那一栏末尾。
-     col 给 null = 只换顺序、不改栏归属（一栏时拖来拖去不该把他排好的两栏打散） */
-  dockMoveTo(d, col, tgt, pos){
+  dockMoveTo(d, tgt, pos){
     const a = this.st.dock, from = a.indexOf(d);
     if(from < 0 || (tgt && a.indexOf(tgt) < 0)) return;
     a.splice(from, 1);
     let at = a.length;
     if(tgt){ const i = a.indexOf(tgt); at = pos === 'after' ? i + 1 : i; }
     a.splice(at, 0, d);
-    if(col !== null && col !== undefined) d.col = col;
     this.save(); this.drawRight();
-  },
-  /* 空的那一栏、还有某一栏卡片下面剩下的空白都是落点：松手就落到那一栏末尾。
-     没有这一条，右栏空着的时候就无处可投，跨栏只能往有卡的栏里挤。 */
-  dockColDnd(el, ci){
-    const me = this;
-    el.addEventListener('dragover', ev => {
-      if(!me.dockCur) return;
-      /* 卡片自己会接那一趟并 stopPropagation，能冒到这儿来的就是「列里的空白」 */
-      ev.preventDefault(); ev.stopPropagation();
-      try{ ev.dataTransfer.dropEffect = 'move'; }catch(e){}
-      me.markCol(el);
-    });
-    el.addEventListener('dragleave', ev => { if(!el.contains(ev.relatedTarget)) me.markCol(null); });
-    el.addEventListener('drop', ev => {
-      const d = me.dockCur;
-      if(!d) return;
-      ev.preventDefault(); ev.stopPropagation();
-      me.dockCur = null; me.markCol(null);
-      me.dockMoveTo(d, ci, null);
-    });
-  },
-  /* 跨栏拖的时候除了卡片上那道插入线，再把要落进去的整一栏淡淡亮一下：
-     光看插入线认不出自己已经换到另一栏了 */
-  markCol(col){
-    if(!this.colEls) return;
-    for(const el of this.colEls) el.classList.toggle('dnd-col', el === col);
   },
   dockCard(it, list){
     const def = Views.get(it.kind);
@@ -946,7 +853,7 @@ const Desk = {
      所以拖的这一趟里这把尺是稳的。 */
   dockMaxH(body){
     const card = body.closest && body.closest('.wnw-dock-card');
-    const box = body.closest('.wnw-dock-col') || body.closest('.wnw-dock-list');
+    const box = body.closest('.wnw-dock-list');
     if(!card || !box) return 0;
     const bb = box.getBoundingClientRect(), cb = card.getBoundingClientRect(), bd = body.getBoundingClientRect();
     const chrome = cb.height - bd.height;
@@ -997,7 +904,7 @@ const Desk = {
     });
     el.addEventListener('dragend', () => {
       me.dockCur = null;
-      for(const x of wnwRoot().querySelectorAll('.dnd-out,.dnd-tgt,.dnd-col')) x.classList.remove('dnd-out', 'dnd-tgt', 'dnd-col');
+      for(const x of wnwRoot().querySelectorAll('.dnd-out,.dnd-tgt')) x.classList.remove('dnd-out', 'dnd-tgt');
     });
     return el;
   },
@@ -1009,13 +916,12 @@ const Desk = {
       if(d === it){
         /* 正拖着自己这一张：不给落点，也别让这一趟冒到列上去
            （冒上去就被当成「拖到这一栏末尾」，在自己身上松手会平白换个位置） */
-        ev.stopPropagation(); me.markCol(null); return;
+        ev.stopPropagation(); return;
       }
       ev.preventDefault(); ev.stopPropagation();
       const r = card.getBoundingClientRect();
       card.dataset.dnpos = ev.clientY < r.top + r.height / 2 ? 'before' : 'after';
       card.classList.add('dnd-tgt');
-      me.markCol(card.parentElement);
     });
     card.addEventListener('dragleave', () => card.classList.remove('dnd-tgt'));
     card.addEventListener('drop', ev => {
@@ -1024,17 +930,13 @@ const Desk = {
       ev.preventDefault(); ev.stopPropagation();
       const pos = card.dataset.dnpos;
       card.classList.remove('dnd-tgt');
-      me.dockCur = null; me.markCol(null);
-      /* 丙-1：落进哪一栏就看这张目标卡在不在哪一栏；一栏时 col 给 null，只换顺序不改栏归属 */
-      me.dockMoveTo(d, me.colsShown === 2 ? me.dockColOf(it, 2) : null, it, pos);
+      me.dockCur = null;
+      me.dockMoveTo(d, it, pos);
     });
   },
   /* 宽度决定完整版 / 精简版：视图自己给 compact，没给就一直是完整版 */
   refitDock(){
-    /* 丙-1：拖分隔条和缩窗口这两条路都走到这里，正好在这儿复查两栏放不放得下。
-       跨了那条线就整栏重画（各栏里还是那几本、那个顺序），drawRight 末尾还会再回到这里一趟，
-       那时 colsShown 已经和实测一致，不会来回弹。 */
-    if(this.dockCols() !== this.colsShown){ this.drawRight(); return; }
+
     for(const it of this.st.dock){
       const api = this.live.get('dock.' + it.id);
       if(!api) continue;
