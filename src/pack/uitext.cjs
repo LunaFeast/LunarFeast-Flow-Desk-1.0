@@ -240,7 +240,7 @@ function packNames(TREE){
 }
 const SH_CN = { 'sh-bank-ui':'词库界面', 'sh-banks':'词库', 'sh-code':'改代码', 'sh-color':'配色',
   'sh-doc':'文档', 'sh-font':'字体', 'sh-gen':'生成器', 'sh-ico':'图标', 'sh-icode':'代码编辑器',
-  'sh-log':'生成记录', 'sh-packs':'插件装卸', 'sh-look':'外观这一层', 'sh-mus':'播放进度那一条桥',
+  'sh-packs':'插件装卸', 'sh-look':'外观这一层', 'sh-mus':'播放进度那一条桥',
   'sh-ttml':'歌词时间尺（ttml / lrc）',
   'sh-style':'样式', 'sh-wizard':'配方向导', 'sh-rand':'零碎帮手', 'sh-store':'数据库助手',
   'sh-load':'插件加载接线' };

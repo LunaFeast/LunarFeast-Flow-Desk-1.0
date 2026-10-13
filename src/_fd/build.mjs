@@ -42,7 +42,7 @@ const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-p
   '../_shared/sh-ttml.js',
   '../_shared/sh-mus.js',
   '../_shared/sh-icode.js',
-  '../_shared/sh-banks.js','../_shared/sh-bank-ui.js','../_shared/sh-log.js'];
+  '../_shared/sh-banks.js','../_shared/sh-bank-ui.js'];
 
 /* boot 排最后：加载器、注册表、外壳底子都站好了才开机 */
 const BOOT = 'fd6-boot.js';

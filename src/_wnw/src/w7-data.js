@@ -1156,7 +1156,7 @@ const TOOL_HOST = {
   get kv(){ return DB; },
   /* 哪份词库归哪个包、明文落在哪儿由包的插件清单（bank.user）说，这儿不再硬点名 */
   /* 自建词库、生成器配方和生成记录都在数据层，都靠这些前缀够到 */
-  bankDir:WNW_DATA_PRE, components:WNW_DATA_PRE + 'plugins/', logDir:WNW_DATA_PRE + 'gen-log/',
+  bankDir:WNW_DATA_PRE, components:WNW_DATA_PRE + 'plugins/',
   picked(){ return null; },
   /* 改词库对话框就用 WNW 自己的浮层（浮层标题栏已经有关闭钮） */
   dlg:{ open(t, b, f, opt){ Overlay.open(t, b, f, opt); }, close(){ Overlay.close(); } },

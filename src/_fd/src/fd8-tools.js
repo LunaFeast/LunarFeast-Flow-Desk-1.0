@@ -76,7 +76,7 @@ window.TOOL_HOST = {
   id:'fd',
   get kv(){ return ToolKv; },
   /* 自建词库、包自带底本和生成器配方都落在数据层 */
-  bankDir:DATA_PRE, components:DATA_PRE + 'plugins/', logDir:DATA_PRE + 'gen-log/',
+  bankDir:DATA_PRE, components:DATA_PRE + 'plugins/',
   async picked(which){ return await ToolKv.get('banktxt.' + which, null); },
   dlg:{ open(t, b, f, opt){ Modal.open(t, b, f, null, opt); }, close(){ Modal.close(); } },
   pick(which){ return pickBank(which); },
