@@ -880,7 +880,7 @@ async function retrace(){
 /* ===== 目录句柄持久化 =====
    首次选定 Rime 文件夹后把目录句柄存入 IndexedDB，之后打开页面可自动（或点一下）读取，
    无需重新导航文件夹。浏览器安全沙箱不允许网页仅凭绝对路径静默读盘、也拿不到系统帐户名，
-   故无法硬编码 C:\Users\帐户名\AppData\Roaming\Rime；句柄记忆是等效的“一次选择、长期自动”方案。
+   故无法硬编码系统里那一串 Rime 用户目录的绝对路径（Roaming 底下那一个）；句柄记忆是等效的“一次选择、长期自动”方案。
    返回 'granted'(已恢复) / 'gesture'(需用户点一下) / 'none'(无句柄/不支持/拒绝)。 */
 async function restoreRimeDir(interactive){
   if(location.protocol==='file:'||!window.showDirectoryPicker)return 'none';

@@ -102,17 +102,25 @@ const 露 = 本.map(p => ({ p, 文: fs.readFileSync(p, 'utf8') }))
 台.判('没有一个字节写着这台机器的盘符、帐户名或私人目录名', 露.length === 0, 露.map(x => path.relative(ROOT, x.p)).join('、'));
 /* 扩出来的那一半（2026-10-11 他定的第五条）：判据不在这儿第二份 —— 走 src\_build\public-scan.mjs 那一颗，
    扫 origin/main 到这一轮那条支之间全部新增和修改的每一份文本（二进制按后缀跳掉）。
-   支名取清单那一行「提交分支 =」；那条支还没开出来（比如这一轮刚开始量）就退一步扫 main —— 扫的面只大不小。 */
+   支名取清单那一行「提交分支 =」；那条支还没开出来（比如这一轮刚开始量）就退一步扫 main —— 扫的面只大不小。
+   这一棵还没推过（没有 origin/main）的时候，比对的那一头换成「全部进版本的那几份」——同样只大不小。 */
 const 支 = (() => {
   const 名 = (() => { try{ return 读清单(读盘清单()).提交分支; }catch(e){ return ''; } })();
   if(!名) return 'main';
   try{ execFileSync('git', ['-C', ROOT, 'rev-parse', '--verify', 名], { stdio:['ignore','ignore','ignore'] }); return 名; }
   catch(e){ return 'main'; }
 })();
+const 基 = (() => {
+  try{ execFileSync('git', ['-C', ROOT, 'rev-parse', '--verify', 'origin/main'], { stdio:['ignore','ignore','ignore'] }); return 'origin/main'; }
+  catch(e){ return '全部'; }
+})();
 let 公开面 = null, 问不出 = '';
-try{ 公开面 = 跑闸(支, 'origin/main'); }catch(e){ 问不出 = String((e && e.message) || e).split(/\r?\n/)[0]; }
-台.数('公开面那一道扫了哪一条支、几本文本', (问不出 ? '问不出：' + 问不出 : 支 + ' · 读了 ' + 公开面.读了 + ' 份（名单 ' + 公开面.面 + ' 份）'));
-台.判('origin/main 到这一轮那条支之间新增和修改的每一本文本里，一处本机痕迹都没有',
+try{ 公开面 = 跑闸(支, 基); }catch(e){ 问不出 = String((e && e.message) || e).split(/\r?\n/)[0]; }
+台.数('公开面那一道扫了哪一条支、几本文本', (问不出 ? '问不出：' + 问不出
+  : 支 + '（比对的那一头：' + 基 + '）· 读了 ' + 公开面.读了 + ' 份（名单 ' + 公开面.面 + ' 份）'));
+台.判(基 === 'origin/main'
+    ? 'origin/main 到这一轮那条支之间新增和修改的每一本文本里，一处本机痕迹都没有'
+    : '这一棵还没推过（没有 origin/main）：改成扫全部进版本的那几份 —— 一处本机痕迹都没有',
   !!公开面 && 公开面.命中.length === 0,
   公开面 ? 公开面.命中.slice(0, 8).map(h => h.份 + ':' + h.行号 + ' · ' + h.串).join('、') : 问不出);
 

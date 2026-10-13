@@ -123,8 +123,12 @@ function gitR(args){
 }
 /* 扫描面：origin/main 到这一轮那条支之间新增与修改的每一份（现取，不抄第二份名单） */
 export function 扫描面(支, 对 = 'origin/main'){
-  const 名单 = gitR(['diff', '--name-only', '--diff-filter=AM', '-z', 对 + '...' + 支]).split('\0').filter(Boolean);
-  return [...new Set(名单)].filter(f => !是二进制(f) && !不扫.has(f.split(path.sep).join('/')));
+  /* 对 = '全部'：这一棵还没远程（或还没推过）的时候用 —— 名单直接取进版本的那几份，
+     那是比对基线不存在时唯一能扫的面，也是最大的一面（只大不小） */
+  const 名单 = 对 === '全部'
+    ? gitR(['ls-files', '-z'])
+    : gitR(['diff', '--name-only', '--diff-filter=AM', '-z', 对 + '...' + 支]);
+  return [...new Set(名单.split('\0').filter(Boolean))].filter(f => !是二进制(f) && !不扫.has(f.split(path.sep).join('/')));
 }
 const 盘上或支上 = (支, 份) => {
   try{ return gitR(['show', 支 + ':' + 份]); }catch(e){ return null; }
