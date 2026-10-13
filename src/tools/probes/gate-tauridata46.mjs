@@ -5,26 +5,25 @@
    钉的是这么几件事，一条都不许放宽：
      一、这一批 11 颗（data:dir/read/write/list/wipe、lib:read/write、cfg:closeGet/Set、cfg:rimeGet/Set）
         每一颗在壳里都有对应的一颗命令，而且都上了 main.rs 的注册单 —— 没上单等于不存在；
-     二、桥里这 11 颗不再是「这颗通道还没搬进壳」：参表里有名，栏名与顺序还对得上 preload 里递的实参个数，
+     二、桥里这 11 颗不再是「这颗通道还没搬进壳」：参表里有名，栏名与顺序还对得上桥里递的实参个数，
         参数名里一个下划线都没有（Tauri 那头按驼峰认名，带下划线就对不上）；
      三、路径那道判断住在纯判断那一格（fd_core::data_path 的 落格），而且测试真钉住了
         「a/b.yaml 放行、../x 拒、盘符那种写法拒、反斜杠问号绕道拒、空串拒」这五条；
         动磁盘那一层只叫它，自己一道判断都没写；
-     四、data:wipe 的删除范围与主进程一字不差：那张字条落在数据层那一格、名字同一个、
-        留着的四格同一串、这一颗自己一颗都不删（真删排在开机那一趟，还没搬进来）；
-     五、库文件那张名单两头同一张表（漏登记的表现是「界面上改得动、报一句存不进文件、重启就没了」）；
-     六、回给页面的形状一格都没动：认不出/读不到 那些格子里字段名与那一头对得上，
-        抛错还是回 null 也照那一头；
+     四、data:wipe 的删除范围钉死在这一道闸里：那张字条落在数据层那一格、名字是 wipe-user.json、
+        留着的四格同一串同一个顺序（plugins / plugins-factory / logs / relocate.txt）、这一颗自己一颗都不删
+        （真删排在开机那一趟）；
+     五、库文件那张名单两头同一张表（一头是壳里那份，一头是开发服务器那份 —— 漏登记的表现是
+        「界面上改得动、报一句存不进文件、重启就没了」）；
+     六、回给页面的形状一格都没动：那三张 struct 的字段名都在，抛错还是回 null 也照规矩；
      七、纯判断那两格（data_path、cfg_value）里没有动磁盘的手、也不认识壳。
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { rd, 记账, 切, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
+import { rd, 记账, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-tauridata46');
-const main = rd('src/pack/main.cjs');
 const 桥 = rd('src/_tauri/ui/fd-bridge.js');
-const 原身 = rd('src/pack/preload.cjs');
 const 壳 = rd('src/_tauri/src/main.rs');
 const 数据 = rd('src/_tauri/src/tauri_bind/data_cmds.rs');
 const 配置 = rd('src/_tauri/src/tauri_bind/cfg_cmds.rs');
@@ -48,29 +47,21 @@ const 批 = [
 ];
 const 那颗本 = 名 => 名 === 'data_cmds' ? 数据 : 配置;
 
-/* 从主进程那份里切出一颗 handler 的原文：从 ipcMain.handle('<通道>' 起到下一个 ipcMain. 为止 */
-function 那一段(通道) {
-  const 起 = main.indexOf("ipcMain.handle('" + 通道 + "'");
-  if (起 < 0) throw new Error('主进程里找不到这一颗：' + 通道);
-  const 止 = main.indexOf('ipcMain.', 起 + 1);
-  return main.slice(起, 止 < 0 ? main.length : 止);
-}
-
-/* 桥的参表（生成物里那一份）；拿不到就当这一批根本没进桥 */
+/* 桥的参表（那份桥自己写死的那一张表）；拿不到就当这一批根本没进桥 */
 const 表文 = (桥.match(/const 参表 = (\{[\s\S]*?\});/) || [])[1] || '{}';
 const 表 = JSON.parse(表文);
 
-/* 页面那一头实参有几栏：从 preload 里 invoke('<通道>' 后面那段按括号层数数一遍顶层逗号 */
+/* 页面那一头实参有几栏：从桥里 invoke('<通道>' 后面那段按括号层数数一遍顶层逗号 */
 function 递了几栏(通道) {
   const 键 = "invoke('" + 通道 + "'";
-  const 次 = 原身.split(键).length - 1;
-  if (次 !== 1) throw new Error('桥的调用点在 preload 里不是唯一的一处：' + 通道 + '（找到 ' + 次 + ' 处）');
-  let k = 原身.indexOf(键) + 键.length, 深 = 0, 出 = '';
-  while (k < 原身.length) {
-    const c = 原身[k];
+  const 次 = 桥.split(键).length - 1;
+  if (次 !== 1) throw new Error('桥的调用点不是唯一的一处：' + 通道 + '（找到 ' + 次 + ' 处）');
+  let k = 桥.indexOf(键) + 键.length, 深 = 0, 出 = '';
+  while (k < 桥.length) {
+    const c = 桥[k];
     if (c === '(' || c === '[' || c === '{') 深++;
     else if (c === ')' || c === ']' || c === '}') { if (深 === 0) break; 深--; }
-    else if (c === '"' || c === "'") { k++; while (k < 原身.length && 原身[k] !== c) k++; }
+    else if (c === '"' || c === "'") { k++; while (k < 桥.length && 桥[k] !== c) k++; }
     出 += c;
     k++;
   }
@@ -85,7 +76,7 @@ function 递了几栏(通道) {
   return 数 + 1;
 }
 
-台.题('一、这一批 11 颗：主进程每一颗，壳里都有一座，且都上了注册单');
+台.题('一、这一批 11 颗：页面请的每一颗，壳里都有一座，且都上了注册单');
 台.数('这一批点名的通道', 批.length + ' 颗 · ' + 批.map(x => x[0]).join(' '));
 台.判('点的就是 11 颗，不多不少', 批.length === 11);
 for (const [通道, 名, 本, 栏] of 批) {
@@ -141,51 +132,46 @@ const 测试段 = (那两格.match(/#\[cfg\(test\)\][\s\S]*$/) || [''])[0];
 台.判('读的颗回 Option（读不到就是 null），写的颗回 Result（跑出那一格就抛）',
   /pub fn data_read\(rel: String\) -> Option<String>/.test(数据)
   && /pub fn data_write\(rel: String, text: Option<String>\) -> Result<bool, String>/.test(数据));
-台.判('抛出去的那句话与主进程同一串', main.includes("throw new Error('数据路径跑出了用户目录：' + rel)")
-  && 那两格.includes('数据路径跑出了用户目录：') && 数据.includes('跑出那句'));
+台.判('抛出去的那句话两格同一串（纯判断那一格写的，动磁盘那一层只是把它递给页面）',
+  那两格.includes('数据路径跑出了用户目录：') && 数据.includes('跑出那句'));
 
-台.题('四、data:wipe 的删除范围与主进程一字不差');
-const 那一段wipe = 那一段('data:wipe');
+台.题('四、data:wipe 的删除范围（留着那四格与那张字条都钉死）');
 const 引号串 = s => [...s.matchAll(/['"]([^'"]*)['"]/g)].map(m => m[1]);
-const 主留着 = 引号串(切(main, 'WIPE_KEEP'));
 const 壳留着 = 引号串((那两格.match(/pub const 留着那几格[\s\S]*?\];/) || [''])[0]);
-台.数('主进程那边留着的几格', 主留着.join('、'));
 台.数('壳里那颗报出来的留着的几格', 壳留着.join('、'));
-台.判('留着的名单同一串、同一个顺序（一颗都不许多留也不许少留）',
-  JSON.stringify(主留着) === JSON.stringify(壳留着));
-const 主字条 = 引号串(切(main, 'WIPE_FILE')).filter(x => x.includes('.json'))[0];
-台.判('那张字条两头同名（' + 主字条 + '）',
-  主字条 === 'wipe-user.json' && 那两格.includes('pub const 字条名: &str = "wipe-user.json"'));
+台.判('留着的名单就这四格、这个顺序（一颗都不许多留也不许少留）',
+  JSON.stringify(壳留着) === JSON.stringify(['plugins', 'plugins-factory', 'logs', 'relocate.txt']));
+台.判('那张字条的名字钉死是 wipe-user.json（开机那一趟认的就是这个名字）',
+  那两格.includes('pub const 字条名: &str = "wipe-user.json"'));
 台.判('字条落在数据层那一格（<树根>\\data），不是用户数据那一格',
-  /const DATA_ROOT = path\.join\(TREE, 'data'\)/.test(main) && 数据.includes('.join("data")'));
-台.判('这一批不把 FD_DATA 那把挪门的尺算进来（那一头 DATA_ROOT 不吃环境变量；注释里写了这一句不算）',
+  数据.includes('let 格 = 数据层格();') && 数据.includes('crate::tree_root().join("data")'));
+台.判('这一批不把 FD_DATA 那把挪门的尺算进来（开发服务器那一头 DATA_ROOT 不吃环境变量；注释里写了这一句不算）',
   !/env::var\(\s*"FD_DATA"/.test(数据 + 配置) && 数据.includes('crate::tree_root().join("data")'));
-台.判('这一颗一颗都不删：壳里没有删的那一手（真删排在开机那一趟，还没搬）',
+台.判('这一颗一颗都不删：壳里没有删的那一手（真删排在开机那一趟）',
   !/remove_dir|remove_file|fs::remove|fs::delete|std::fs::remove|remove_dir_all/.test(数据));
-台.判('主进程那一颗也确实不删（只写字条）',
-  !/rmSync|unlink|rm\(|rimraf/.test(那一段wipe) && 那一段wipe.includes('fs.writeFileSync(WIPE_FILE()'));
-台.判('已经排着就不重写，只把时间戳留着（already 那一格两头都有）',
-  那一段wipe.includes('already:true') && 数据.includes('already: Some(true)'));
-台.判('字条上那两栏照那一头（requestedAt 与 keep，缩进两格）',
-  那一段wipe.includes('requestedAt:new Date().toLocaleString()') && 那一段wipe.includes('null, 2')
-  && /rename = "requestedAt"/.test(数据) && 数据.includes('to_string_pretty'));
+台.判('已经排着就不重写，只把时间戳留着（回的那一格 already 认得出已经排过）',
+  数据.includes('already: Some(true)'));
+台.判('字条上那两栏的键名与先后（先 requestedAt 再 keep）、缩进两格',
+  /rename = "requestedAt"/.test(数据) && 数据.includes('keep: 留着那几格.to_vec()')
+  && 数据.includes('to_string_pretty'));
 
-台.题('五、库文件那张名单两头同一张表');
-const 主名单 = 引号串(切(main, 'LIB_NAMES'));
+台.题('五、库文件那张名单两头同一张表（壳里那一格与开发服务器那一份）');
+const 服名单 = 引号串((rd('src/_fd/fd-serve.mjs').match(/const LIB_NAMES = \[[^\]]*\]/) || [''])[0]);
 const 壳名单 = 引号串((那两格.match(/pub const 库名单[\s\S]*?\];/) || [''])[0]);
-台.数('主进程那边认哪几份', 主名单.join(' '));
+台.数('开发服务器认哪几份', 服名单.join(' '));
 台.数('壳里认哪几份', 壳名单.join(' '));
 台.判('两张表同一串、同一个条数（少一份就是「存不进文件」那类毛病）',
-  JSON.stringify(主名单) === JSON.stringify(壳名单) && 主名单.length === 5);
-台.判('认不出的那一句话两头同一串', 那一段('lib:read').includes('不认这一份库文件：')
-  && 那两格.includes('不认这一份库文件：'));
+  JSON.stringify(服名单) === JSON.stringify(壳名单) && 壳名单.length === 5);
+台.判('认不出的那一句话只有纯判断那一格写了一份（动磁盘那一层只是把它递给页面）',
+  那两格.includes('pub const 不认那句: &str = "不认这一份库文件："')
+  && 数据.includes('不认那句') && !数据.includes('"不认这一份库文件："'));
 台.判('名单只在纯判断那一格里有一份（动磁盘那一层只叫 库名在册）',
   /pub fn 库名在册/.test(那两格) && !/fn 库名在册/.test(数据) && (数据.match(/库名在册\(/g) || []).length === 2);
-台.判('库文件落点与那一头同一格（DATA_ROOT 拼名字，不拼用户数据那一格）',
-  /const libFile = n => path\.join\(DATA_ROOT, n\)/.test(main) && 数据.includes('数据层格().join(&name)'));
-台.判('广播那条事件名两头同一串（lib:changed）',
-  main.includes("send('lib:changed'") && 数据.includes('emit("lib:changed"'));
-台.判('写完才喊，认不出与写不下去都不喊（照那一头的先后次序）',
+台.判('库文件落点认的是数据层那一格（拼名字，不拼用户数据那一格）',
+  数据.includes('数据层格().join(&name)') && !数据.includes('userdata'));
+台.判('广播那条事件名两头同一串（壳里喊的那一颗就是桥里听的这一颗）',
+  桥.includes("'lib:changed'") && 数据.includes('emit("lib:changed"'));
+台.判('写完才喊，认不出与写不下去都不喊（先后次序钉住）',
   数据.indexOf('fs::write(&路') < 数据.indexOf('emit("lib:changed"'));
 
 台.题('六、回给页面的形状一格都没动');
@@ -195,30 +181,29 @@ const 形状 = [['lib:read', '一份库', ['ok', 'text', 'file', 'msg']],
 for (const [通道, 结构, 格] of 形状) {
   const 块 = (数据.match(new RegExp('pub struct ' + 结构 + ' \\{[\\s\\S]*?\\n\\}')) || [''])[0];
   for (const g of 格)
-    台.判(通道 + ' 回的那一格 ' + g + ' 两头都有',
-      那一段(通道).includes(g) && new RegExp('\\b' + g + ':').test(块));
+    台.判(通道 + ' 回的那一格 ' + g + ' 在 struct 上（页面上取的就是这个名字）',
+      new RegExp('\\b' + g + ':').test(块));
   台.判(通道 + ' 的 struct 名对得上（' + 结构 + '）', 块.length > 0);
 }
-台.判('lib:read 认不出时回的是 text:"" 与 file:""（那一头就是这两格空的）',
-  那一段('lib:read').includes("{ ok:false, text:'', file:''") && /ok: false,\s*text: String::new\(\), file: String::new\(\)/.test(数据));
-台.判('lib:read 那一份不在盘上也算读得到、原文是空串（照那一头 readLibRaw 的 catch）',
-  /return \{ ok:true, text: readLibRaw\(n\)/.test(那一段('lib:read')) && 数据.includes('read_to_string(&路).unwrap_or_default()'));
-台.判('data:list 只列一层、只要文件、按名字排；列不出来回空串那一样（两头同）',
-  那一段('data:list').includes('filter(x => x.isFile())') && 那一段('data:list').includes('.sort()')
-  && 数据.includes('.is_file()') && 数据.includes('列.sort()'));
-台.判('cfg:closeSet 回的是归过以后那一档，不是页面递进来的原串（两头都先认档再回）',
-  /const mode = \(m === 'tray' \|\| m === 'quit'\) \? m : 'ask'/.test(切(main, 'writeCloseMode'))
-  && /let 档 = 认关法\(&mode\)/.test(配置) && 配置.includes('档.to_string()'));
-台.判('cfg:closeSet 与 cfg:rimeSet 写不写得进去都照样回话（那一头 catch 吞掉）',
-  /try\{ fs\.mkdirSync/.test(切(main, 'writeRimeDir')) && 配置.includes('let _ = fs::write(路, 文)'));
-台.判('cfg:rimeGet 的回退那一手两头同（没记过才看默认那一格，真是目录才报，都不是回空串）',
-  /process\.env\.APPDATA \? path\.join\(process\.env\.APPDATA, 'Rime'\) : ''/.test(切(main, 'readRimeDir'))
-  && 配置.includes('std::env::var("APPDATA")') && 配置.includes('"Rime"') === false && 配置.includes('Rime'));
-台.判('cfg:rimeSet 那一头是 String(p || "")：没给、给空都算清空指向',
+台.判('lib:read 认不出时回的是 text:"" 与 file:""（那两格是空的，不是没有这一格）',
+  /ok: false,\s*text: String::new\(\), file: String::new\(\)/.test(数据));
+台.判('lib:read 那一份不在盘上也算读得到、原文是空串（读不下去不把错递给页面）',
+  数据.includes('read_to_string(&路).unwrap_or_default()'));
+台.判('data:list 只列一层、只要文件、按名字排；列不出来回空的那一串',
+  数据.includes('.is_file()') && 数据.includes('列.sort()') && 数据.includes('Err(_) => return Vec::new()'));
+台.判('cfg:closeSet 回的是归过以后那一档，不是页面递进来的原串（认档那一手住在纯判断那一格）',
+  /pub fn 认关法\(串: &str\)/.test(那两格) && /let 档 = 认关法\(&mode\)/.test(配置)
+  && 配置.includes('档.to_string()'));
+台.判('cfg:closeSet 与 cfg:rimeSet 写不写得进去都照样回话（写不下去不递给页面）',
+  配置.includes('let _ = fs::write(路, 文)') && 配置.includes('pub fn cfg_rime_set(p: Option<String>) -> bool'));
+台.判('cfg:rimeGet 的回退那一手（没记过才看默认那一格：用户 roaming 那一格下的小企鹅那一份，真是目录才报，都不是回空串）',
+  配置.includes('std::env::var("APPDATA")') && 配置.includes('Path::new(&根).join(默认那格)')
+  && 那两格.includes('pub const 默认那格: &str = "Rime"'));
+台.判('cfg:rimeSet 没给、给空都算清空指向（Option 落成空串，不当错）',
   配置.includes('pub fn cfg_rime_set(p: Option<String>) -> bool')
-  && 切(main, 'writeRimeDir').includes("String(p || '')"));
-台.判('data:dir 回的就是那一头 app.getPath(\'userData\') 同一把格（与挑文件那一组共用一颗）',
-  那一段('data:dir').includes('async () => DATA_DIR()') && 数据.includes('pick_cmds::数据格()'));
+  && 配置.includes('let 指 = p.unwrap_or_default();'));
+台.判('data:dir 回的就是用户数据那一格（与挑文件那一组共用一颗，不另起第二把尺）',
+  数据.includes('crate::tauri_bind::pick_cmds::数据格()') && (数据.match(/fn 用户数据格/g) || []).length === 1);
 
 台.题('七、纯判断那两格不动磁盘、不认识壳');
 for (const 禁 of ['std::fs', 'fs::', 'File::open', 'File::create', 'read_to_string', 'create_dir',

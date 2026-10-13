@@ -5,7 +5,7 @@
    钉的是这么几件事，一条都不许放宽：
      一、这一批 8 颗（backup:run / last / check / roots、sys:rebuild、web:title、img:peek / open）
         每一颗在壳里都有对应的一颗命令，而且都上了 main.rs 的注册单 —— 没上单等于不存在；
-     二、桥里这 8 颗不再是「这颗通道还没搬进壳」：参表里有名、栏名与顺序对得上 preload 递的实参个数，
+     二、桥里这 8 颗不再是「这颗通道还没搬进壳」：参表里有名、栏名与顺序对得上桥里递的实参个数，
         参数名里一个下划线都没有；
      三、备份落点那道「不许写进这一棵树里」的判断住在纯判断那一格（fd_core::backup_rule 的 落点不许），
         四条硬样本真有测试钉着：仓内子路径拒、.. 拒、仓外的绝对地址放行、空串拒；
@@ -20,11 +20,9 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { rd, 记账, 切, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
+import { rd, 记账, ROOT, 对名单, 壳注册单 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-tauribackup46');
-const main = rd('src/pack/main.cjs');
-const 原身 = rd('src/pack/preload.cjs');
 const 抄的那颗 = rd('src/pack/backup.cjs');
 const 桥 = rd('src/_tauri/ui/fd-bridge.js');
 const 壳 = rd('src/_tauri/src/main.rs');
@@ -52,29 +50,21 @@ const 批 = [
 ];
 const 那本 = 名 => ({ backup_cmds: 备份, img_cmds: 图, web_cmds: 网, sys_cmds: 统 })[名];
 
-/* 从主进程那份里切出一颗 handler 的原文：从 ipcMain.handle('<通道>' 起到下一个 ipcMain. 为止 */
-function 那一段(通道) {
-  const 起 = main.indexOf("ipcMain.handle('" + 通道 + "'");
-  if (起 < 0) throw new Error('主进程里找不到这一颗：' + 通道);
-  const 止 = main.indexOf('ipcMain.', 起 + 1);
-  return main.slice(起, 止 < 0 ? main.length : 止);
-}
-
-/* 桥的参表（生成物里那一份）；拿不到就当这一批根本没进桥 */
+/* 桥的参表（那份桥自己写死的那一张表）；拿不到就当这一批根本没进桥 */
 const 表文 = (桥.match(/const 参表 = (\{[\s\S]*?\});/) || [])[1] || '{}';
 const 表 = JSON.parse(表文);
 
-/* 页面那一头实参有几栏：从 preload 里 invoke('<通道>' 后面那段按括号层数数一遍顶层逗号 */
+/* 页面那一头实参有几栏：从桥里 invoke('<通道>' 后面那段按括号层数数一遍顶层逗号 */
 function 递了几栏(通道) {
   const 键 = "invoke('" + 通道 + "'";
-  const 次 = 原身.split(键).length - 1;
-  if (次 !== 1) throw new Error('桥的调用点在 preload 里不是唯一的一处：' + 通道 + '（找到 ' + 次 + ' 处）');
-  let k = 原身.indexOf(键) + 键.length, 深 = 0, 出 = '';
-  while (k < 原身.length) {
-    const c = 原身[k];
+  const 次 = 桥.split(键).length - 1;
+  if (次 !== 1) throw new Error('桥的调用点不是唯一的一处：' + 通道 + '（找到 ' + 次 + ' 处）');
+  let k = 桥.indexOf(键) + 键.length, 深 = 0, 出 = '';
+  while (k < 桥.length) {
+    const c = 桥[k];
     if (c === '(' || c === '[' || c === '{') 深++;
     else if (c === ')' || c === ']' || c === '}') { if (深 === 0) break; 深--; }
-    else if (c === '"' || c === "'") { k++; while (k < 原身.length && 原身[k] !== c) k++; }
+    else if (c === '"' || c === "'") { k++; while (k < 桥.length && 桥[k] !== c) k++; }
     出 += c;
     k++;
   }
@@ -97,7 +87,7 @@ function 壳字段(源, 名) {
   return [...new Set([...块.matchAll(/^\s{4}([A-Za-z0-9_\u4e00-\u9fff]+)\s*:/gm)].map(m => m[1]))];
 }
 
-台.题('一、这一批 8 颗：主进程每一颗，壳里都有一座，且都上了注册单');
+台.题('一、这一批 8 颗：页面请的每一颗，壳里都有一座，且都上了注册单');
 台.数('这一批点名的通道', 批.length + ' 颗 · ' + 批.map(x => x[0]).join(' '));
 台.判('点的就是 8 颗，不多不少', 批.length === 8);
 for (const [通道, 名, 本] of 批) {
@@ -134,7 +124,7 @@ const 栏名们 = 批.flatMap(x => 表[x[1]] || []);
   栏名们.every(n => !/^(app|手|窗口|状态|事件)/.test(n)));
 台.判('AppHandle 只挂在 sys:rebuild 那一颗上（它要朝各窗口送进度），别的颗都不收',
   (统.match(/app: AppHandle/g) || []).length === 1 && ![备份, 图, 网].some(s => /app: AppHandle/.test(s)));
-台.判('img:peek 那一颗收两栏（路径 + 那一档宽），照 preload 的递法',
+台.判('img:peek 那一颗收两栏（路径 + 那一档宽），照桥里的递法',
   JSON.stringify(表.img_peek) === JSON.stringify(['p', 'maxw']) && 递了几栏('img:peek') === 2);
 
 台.题('三、落点那道「不许写进仓里」住在纯判断那一格，四条硬样本真有测试钉着');
@@ -219,8 +209,8 @@ const 壳收 = 壳字段(备份, '一份收');
   && !/pub async fn backup_last[\s\S]*?-> Option/.test(备份));
 
 台.题('五、img:peek 回的是裸字节，半路没化成字符串');
-台.判('那一头回的是 data 地址：mime + base64 的原文（这一头同一手）',
-  那一段('img:peek').includes("'data:' + mime + ';base64,' + buf.toString('base64')"));
+台.判('data 地址那个形状由纯判断那一格拼（data: 打头、mime 在中间、;base64, 接原文）',
+  /"data:\{\};base64,\{\}"/.test(节));
 台.判('壳里读进来的是裸字节（fs::read → Vec<u8>），直接进 base64 那颗',
   /let 节 = match fs::read\(路\)/.test(图) && 图.includes('包成data地址(mime, &节)'));
 台.判('base64 那颗的入参是 &[u8]，出的是一串字（半路没有 String 换算这一步）',
@@ -229,81 +219,70 @@ const 壳收 = 壳字段(备份, '一份收');
   !图.includes('from_utf8') && !图.includes('to_string_lossy') && !图.includes('read_to_string'));
 台.判('测试拿一段故意不是 UTF-8 的字节钉住了它（JPEG 的头 0xFF 0xD8 打头）',
   /let 头: Vec<u8> = vec!\[0xFF, 0xD8, 0xFF, 0xE0/.test(节) && /裸字节转那一串\(&头\), "\/9j/.test(节));
-台.判('成了那一格五栏同一串（ok url w h big，壳里另带一格 miss）',
-  那一段('img:peek').includes('{ ok:true, url, w:s.width, h:s.height, big:f }')
-  && JSON.stringify(壳字段(图, '一张缩略')) === JSON.stringify(['ok', 'url', 'w', 'h', 'big', 'miss']));
-台.判('不成那一格只有 ok 与 miss 两栏（照那一头 miss 的写法，不是 msg）',
-  那一段('img:peek').includes('{ ok:false, miss:') && 图.includes('miss: Some(那句)'));
-台.判('img:peek 认不成尺寸的那一类回 0 0，与那一头 nativeImage 认不动时同一形状',
-  那一段('img:peek').includes('w:0, h:0') && 图.includes('unwrap_or((0, 0))'));
-const 主mime = [...切(main, 'IMG_MIME').matchAll(/'(\.[a-z]+)'\s*:\s*'([^']+)'/g)].map(m => m[1] + '=' + m[2]).sort();
-const 期望mime = ['.bmp=image/bmp', '.gif=image/gif', '.jpeg=image/jpeg', '.jpg=image/jpeg', '.png=image/png', '.svg=image/svg+xml', '.webp=image/webp'];
-台.数('IMG_MIME 那张表', 主mime.join(' '));
-台.判('那一头那张表就是这七种写法（少了就是主进程那边动了）', JSON.stringify(主mime) === JSON.stringify(期望mime));
+台.判('成了那一格六栏同一串（ok url w h big miss，页面上取的就是这几个名字）',
+  JSON.stringify(壳字段(图, '一张缩略')) === JSON.stringify(['ok', 'url', 'w', 'h', 'big', 'miss']));
+台.判('不成那一格只有 ok 与 miss 那一栏（不是 msg —— 名字换了页面上就取不到）',
+  图.includes('miss: Some(那句)') && !壳字段(图, '一张缩略').includes('msg'));
+台.判('img:peek 认不成尺寸的那一类回 0 0（不是 null、也不抛）',
+  图.includes('unwrap_or((0, 0))') && /pub fn 认宽长|fn 认宽长/.test(节));
 const 壳线 = 节.split(/\r?\n/).filter(l => /^\s+".*\s=>\s"image\//.test(l)).map(l => l.trim().replace(/,$/, ''));
 const 期线 = ['".png" => "image/png"', '".jpg" | ".jpeg" => "image/jpeg"', '".gif" => "image/gif"',
   '".webp" => "image/webp"', '".bmp" => "image/bmp"', '".svg" => "image/svg+xml"'];
 台.数('壳那张表有哪几行', 壳线.join(' | '));
-台.判('壳那张表把这七种写法一种不落全认了，且一行都不许多认（退法也是那一头那一种）',
-  JSON.stringify(壳线) === JSON.stringify(期线) && 节.includes('_ => "image/png"'));
-台.判('认不出后缀的退法两头同（那一头退 image/png，不是 octet-stream）',
-  那一段('img:peek').includes("|| 'image/png'") && /_ => "image\/png"/.test(节));
-台.判('那一道 64 MB 的顶两头同一个数', 那一段('img:peek').includes('64 * 1024 * 1024') && 节.includes('64 * 1024 * 1024'));
-台.判('那一档宽的算法照那一头（max 64、min 1200、不是数按 360）',
-  那一段('img:peek').includes('Math.max(64, Math.min(1200, Number(maxW) || 360))')
-  && 节.includes('clamp(64, 1200)') && /_ => 360,/.test(节));
+台.判('后缀那一张表把这七种写法一种不落全认了，且一行都不许多认',
+  JSON.stringify(壳线) === JSON.stringify(期线));
+台.判('认不出后缀的退法是 image/png，不是 octet-stream', /_ => "image\/png"/.test(节));
+台.判('那一道 64 MB 的顶钉住了（纯判断那一格里一颗常量，动磁盘那一层只叫它）',
+  /pub const 太大的字节: u64 = 64 \* 1024 \* 1024;/.test(节) && !/64 \* 1024 \* 1024/.test(图));
+台.判('那一档宽的算法钉住（max 64、min 1200、不是数按 360）',
+  节.includes('clamp(64, 1200)') && /_ => 360,/.test(节));
 台.判('先自己确认那一份在不在才交给系统（免得 Windows 弹系统模态框把这一路卡死）',
-  那一段('img:open').includes('st.isFile()') && 图.includes('fs::metadata(路).map(|m| m.is_file())'));
-台.判('img:open 回的是 { ok, msg } 那一格（照 shell.openPath 那两栏）',
-  那一段('img:open').includes('return { ok:!msg, msg:msg') && /pub struct 一个开图 \{\s+ok: bool,\s+msg: String,/.test(图));
+  图.includes('fs::metadata(路).map(|m| m.is_file())'));
+台.判('img:open 回的是 { ok, msg } 那一格（系统那句原话递给页面，空串就是成了）',
+  /pub struct 一个开图 \{\s+ok: bool,\s+msg: String,/.test(图));
 
 台.题('六、四颗备份的默认那一处与候选那一串');
-台.判('默认那一处两头同格：label 叫「数据」、dir 是 <树根>\\data',
-  切(main, 'backupRoots').includes("{ label:'数据', dir:DATA_ROOT }")
-  && 备份.includes('label: "数据"') && 备份.includes('data_cmds::数据层格()'));
+台.判('默认那一处钉死：label 叫「数据」、dir 是 <树根>\\data',
+  备份.includes('label: "数据"') && 备份.includes('data_cmds::数据层格()'));
 台.判('数据层那一格与 data_cmds 共用一颗（不另起第二份口径）',
   /pub(\(crate\))? fn 数据层格\(\) -> PathBuf \{ crate::tree_root\(\)\.join\("data"\) \}/.test(rd('src/_tauri/src/tauri_bind/data_cmds.rs')));
-台.判('backup:roots 就是 backupRoots({})：只有默认那一处，不读这台机器的位置登记',
-  那一段('backup:roots').includes('backupRoots({})') && /pub async fn backup_roots\(\) -> Vec<一处根> \{\s*要抄的几处\(&Value::Null\)/.test(备份));
+台.判('backup:roots 就是只给默认那一处，不读这台机器的位置登记',
+  /pub async fn backup_roots\(\) -> Vec<一处根> \{\s*要抄的几处\(&Value::Null\)/.test(备份));
 台.判('壳里没有去读那一份位置登记的口子（那一颗不进仓、Rust 也读不动，落点只能由页面递进来）',
   !备份.includes('本地路径') && !统.includes('本地路径') && !备份.includes("require("));
-台.判('外加的那几处走 cfg.extra 递进来，名字撞了要给号（照 backupRoots 那一手）',
-  切(main, 'backupRoots').includes("r.label + '-' + (n + 1)") && 备份.includes('format!("{}-{}", r.label, 次 + 1)'));
+台.判('外加的那几处走 cfg.extra 递进来，名字撞了要给号',
+  备份.includes('format!("{}-{}", r.label, 次 + 1)'));
 台.判('落点由页面递进来（壳不自己认「该备份到哪儿」）',
-  那一段('backup:run').includes("dest:String((cfg && cfg.dest) || '')") && 备份.includes('栏文(单, "dest")'));
-台.判('backup:run 收的那一格是页面递的那一整格 cfg（一栏，照 backupRun 的递法）',
-  那一段('backup:run').includes('async (e, cfg)') && 原身.includes("invoke('backup:run', cfg && typeof cfg === 'object' ? cfg : {})"));
+  备份.includes('栏文(单, "dest")'));
+台.判('backup:run 收的那一格是页面递的那一整格 cfg（一栏，桥里那一颗递法钉住）',
+  桥.includes("invoke('backup:run', cfg && typeof cfg === 'object' ? cfg : {})"));
 
 台.题('七、sys:rebuild 与 web:title');
-const 重段 = 那一段('sys:rebuild');
-台.判('那两步的标签与百分比照那一头', 重段.includes("label:'生成 Flow-Desk 页面', pct:8")
-  && 重段.includes("label:'页面生成好了', pct:92")
-  && 统.includes('label: "生成 Flow-Desk 页面".to_string(), pct: 8') && 统.includes('pct: 92'));
+台.判('那两步的标签与百分比钉死（8 与 92）', 统.includes('label: "生成 Flow-Desk 页面".to_string(), pct: 8')
+  && 统.includes('pct: 92'));
 for (const 件 of ['rebuild:step', 'rebuild:done'])
-  台.判('事件名「' + 件 + '」两头同一串（主进程送得出，壳也送得出）',
-    重段.includes("'" + 件 + "'") && 统.includes('"' + 件 + '"'));
+  台.判('事件名「' + 件 + '」两头同一串（壳里送得出，桥里听的也是这一颗）',
+    桥.includes("'" + 件 + "'") && 统.includes('"' + 件 + '"'));
 台.判('rebuild:done 那一份带的是 files 那一格（写了哪几份）',
-    重段.includes('{ files:lines }') && JSON.stringify(壳字段(统, '一份写完')) === JSON.stringify(['files']));
-台.判('那一串是从 stdout 里挑 WROTE 打头那几行', 重段.includes("startsWith('WROTE')") && 统.includes('starts_with("WROTE")'));
-台.判('没记下源码在哪儿那一句两头同一串', 重段.includes('这台机器没记下源码在哪儿，重新构建不了') && 统.includes('这台机器没记下源码在哪儿，重新构建不了'));
-台.判('找不到构建脚本那一句照那一头，落点是 <源码格>\\_fd\\build.mjs',
-  重段.includes("'找不到构建脚本：' + script") && 统.includes('找不到构建脚本：') && 重段.includes("'_fd', 'build.mjs'") && 统.includes('join("_fd").join("build.mjs")'));
-台.判('FD_TREE 一起带过去（构建脚本才知道该往哪棵树生成）', 重段.length > 0 && 统.includes('env("FD_TREE"'));
-台.判('失败那一句照那一头（码 + 那句 err 或 out），不是零就算败',
-  重段.includes("'Flow-Desk 页面构建失败（' + r.code + '）：\\n'") && 统.includes('Flow-Desk 页面构建失败（'));
-台.判('成了那句：没听说写了哪个文件也有个交代（照那一头同一句）',
-  重段.includes('构建跑完了，但没听说写了哪个文件') && 统.includes('构建跑完了，但没听说写了哪个文件'));
-const 网段 = 那一段('web:title');
+  JSON.stringify(壳字段(统, '一份写完')) === JSON.stringify(['files']));
+台.判('那一串是从 stdout 里挑 WROTE 打头那几行', 统.includes('starts_with("WROTE")'));
+台.判('没记下源码在哪儿那一句原话钉住（界面上读的就是这一串）', 统.includes('这台机器没记下源码在哪儿，重新构建不了'));
+台.判('找不到构建脚本那一句在，落点是 <源码格>\\_fd\\build.mjs',
+  统.includes('找不到构建脚本：') && 统.includes('join("_fd").join("build.mjs")'));
+台.判('FD_TREE 一起带过去（构建脚本才知道该往哪棵树生成）', 统.includes('env("FD_TREE"'));
+台.判('失败那一句带得上退出码，不是零就算败',
+  /Flow-Desk 页面构建失败（\{\}）：\\n\{\}/.test(统) && 统.includes('得.0'));
+台.判('成了那句：没听说写了哪个文件也有个交代', 统.includes('构建跑完了，但没听说写了哪个文件'));
 台.判('web:title 任何一步不成都回空串（不抛、不回 null）',
-  网段.includes("return ''") && 网段.includes('catch(err){ return') && /pub async fn web_title\(url: String\) -> String/.test(网));
-台.判('只认 http 与 https 那两种方案', 网段.includes('/^https?:$/.test(u.protocol)') && 页.includes('"http"') && 页.includes('"https"'));
-台.判('四秒这一道兜底在（那一头是 AbortSignal.timeout(4000)）',
-  网段.includes('AbortSignal.timeout(4000)') && 网.includes('4000'));
-台.判('那个 User-Agent 一字没改', 网段.includes("'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'") && 网.includes('Mozilla/5.0 (Windows NT 10.0; Win64; x64)'));
-台.判('状态码不是 2xx 就算了（那一头 if(!r.ok) return 空串）', 网段.includes('if(!r.ok)') && 网.includes('200..300'));
-台.判('标题那一截最长四百字、洗完留一百二十个字（照那段正则与 slice）',
-  网段.includes('{0,400}') && 页.includes('最长一截: usize = 400') && 页.includes('留多少字: usize = 120') && 网段.includes('.slice(0, 120)'));
-台.判('那七条命名实体一条都不许多加（照 htmlTitle 那张表）',
+  /pub async fn web_title\(url: String\) -> String/.test(网) && !/-> Option<String>/.test(网));
+台.判('只认 http 与 https 那两种方案（判断住在纯判断那一格）',
+  /if 方 != "http" && 方 != "https"/.test(页) && /pub fn 肯取的地址/.test(页));
+台.判('四秒这一道兜底在（等不到就算了，不挂在这儿）', 网.includes('const 四秒: u32 = 4000'));
+台.判('那个 User-Agent 一字没改', 网.includes('Mozilla/5.0 (Windows NT 10.0; Win64; x64)'));
+台.判('状态码不是 2xx 就算了', 网.includes('200..300'));
+台.判('标题那一截最长四百字、洗完留一百二十个字',
+  页.includes('最长一截: usize = 400') && 页.includes('留多少字: usize = 120'));
+台.判('那六条命名实体一条都不许多加（htmlTitle 那张表）',
   ['nbsp', 'quot', 'apos', 'lt', 'gt', 'amp'].every(x => 页.includes('"' + x + '"')) && !页.includes('"euro"'));
 
 台.题('八、纯判断那三格不动磁盘、不认识壳');
