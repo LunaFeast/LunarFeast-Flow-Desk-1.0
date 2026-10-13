@@ -33,7 +33,7 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { TREE, git, 分家, 拼装, 拼装支, 各家快进, 本轮那一支名, 各家说明, 主程序笔名,
   合进那条支, 重建集成分支, 本地前瞻支 } from './plugin-repos.mjs';
-import { 读清单, 读盘清单, 确认词, 支名形状, 认支类, 可推远程, 支名可用, 文字齐 } from './push-list.mjs';
+import { 读清单, 读盘清单, 确认词, 支名形状, 认支类, 可推远程, 支名可用, 文字齐, 集成分支名 } from './push-list.mjs';
 import { 跑闸, 私人串清单 } from './public-scan.mjs';
 import { 认这项, 中文名 as 中文名of, 分支of } from './forward-features.mjs';
 
