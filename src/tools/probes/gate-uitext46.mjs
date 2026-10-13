@@ -1,5 +1,5 @@
 /* ============================================================
-   gate-uitext46.mjs · 「界面文字」和「卡片大小」那两条写进程序的路，各认各的落点
+   gate-uitext46.mjs · 「界面文字」写回源码那一条路认它的落点
    ------------------------------------------------------------
      node src/tools/probes/gate-uitext46.mjs
    钉的是这么几件事：
@@ -10,7 +10,6 @@
      三 · plan()/apply() 不再收「那一张页面文件」那一个参数（收了就是还留着老那条路）；
      四 · 对不上的仍进 miss；同一组底下每一处都换、别组一个字不动；拼接式按槽拆回去；
           「这句不要了」掏空；落完笔清单自己刷新（已经写进源码的那几行不再算改动）；
-     五 · 卡片大小那一摊照旧：落点是装机那一张页面（pageSpan / readPage 还在承重）；
      六 · 程序里那台旧的「改界面文字」撤干净：运行时替换那一层、主进程与桥那八条通道、
           功能包递 Phrase 那一条 —— 都不许长回来。
    这一台不读 pages\ 里那一份真的页面文件（那是他的文稿目录，一个字节都不许量）：现场是沙盒里
@@ -25,8 +24,7 @@ import { ROOT, rd, 切, 记账 } from './lib-slice.mjs';
 const 台 = 记账('gate-uitext46');
 const require = createRequire(import.meta.url);
 const U = require(ROOT + 'src/pack/uitext.cjs');
-const C = require(ROOT + 'src/pack/cardsize.cjs');
-const 文UIT = rd('src/pack/uitext.cjs'), 文CSZ = rd('src/pack/cardsize.cjs');
+const 文UIT = rd('src/pack/uitext.cjs');
 const 文主 = rd('src/pack/main.cjs'), 文载 = rd('src/pack/preload.cjs'), 文桥 = rd('src/_tauri/ui/fd-bridge.js');
 const hash = p => { try{ const b = fs.readFileSync(p); return b.length + ':' + require('node:crypto').createHash('sha1').update(b).digest('hex'); }catch(e){ return '读不到'; } };
 const 颗 = (源, 名) => { try{ return 切(源, 名); }catch(e){ return ''; } };
@@ -125,8 +123,8 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
 {
   台.判('locate / plan / apply 三颗的签名都只到 edits 为止',
     /function locate\(TREE, edits\)/.test(文UIT) && /function plan\(TREE, edits\)/.test(文UIT) && /function apply\(TREE, edits\)/.test(文UIT));
-  台.判('locate 那一颗里不再拿 pageSpan 往页面上找位置（写回源码不需要搬）',
-    !/pageSpan\(/.test(颗(文UIT, 'locate')) && /每份\.values\(\)/.test(颗(文UIT, 'locate')));
+  台.判('locate 那一颗认位置靠的是每一份源码自己那一段（往一张已经生成的页面上搬位置那两把整台没了）',
+    /每份\.values\(\)/.test(颗(文UIT, 'locate')) && !/pageSpan|readPage/.test(文UIT));
   台.判('界面文字那一屏不再让人挑「写进哪一张页面」（页面文件那一格整个撤了）',
     !rd('src/_build/push-ui.html').includes('id="字页"') && !rd('src/_build/push-ui.mjs').includes('function 页面单'));
   台.判('那一屏写句子那一道递给 apply 的是树与改动两样（多递一枚页面文件名就是还留着老路）',
@@ -172,31 +170,8 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
     源码清单.every(rel => { try{ new vm.Script(读(rel), { filename:rel }); return true; }catch(e){ return false; } }));
 }
 
-/* ---------- 五 · 卡片大小那一摊照旧贴装机那一张 ---------- */
-台.题('五 · 卡片大小那一摊照旧：落点是装机那一张页面（pageSpan 还在承重）');
-{
-  const 双份的页 = 份('Flow_Desk_0.0.2+build.0000001.html',
-    '<html><script>\n' + 读('src/_fd/src/fd8-tools.js') + '\n' + 读('src/_fd/src/fd8-tools.js') + '\n</script></html>\n');
-  台.判('pageSpan / readPage / PAGE_PAD 还在（卡片大小那一摊靠它们，界面文字这一摊不再用）',
-    typeof U.pageSpan === 'function' && typeof U.readPage === 'function' && U.PAGE_PAD > 0
-    && /pageSpan\(body, bundle/.test(文CSZ));
-  const c = C.plan(树, [{ name:'其他卡片', to:'9 × 7' }], 页);
-  台.判('「其他卡片」那一句兜底在页面文件里对得上（能写）', c.list.length === 1 && c.miss.length === 0);
-  const 没兜底的页 = 份('Flow_Desk_0.0.1+build.0000000.html', '<html><script>\n' + 读('src/_fd/src/z1-view.js') + '\n</script></html>\n');
-  const c2 = C.plan(树, [{ name:'其他卡片', to:'2 × 2' }], 没兜底的页);
-  台.判('那一段不在页面文件里 → 卡片大小那一句进 miss（这一摊还是老口径）', c2.list.length === 0 && c2.miss.length === 1);
-  const 前 = hash(双份的页);
-  const c3 = C.apply(树, [{ name:'其他卡片', to:'9 × 7' }], 双份的页);
-  台.判('锚在那一张页面里出现两回 → 不敢猜改哪一处：一个字节都不写（files ' + c3.files.length + '）',
-    c3.done.length === 0 && hash(双份的页) === 前);
-  台.判('真拿一份不存在的页面文件去 plan 卡片大小，报的是读不到那一张', (() => {
-    try{ C.plan(树, [{ name:'其他卡片', to:'2 × 2' }], path.join(沙, '没有那一张.html')); return false; }
-    catch(e){ return /读不到要改的那一张页面文件/.test(String(e.message)); }
-  })());
-}
-
-/* ---------- 六 · 程序里那台旧的改字代码撤干净 ---------- */
-台.题('六 · 旧的「改界面文字」在程序里不留一根线（乙 运行时那一层 / 丙 通道 / 丁 名单）');
+/* ---------- 五 · 程序里那台旧的改字代码撤干净 ---------- */
+台.题('五 · 旧的「改界面文字」在程序里不留一根线（乙 运行时那一层 / 丙 通道 / 丁 名单）');
 {
   台.判('运行时替换那一层整份没了（src\\_shared\\sh-text.js）', !fs.existsSync(ROOT + 'src/_shared/sh-text.js'));
   台.判('生成那一趟不再把它拼进产物', !/sh-text/.test(rd('src/_fd/build.mjs')));
@@ -217,14 +192,18 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
     !/uiText/.test(rd('src/_shared/sh-load.js')) && !/uiText/.test(rd('src/_build/scan-packs.mjs')));
   台.判('Rust 那一头的地板与测试同样退了这两颗', !/uiText/.test(rd('src/_tauri/src/core/app_deny.rs'))
     && !/uiText/.test(rd('src/_tauri/src/core/perm_rule.rs')));
-  台.判('开机补铺那一列里只剩卡片大小那一份（程序运行时不读界面文字清单）',
-    !/ui-text/.test(颗(文主, 'syncLists')));
-  台.判('主进程不再跟着重扫界面文字清单（装完卸完功能只重扫卡片大小那一份）',
+  台.判('主进程里那一份「开机把出厂清单补铺到数据层」整台没了（程序运行时不读界面文字清单）',
+    !/syncLists|layList/.test(文主));
+  台.判('主进程不再跟着重扫界面文字清单（装完卸完功能都不重扫）',
     !/UIT/.test(文主) && !/require\(['"]\.\/uitext\.cjs['"]\)/.test(文主));
+  台.判('卡片大小那一台一处不留：清单生成器、运行时那一份、四颗通道、设置里那一行',
+    !fs.existsSync(ROOT + 'src/pack/cardsize.cjs') && !fs.existsSync(ROOT + 'src/_fd/src/fd10-size.js')
+    && !/cardSize|card-size/.test(文主) && !/cardSize|card-size/.test(文载) && !/cardSize|card-size/.test(文桥)
+    && !/SizeList|SizeCfg/.test(rd('src/_fd/src/fd3-shell.js') + rd('src/_fd/src/fd4-builtin.js') + rd('src/_fd/src/fd6-boot.js')));
 }
 
-/* ---------- 七 · 首装那一个窗口的字也在扫描那几棵树里（2026-10-13 他指着那一格说「这里的文字也要提供修改」）---------- */
-台.题('七 · 双击 setup.exe 看到的那一格：句子进清单、写回落进 sfx.cs');
+/* ---------- 六 · 首装那一个窗口的字也在扫描那几棵树里（2026-10-13 他指着那一格说「这里的文字也要提供修改」）---------- */
+台.题('六 · 双击 setup.exe 看到的那一格：句子进清单、写回落进 sfx.cs');
 {
   const 壳 = rd('src/pack/sfx.cs'), 发 = rd('src/pack/publish.mjs');
   台.判('扫描那一份里登记了这一份 C# 壳（只点名一份，不放开「只认 .js / .cjs」那个口子）',

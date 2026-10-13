@@ -155,25 +155,12 @@ if(!ONLY || ONLY === '2'){
   if(!area || !cols || !rows) warn('没在 ' + rel(shell || { rel:'?' }) + ' 里找全 EXPAND_AREA / GRID_COLS / GRID_ROWS 这三个名字，这一节跳过（它们改名了，这台也要跟着改）');
   else {
     const need = Math.floor(+cols[1] * +rows[1] * +area[1]);
-    const csPath = path.join(ROOT, 'data', 'card-size.yaml');
     let max = 0, who = '', count = 0;
-    /* 那一份的真实形状：每张卡两行 `出厂: 7 × 8` / `你要:`（空的就按出厂）—— 用「你要」那一行，
-       因为作者手填过的大小才是出厂桌面上真摆出来的那个数。 */
-    const num = s => { const m = /(\d+)\s*[×x*,]\s*(\d+)/.exec(s || ''); return m ? +m[1] * +m[2] : 0; };
-    if(fs.existsSync(csPath)){
-      let cur = null;
-      const flush = () => { if(cur){ const a = num(cur.yao) || num(cur.chu); if(a){ count++; if(a > max){ max = a; who = cur.name + '（' + a + ' 格）'; } } } cur = null; };
-      for(const line of fs.readFileSync(csPath, 'utf8').split(/\r?\n/)){
-        if(/^\s*#/.test(line) || !line.trim()) continue;
-        const m0 = /^\s{2}(\S.*?)\s*:\s*$/.exec(line);
-        if(m0){ flush(); cur = { name: m0[1].trim(), chu:'', yao:'' }; continue; }
-        if(!cur) continue;
-        const g = /^\s{4}(出厂|你要)\s*:\s*(.*)$/.exec(line);
-        if(g){ if(g[1] === '你要') cur.yao = g[2]; else cur.chu = g[2]; }
-      }
-      flush();
+    /* 每张卡出厂多大，看它自己注册那一句给的 def —— 一家一家数，取最大的一张 */
+    for(const h of all(/def:\{\s*w:\s*(\d+)\s*,\s*h:\s*(\d+)/g)){
+      const a = (+h.m[1]) * (+h.m[2]); count++;
+      if(a > max){ max = a; who = rel(h.f) + ':' + h.line + ' ' + h.m[1] + ' × ' + h.m[2]; }
     }
-    else warn('没有 ' + path.join('data', 'card-size.yaml') + ' 这一份，这一节白跑');
     /* 这道闸现在卡着哪几个函数：从每个 `  函数名(){` 起做一遍花括号配平，把范围圈出来 */
     const gated = [];
     const re = /^  ([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/gm;
@@ -193,14 +180,14 @@ if(!ONLY || ONLY === '2'){
        没交代的 = 只挂着这一道闸，功能等于没做。加一处新的阈值闸，这台就逼着写一句。 */
     const 交代过 = {
       dimTop:'封面那层（#fdCover 没 hidden）开着也算 —— ⛶ 那个按钮出厂就点得到（外29 第 43 轮改的）',
-      cardFor:'只决定卡片自己那枚 .expanded 类和 放大 按钮显隐，不是任何功能的唯一入口（用户手拉、手填大小才走得到）',
+      cardFor:'只决定卡片自己那枚 .expanded 类和 放大 按钮显隐，不是任何功能的唯一入口（用户自己把卡拉大才走得到）',
       bindDrag:'同上：拖大拖小过这一档时换 expanded 这一枚类，拖本来就是给用户手拉的口子，不是哪条功能的唯一入口',
     };
-    if(!count) warn('card-size.yaml 里一张卡的大小都没数到（那份的形状改了，这台要跟着改）');
+    if(!count) warn('一处卡片出厂大小都没数到（注册那一句的形状改了，这台要跟着改）');
     else if(!gated.length) warn('这一版里再没有「占够 ' + need + ' 格」那种闸了 —— 这一节的名单可以整块撤（先确认不是改名绕过去了）');
     else for(const g of gated){
       if(交代过[g.name]){ ok(g.at + '（' + g.name + '）要占够 ' + need + ' 格，出厂最大 ' + max + ' 格（' + who + '）—— 交代过别的口子：' + 交代过[g.name]); continue; }
-      bad(g.at + '（' + g.name + '）的生效条件是「占够 ' + need + ' 格」，而按 card-size.yaml 最大的一张只有 ' + max + ' 格 —— ' +
+      bad(g.at + '（' + g.name + '）的生效条件是「占够 ' + need + ' 格」，而各家注册的出厂大小里最大的一张只有 ' + max + ' 格 —— ' +
         '出厂走不到，这台又不知道界面上还有没有别的路（没在 selfcheck 第二节那张交代表里）。功能等于没做，' +
         '而任何"自己把 class 挂上再量计算值"的探针都会 PASS');
     }

@@ -310,8 +310,6 @@ function prepareTrees(tree){
       }
     }
   }
-  /* 两份清单（界面文字 / 卡片大小）第一次开机也从自带那一层落到 data\，落地之后这一份归用户。 */
-  syncLists(data, log);
   /* 插件不再跟着程序发：外43 撤掉了「开机把自带那一层铺成插件层」那一步 ——
      新树第一次开机就是没有插件，那一家一家归用户自己装（顶栏 ＋ 里导入，或把包丢进 data\plugins\）。
      老树留一次搬家：原版那一格从前住在自带那一层，第一次开机把它取到数据层的新格子里，
@@ -323,32 +321,6 @@ function prepareTrees(tree){
   }catch(e){ log.push('原版那一格没搬成：' + (e && e.code || e)); }
   save();
   return { log, blocked: blocked.join('；') };
-}
-/* 清单的自动落地（#270）：卡片大小 card-size.yaml 的真身就是 data\ 里那一份明文，出厂那份跟着程序走
-   （resources\app\data\）。第一次开机把自带那份铺到 data\，铺完这一份就归用户：以后一个字不再覆盖
-   （他改过的改动写进装机那一份是另一条路，走 plan/apply）。
-   自带那一层没带这份（老包）就不铺，读清单那里照旧能从源码现扫一份兜底。
-   两个触发口：开机这一趟（记进搬家日志）+ 哪一份还没铺成而页面先来读它（补铺，不记日志）。
-   界面文字那份（ui-text.yaml）不在这一列里了：运行时不换字（2026-10-13 方案甲，句子改在源码里），
-   程序开机不读它，它只是「GitHub 版本资源助手」那一屏的工作台文件，住在仓里的 data\ 那一格。
-   「用户数据详单」那一屏读的 userdata-list.md 不在这一列里，也不在出厂层里：那一篇是用户自己写的，
-   首次安装就没有它，清掉之后也没有谁替它兜底 —— 那一屏说「读不到」就是正确行为（2026-10-10 他定的）。 */
-function layList(data, name, log){
-  const work = path.join(data, name), src = path.join(DATA_BUNDLED, name);
-  if(fs.existsSync(work)) return true;
-  try{ if(!fs.statSync(src).isFile()) return false; }catch(e){ return false; }
-  try{
-    fs.mkdirSync(data, { recursive:true });
-    fs.copyFileSync(src, work);
-    if(log) log.push(name + ' 第一次落地：resources\\app\\data → data\\' + name);
-    return true;
-  }catch(e){
-    if(log) log.push(name + ' 没落成人：' + (e && e.code || e));
-    return false;
-  }
-}
-function syncLists(data, log){
-  for(const n of ['card-size.yaml']){ try{ layList(data, n, log); }catch(e){} }
 }
 
 /* ---------- 版本号文件取最新：按文件时间认最近写过的那一张 ----------
@@ -1447,100 +1419,12 @@ function runBuild(script, cwd, onLine, args){
   });
 }
 
-/* 卡片默认大小清单（#251）：扫源码、摆清单、写回，全在 cardsize.cjs。
-   清单在 data\card-size.yaml，一张卡片两行：卡片名底下「出厂:」是源码现在给的大小，
-   「你要:」写你要的大小；桌面卡片只有 Flow-Desk 有，这一份只管它。
-   它一变，广播 card-size:changed，页面按新默认重新盖大小。
-   （界面文字那一摊不再走这一层：运行时不换字，改的是源码那一份，由「GitHub 版本资源助手」那一屏
-    调 src\pack\uitext.cjs 写回源码再重跑生成 —— 2026-10-13 方案甲，主进程这里不留通道。） */
-let CSZ = null;
-try{ CSZ = require('./cardsize.cjs'); }catch(e){}
-const CARD_SIZE_FILE = () => path.join(DATA_ROOT, 'card-size.yaml');
-function readCardSizeRaw(){ try{ return fs.readFileSync(CARD_SIZE_FILE(), 'utf8'); }catch(e){ return ''; } }
-function ensureCardSize(){
-  const f = CARD_SIZE_FILE();
-  try{ if(fs.existsSync(f)) return { ok:true, file:f }; }catch(e){}
-  /* 开机那一趟没铺成（老包 / 那一趟被别的程序占着），这儿补一次：先从自带那份落，落不到再扫源码现生成 */
-  try{ if(layList(DATA_ROOT, 'card-size.yaml', null)) return { ok:true, file:f }; }catch(e){}
-  if(!CSZ) return { ok:false, file:f, msg:'这份产物里没带 cardsize.cjs，生成不了清单' };
-  try{ CSZ.refresh(TREE); return { ok:fs.existsSync(f), file:f }; }
-  catch(err){ return { ok:false, file:f, msg:'生成清单失败：' + String((err && err.message) || err) }; }
-}
-function cardSizeEdits(){
-  try{ return CSZ ? CSZ.parse(readCardSizeRaw()).filter(r => r.to) : []; }catch(e){ return []; }
-}
-function broadcastCardSize(text){
-  for(const w of BrowserWindow.getAllWindows()){
-    if(w.isDestroyed()) continue;
-    try{ w.webContents.send('card-size:changed', text); }catch(err){}
-  }
-}
-/* 「把改动写进程序」那一条（卡片大小）的落点：装机里 pages\ 底下最近写过的那一张
-   Flow_Desk_<号>.html —— 认它这一手主进程早就有了（resolveEntry / latestIn，见上面那一颗），
-   这里直接用它，不写第二份。
-   从前这一条落完笔还要跑一趟「从源码重新生成页面」（rebuildPages 那一颗），现在这条路反了：
-   源码不动、改的就是产物，那一趟跟着撤干净。界面上「重新构建」那一条（sys:rebuild）照旧留着 ——
-   那是「改代码」那条路要的，和这一条不再有关系。 */
-function pageTarget(){
-  const f = resolveEntry(APP.entry);
-  return f ? { file:f }
-    : { msg:'找不到要改的那一份页面文件：' + PAGES_ROOT + '\\' + APP.entry +
-      '（这一条改的就是装机里那一份已经生成的页面，源码不动）' };
-}
-/* 重启自己：卡片大小清单「把改动写进程序」之后，托盘菜单、窗口标题这些
-   开机认一次的东西要重开才换得过来。走和 quitApp 同一条路（isQuitting + close + quit），
-   before-quit 该摘的托盘、该杀的音乐桥都照旧；relaunch 排在退出之后起新的。 */
+/* 重启自己：托盘菜单、窗口标题这些开机认一次的东西要重开才换得过来。走和 quitApp 同一条路
+   （isQuitting + close + quit），before-quit 该摘的托盘、该杀的音乐桥都照旧；relaunch 排在退出之后起新的。 */
 ipcMain.handle('app:restart', async () => {
   try{ app.relaunch(); }catch(e){ return { ok:false, msg:'这台机器重启不了：' + ((e && e.message) || e) }; }
   setTimeout(() => { app.isQuitting = true; const w = live(); if(w) w.close(); app.quit(); }, 250);
   return { ok:true };
-});
-/* ---------- #251 卡片大小清单：读写 / 问改动清单 / 写进装机那一份 ----------
-   read/write 走磁盘这一份，plan 只出改动清单，apply 真写 —— 落点是装机里的东西，源码一个字不碰，
-   也不再重新生成页面：
-   「其他卡片」那一句兜底数字改的是 pages\ 那一张页面文件里的一段（它跟着 fd8-tools.js 原样拼进页面），
-   其余几家改的是 data\plugins\<id>\main.js（配方还有 recipe.json）—— 那两份本来就不是 src\ 底下的源码。
-   不显示文件路径、不提供「打开清单」按钮。 */
-ipcMain.handle('card-size:read', async () => {
-  ensureCardSize();
-  return { text: readCardSizeRaw(), file: CARD_SIZE_FILE() };
-});
-ipcMain.handle('card-size:write', async (e, text) => {
-  try{
-    const g = ensureCardSize();
-    if(!g.ok && g.msg) return g;
-    fs.mkdirSync(DATA_ROOT, { recursive:true });
-    fs.writeFileSync(CARD_SIZE_FILE(), String(text || ''));
-    broadcastCardSize(String(text || ''));
-    return { ok:true };
-  }catch(err){ return { ok:false, msg:String((err && err.message) || err) }; }
-});
-ipcMain.handle('card-size:plan', async () => {
-  if(!CSZ) return { ok:false, msg:'这份产物里没带 cardsize.cjs，认不出改动清单' };
-  if(!ROOTS.src) return { ok:false, msg:'这台机器没记下源码在哪儿，认不出每张卡片的大小住在哪儿（清单照旧能改大小）' };
-  const t = pageTarget();
-  if(t.msg) return { ok:false, msg:t.msg };
-  try{ const p = CSZ.plan(TREE, cardSizeEdits(), t.file); return { ok:true, list:p.list, miss:p.miss }; }
-  catch(err){ return { ok:false, msg:String((err && err.message) || err) }; }
-});
-ipcMain.handle('card-size:apply', async (e, list) => {
-  if(!CSZ) return { ok:false, msg:'这份产物里没带 cardsize.cjs，写不进去' };
-  if(!ROOTS.src) return { ok:false, msg:'这台机器没记下源码在哪儿，认不出每张卡片的大小住在哪儿' };
-  const t = pageTarget();
-  if(t.msg) return { ok:false, msg:t.msg };
-  const edits = Array.isArray(list) ? list : cardSizeEdits();
-  let r = null;
-  try{ r = CSZ.apply(TREE, edits, t.file); }
-  catch(err){ return { ok:false, msg:'改装机里那一份这一步就失败了：' + String((err && err.message) || err) }; }
-  if(!r.done.length) return { ok:false, msg:'没有可写的改动（「你要」那一行还都空着或者跟出厂一样）' };
-  for(const w of BrowserWindow.getAllWindows()){
-    if(w.isDestroyed()) continue;
-    try{ w.webContents.send('rebuild:done', { files:['卡片大小写进装机 · ' + r.done.length + ' 处'] }); }catch(err){}
-  }
-  broadcastCardSize(readCardSizeRaw());
-  const missNote = r.miss.length ? '；另有 ' + r.miss.length + ' 行认不出那张卡片，或者那一句在页面文件里对不上，没动它们' : '';
-  return { ok:true, msg:'已写进装机里那一份（' + r.files.map(f => path.basename(f)).join('、') + '）：' +
-    r.done.length + ' 处' + missNote + '（各窗口刷新就是新大小）' };
 });
 /* ---------- #291 #292 库文件：data\palettes.yaml 色卡（成套那一份）、data\cards.yaml 色卡（一个一个攒的那一份）、
    data\looks.yaml 外观方案、data\images.yaml 图片库清单、data\lib-pending.json 待实现清单 ----------
@@ -1577,9 +1461,8 @@ ipcMain.handle('lib:write', async (e, name, text) => {
   }catch(err){ return { ok:false, msg:String((err && err.message) || err) }; }
 });
 /* 外部编辑器改了磁盘这一份 → 300ms 内合并成一次广播。盯的是 data\ 目录里这个名字，
-   不是文件本身：Notepad++ 存盘可能换一个新文件进来，盯文件会跟丢。
-   #251：卡片大小清单也住在 data\，各走各的广播，盯法一样。 */
-let cardSizeWatchTimer = null, dataWatched = false;
+   不是文件本身：Notepad++ 存盘可能换一个新文件进来，盯文件会跟丢。 */
+let dataWatched = false;
 const libWatchTimers = {};
 function startDataWatch(){
   if(dataWatched) return;
@@ -1590,11 +1473,6 @@ function startDataWatch(){
       if(LIB_NAMES.includes(n)){                                   /* #291 #292 色卡 / 外观方案 */
         clearTimeout(libWatchTimers[n]);
         libWatchTimers[n] = setTimeout(() => broadcastLib(n, readLibRaw(n)), 300);
-        return;
-      }
-      if(n === 'card-size.yaml'){
-        clearTimeout(cardSizeWatchTimer);
-        cardSizeWatchTimer = setTimeout(() => broadcastCardSize(readCardSizeRaw()), 300);
         return;
       }
     });
@@ -1613,23 +1491,6 @@ function startDataWatch(){
 const PACKS_DIR = () => path.join(DATA_ROOT, 'plugins');
 const OFF_LIST = 'off.json';
 const OLD_LIST = 'installed.json';   /* 外41 六段之前那份「装了哪些」，读到一次就换算掉 */
-/* #277：装完、删完功能之后卡片大小那份清单马上跟着变。
-   它是照着源码扫出来的，包里新摆的那张卡片扫一遍才进清单；扫完直接写回 data\ 那一份明文，
-   写盘这一下又让上面那个盯目录的 fs.watch 抓到，各窗口的页面当场按新大小摆 —— 不用重启，也不用重新生成页面。
-   界面文字那一摊不在这里：它不再由程序重扫（运行时不换字了），改句子走「GitHub 版本资源助手」那一屏。
-   排在回话之后跑（setImmediate）：这一趟要把整棵树的源码读一遍，别让它挡着页面上那个进度条。 */
-function refreshLists(){
-  /* 这台机器不知道源码在哪（拷到没源码的机器上那份产物）就别扫：
-     扫出来是空的，写盘会把用户已经写好的那几行改动一起抹掉 */
-  if(!ROOTS.src) return;
-  setImmediate(() => {
-    let m = null;
-    try{ m = CSZ; }catch(e){}
-    if(!m || typeof m.refresh !== 'function') return;
-    try{ const r = m.refresh(TREE); logLine('清单', '重扫 ' + ((r && r.file) || '') + '：' + ((r && r.rows) || 0) + ' 行'); }
-    catch(err){ logLine('清单', '重扫没成：' + String((err && err.message) || err)); }
-  });
-}
 /* 一个包摊平后的样子：id + 插件清单 + 它是文件夹还是 zip + 文件列表（文件夹） */
 function packOne(dir, name, kind){
   const up = require('./zip-read.cjs');
@@ -1874,7 +1735,6 @@ ipcMain.handle('pack:import', (e, payload) => {
       const r = expandZipPack(dir, buf, id);
       if(!r.ok) return bad(r.msg);
       keepOriginal(id);                                            /* 导入即留一份原版 */
-      refreshLists();                                              /* #277：新包里的字和卡片大小立刻进清单 */
       return { ok:true, id, where:id + '/', files:r.files, name:r.name };
     }
     if(st.isDirectory()){
@@ -1896,7 +1756,6 @@ ipcMain.handle('pack:import', (e, payload) => {
         fs.copyFileSync(path.join(src, ...rel.split('/')), dest);
       }
       keepOriginal(id);                                            /* 导入即留一份原版 */
-      refreshLists();                                              /* #277：新包里的字和卡片大小立刻进清单 */
       return { ok:true, id, where:id + '/', files:list.length, name:m.name || id };
     }
     return bad('挑的东西既不是文件也不是文件夹');
@@ -1952,12 +1811,12 @@ ipcMain.handle('comp:read', (e, id, rel) => { try{ return COMP.read(id, rel); }
 ipcMain.handle('comp:list', (e, id) => { try{ return COMP.list(id); }
   catch(err){ return { ok:false, msg:String((err && err.message) || err) }; } });
 /* #277：改代码存一次、整格删掉一次、恢复出厂一次 —— 这三趟都动了包里的源码，
-   两份清单跟着扫一遍，界面上那些字和卡片大小才跟得上现在这一份代码。 */
-ipcMain.handle('comp:write', (e, id, rel, text) => { try{ const r = COMP.write(id, rel, text); if(r && r.ok) refreshLists(); return r; }
+   界面上那一张「有哪些家」跟着刷新。 */
+ipcMain.handle('comp:write', (e, id, rel, text) => { try{ const r = COMP.write(id, rel, text); return r; }
   catch(err){ return { ok:false, msg:String((err && err.message) || err) }; } });
-ipcMain.handle('comp:delete', (e, id) => { try{ const r = COMP.remove(id); if(r && r.ok) refreshLists(); return r; }
+ipcMain.handle('comp:delete', (e, id) => { try{ const r = COMP.remove(id); return r; }
   catch(err){ return { ok:false, msg:String((err && err.message) || err) }; } });
-ipcMain.handle('comp:restore', (e, id, rel) => { try{ const r = COMP.restore(id, rel); if(r && r.ok) refreshLists(); return r; }
+ipcMain.handle('comp:restore', (e, id, rel) => { try{ const r = COMP.restore(id, rel); return r; }
   catch(err){ return { ok:false, msg:String((err && err.message) || err) }; } });
 ipcMain.handle('comp:factory', (e, id) => ({ ok:true, files:COMP.factoryFiles(id), has:COMP.hasFactory(id) }));
 
@@ -2603,8 +2462,6 @@ else {
       try{ packAdopt(); }catch(err){ logLine('插件', '开机摊开这一趟没跑成：' + String((err && err.message) || err)); }
       win = makeWindow();
       buildTray();
-      /* #251：开机就把卡片大小那份清单备好在磁盘上（没有就现扫源码生成），然后盯着 data\ 里的这一份 */
-      ensureCardSize();
       startDataWatch();
       /* 本地字体：开机就在后台重数一遍（装了新字体不该等谁去点「读系统字体」才看得见）。
          页面那头的 font:list 拿的是缓存，这一趟数完把新的推过去，界面自己刷新。 */

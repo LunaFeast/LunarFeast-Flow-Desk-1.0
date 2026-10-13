@@ -33,7 +33,6 @@ export const FORBID = {
   packList: '不开放（装卸归宿主）', packSet: '不开放（装卸归宿主）', packWipe: '不开放（装卸归宿主）',
   packImport: '不开放（装卸归宿主）', rebuild: '不开放（重新生成页面归宿主）',
   onRebuildDone: '不开放', onRebuildStep: '不开放', onIcons: '不开放',
-  cardSizeApply: '不开放', cardSizePlan: '不开放', onCardSize: '不开放',
   aboutInfo: '不开放（关于那一格归宿主）',
   winCtl: '不开放（窗口归宿主）', winState: '不开放', restartApp: '不开放', closeChoice: '不开放',
   setCloseChoice: '不开放', systemMing: '不开放（深浅色由宿主递 ctx.theme）',

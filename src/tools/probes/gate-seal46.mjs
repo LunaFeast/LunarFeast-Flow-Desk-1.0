@@ -177,8 +177,7 @@ const 必须挡 = ['dataWipe', 'dataRead', 'dataWrite', 'dataList', 'dataDir', '
   'packList', 'packSet', 'packFile', 'packImport', 'packWipe', 'rebuild',
   'compRead', 'compWrite', 'compDelete', 'compRestore', 'compFactory', 'compList',
   'winCtl', 'winState', 'restartApp', 'closeChoice', 'setCloseChoice', 'systemMing',
-  'aboutInfo', 'iconsList', 'fontList', 'ocrSwatch', 'imgPeek', 'imgOpen',
-  'cardSizeRead', 'cardSizeWrite', 'cardSizeApply', 'cardSizePlan'];
+  'aboutInfo', 'iconsList', 'fontList', 'ocrSwatch', 'imgPeek', 'imgOpen'];
 const 漏 = 必须挡.filter(名 => !地板.includes(名));
 台.判('该挡的 ' + 必须挡.length + ' 颗一颗不漏在地板上', 漏.length === 0, 漏);
 const 挡空 = 地板.filter(名 => !在桥上(名));

@@ -30,7 +30,7 @@
          这一颗不写备份、不落字条、不动包本身；抹成了才进 removed、抹不动不报错、永远 ok:true；
          files 报的是页面递进来的原文、shared 报的是折过的那一串（原件两处不同，一处都不许多折、也不许少折）；
      十、纯判断那一格带测试、不动磁盘、不认识壳；
-     十一、账：覆盖率 已搬 63 / 67、main.rs 顶上那句「还剩几颗没搬」跟着改成 4、
+     十一、账：主进程那 63 颗通道全在壳的注册单上、main.rs 顶上不再写「还剩几颗没搬」那一句、
           四道同族闸的数撞得上、跑测试此刻全绿 233 颗零警告；
           本批那几本文本里一个字节都没写这台机器的盘符、帐户名、私人目录名。
    ============================================================ */
@@ -561,8 +561,8 @@ for (const [颗, 期望, 原样] of 那十句) {
 台.判('开机那一趟 packAdopt 与界面「导入」共用同一颗摊法（原件注释就这么写的），壳里也只有一颗',
   切(main, 'packAdopt').includes('expandZipPack(dir, buf, id);')
   && (动.match(/fn 摊成一家\(/g) || []).length === 1);
-台.判('原件导入成了之后那句 refreshLists 没搬，缺口写在文件顶上（不假装搬齐）',
-  主挑.includes('refreshLists();') && 动.includes('refreshLists') && 动.includes('没搬'));
+台.判('原件导入成了之后不再叫那句重扫，pack_cmds 顶上那几处差不再写这一条',
+  !/refreshLists/.test(主挑) && !/refreshLists/.test(动) && 动.includes('四处差'));
 
 台.题('十、pack:wipe：删哪几格、留哪几格，逐格钉住（一手都不许多删）');
 const 主抹 = 那一段('pack:wipe');
@@ -721,8 +721,8 @@ const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n))
 台.判('插件那一列这五颗全搬齐了（这一列剩零颗没搬）',
   ['pack:list', 'pack:file', 'pack:set', 'pack:import', 'pack:wipe'].every(c => 已搬.includes(c)));
 台.判('已搬总数到了 63（批六那 60 颗 + 批七这三颗：30 + 8 + 7 + 9 + 4 + 2 + 3）', 已搬.length === 63);
-台.判('还没搬的照实记着：主进程还剩 ' + (电.length - 已搬.length) + ' 颗', 电.length - 已搬.length === 4);
-台.判('main.rs 顶上那句「还剩几颗没搬」跟着改成 4（界面文字那六颗跟着 #175 撤了；不许写着旧数当已实现）', 壳.includes('剩下的 4 颗'));
+台.判('两头一颗不差：主进程那 ' + 电.length + ' 颗通道全在壳的注册单上', 电.length === 已搬.length && 电.length === 63);
+台.判('main.rs 顶上那句「还剩几颗没搬」整句撤了（壳里一颗不差，不许留着一句旧账当已实现）', !/还没搬|剩下的 4 颗/.test(壳));
 台.判('main.rs 顶上那句也点了这一批那三颗（⑪ 那一段），不是只改了个数',
   壳.includes('⑪ 插件那一列剩下那三颗') && 壳.includes('pack:set / pack:import / pack:wipe'));
 台.判('main.rs 的注册单上这三颗排在 ⑪ 那一段后面（一格一段，不是散着塞的）',
@@ -737,10 +737,10 @@ const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n))
     return 它.includes('已搬.length === 63') && 它.includes('已搬.length === 60') === false
       && 它.includes('已搬.length === 58') === false && 它.includes('已搬.length === 54') === false
       && 它.includes('已搬.length === 45') === false && 它.includes('已搬.length === 13') === false;
-  }) && rd('src/tools/probes/gate-tauricomp46.mjs').includes("壳.includes('剩下的 4 颗')"));
-台.判('另四道同族闸那句「还剩几颗没搬」也一起跟上 4（一处旧数都不留）',
+  }) && rd('src/tools/probes/gate-tauricomp46.mjs').includes('整句撤了'));
+台.判('另四道同族闸那句「还剩几颗没搬」的账也一起撤了（一处旧账都不留）',
   ['gate-tauridata46', 'gate-tauribackup46', 'gate-tauricomp46', 'gate-taurimedia46'].every(名 =>
-    rd('src/tools/probes/' + 名 + '.mjs').replace(/'(?:[^'\\\n]|\\.)*'/g, "''").includes('=== 4)')));
+    !rd('src/tools/probes/' + 名 + '.mjs').replace(/'(?:[^'\\\n]|\\.)*'/g, "''").includes('=== 4)')));
 台.判('跑测试那一道此刻是全绿 233 颗零警告（212 → 219 运行日志那 7 颗 → 220 本地协议类型表那 1 颗 → 233 批九网格吸附那 13 颗），与本道数的字数同一现场',
   全测试数() === 233);
 台.判('媒体那一道闸数的字数与本道同一现场（两道闸数的是同一棵树，不许各说各话）',

@@ -313,8 +313,8 @@ const 壳写 = 壳字段(动, '一个回执');
   && 纯.includes('format!("这份文件 {}MB，太大不走这条路"') && 纯.includes('format!("这份 {}MB，太大不走这条路"'));
 台.判('写下去报的 size 是字节数（buf.length 那一手），不是字符数',
   动.includes('let 节 = text.as_bytes();') && 动.includes('一个回执::成了(节.len() as u64)'));
-台.判('主进程那三颗（write / delete / restore）成了之后叫 refreshLists —— 那两摊清单还没搬，这一层明写着缺口',
-  那一段('comp:write').includes('if(r && r.ok) refreshLists()') && 动.includes('refreshLists'));
+台.判('主进程那三颗（write / delete / restore）成了之后不再叫任何重扫（那两台清单都不再由程序重扫），这一层顶上也不挂「已知缺口」那一段',
+  !/refreshLists/.test(那一段('comp:write')) && !/refreshLists/.test(动) && !动.includes('已知缺口'));
 台.判('那一层任何一步都不抛给页面（六颗返回的类型都不是 Result）',
   !/pub fn comp_\w+\([^)]*\) -> Result/.test(动));
 
@@ -413,7 +413,7 @@ const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n))
 台.数('覆盖率那一句', '已搬 ' + 已搬.length + ' / ' + 电.length);
 台.判('这一批 7 颗全在已搬名单里', 批.every(x => 已搬.includes(x[0])));
 台.判('已搬总数到了 63（这一批那七颗在里头，往后音乐遥控器那九颗、批五那四颗、批六那两颗与批七那三颗也已经跟上：30 + 8 + 7 + 9 + 4 + 2 + 3）', 已搬.length === 63);
-台.判('还没搬的照实记着：主进程还剩 ' + (电.length - 已搬.length) + ' 颗', 电.length - 已搬.length === 4);
+台.判('两头一颗不差：主进程那 ' + 电.length + ' 颗通道全在壳的注册单上', 电.length === 已搬.length && 电.length === 63);
 台.判('三处账目撞得上：另两道闸里那句已搬数与本道同一个现场数（不是一处改了别处还写着旧数）',
   rd('src/tools/probes/gate-tauridata46.mjs').includes('已搬.length === 63')
   && rd('src/tools/probes/gate-tauribackup46.mjs').includes('已搬.length === 63')
@@ -426,5 +426,5 @@ const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n))
   && rd('src/tools/probes/gate-tauribackup46.mjs').includes('已搬.length === 45') === false
   && rd('src/tools/probes/gate-tauribackup46.mjs').includes('已搬.length === 54') === false
   && rd('src/tools/probes/gate-taurimedia46.mjs').includes('已搬.length === 63'));
-台.判('主.rs 顶上那句「还剩几颗没搬」跟着改成 4（界面文字那六颗跟着 #175 撤了；不许写着旧数当已实现）', 壳.includes('剩下的 4 颗'));
+台.判('主.rs 顶上那句「还剩几颗没搬」整句撤了（壳里一颗不差，不许留着一句旧账当已实现）', !/还没搬|剩下的 4 颗/.test(壳));
 台.收尾();

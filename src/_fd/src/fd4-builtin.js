@@ -2292,10 +2292,8 @@ function tabData(){
     Backup.账().then(补);                /* 磁盘上那一账是问出来的：先摆着，问到就补那两个字 */
     return blk;
   })()));
-  /* #251 · 卡片大小清单：摆在「数据」这一档，一行一张卡片。
-     下面这一包对话框接法（确认框 + 写进程序后问一句重启）是它一个人在用 ——
-     界面文字那一行外46 十二撤走了，那份清单改由 GitHub 版本资源助手那一台管（src\_build\push-ui.mjs）。
-     桌面卡片只有 Flow-Desk 有，这一份只摆在这一边。 */
+  /* 下面这一包对话框接法（确认框 + 改完问一句重启）现在只有「一键清理」在用 ——
+     界面文字那一行外46 十二撤走了，那份清单改由 GitHub 版本资源助手那一台管（src\_build\push-ui.mjs）。 */
   const listDlg = {
     base:{ row:'fd-row', btn:'fd-btn', input:'fd-input', hint:'fd-hint' },
     dlg(title, body, okText){
@@ -2307,7 +2305,7 @@ function tabData(){
         ], () => res(yes));
       });
     },
-    /* 写进程序之后问一句：立刻重启还是稍后自己重启（各窗口刷新也能见到新字，只是菜单托盘要重启才换） */
+    /* 这一类要重启才全换的做法：问一句立刻重启还是稍后自己重启（各窗口刷新也能见到新字，只是菜单托盘要重启才换） */
     askRestart(msg){
       return new Promise(res => {
         Modal.open('改动已经写进程序', h('div', { style:'display:grid;gap:8px;min-width:380px' }, [
@@ -2321,7 +2319,6 @@ function tabData(){
     },
     restart(){ return window.FD_APP && window.FD_APP.restartApp ? window.FD_APP.restartApp() : { ok:false }; }
   };
-  box.appendChild(row('卡片大小', SizeCfg.settingsRow(listDlg)));
   /* ---------- 外42 二 · 一键清理所有用户数据 ----------
      三次确认：点这一颗算第一次，后面两道各问一句（那两句就是他给的原话，不添小字）。
      真删不在这一趟：浏览器存储那一格此刻正被内核占着，当场删一半比不删更糟 —— 所以只排一张字条，
@@ -2335,7 +2332,7 @@ function tabData(){
       if(!r || !r.ok){ toast((r && r.msg) || '清理没排下去'); return; }
       if(await listDlg.askRestart('清理排下了：重启之后就是刚装好的样子。') === 'now') await listDlg.restart();
     }}, '一键清理所有用户数据'),
-    h('span', { class:'fd-hint' }, '删的是数据层那一格里属于你的东西（书、文稿、卡片、看板、逐字记录、插图、色卡与外观方案、界面文字与卡片大小那两份清单、浏览器存储）· 留着插件、日志、搬家账本')
+    h('span', { class:'fd-hint' }, '删的是数据层那一格里属于你的东西（书、文稿、卡片、看板、逐字记录、插图、色卡与外观方案、界面文字清单、浏览器存储）· 留着插件、日志、搬家账本')
   ])));
   return box;
 }

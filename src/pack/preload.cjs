@@ -287,18 +287,6 @@ window.FD_APP = {
   async setRimeDir(p){ try{ return await ipcRenderer.invoke('cfg:rimeSet', p); }catch(e){ return null; } },
   /* 从前这里还有一条 rimeThemes()：把 Rime 目录里的 weasel 配色原文递给页面解析。
      件-9 整条撤下 Rime 配色，这条跟着撤；上面两条是给声笔输入法练习指目录用的，留着。 */
-  /* ---------- #251 卡片大小清单（data\card-size.yaml）：运行时那一半（fd10-size.js）喊这几条 ----------
-     读 / 写 / 问改动清单 / 写进装机那一份；onCardSize 订的这条广播，磁盘那份一变就来喊。
-     不显示文件路径、没有「打开清单」这一条。 */
-  async cardSizeRead(){ try{ return await ipcRenderer.invoke('card-size:read'); }catch(e){ return { text:'', file:'' }; } },
-  async cardSizeWrite(text){ try{ return await ipcRenderer.invoke('card-size:write', text); }catch(e){ return { ok:false, msg:String((e && e.message) || e) }; } },
-  async cardSizePlan(){ try{ return await ipcRenderer.invoke('card-size:plan'); }catch(e){ return { ok:false, msg:String((e && e.message) || e) }; } },
-  async cardSizeApply(list){ try{ return await ipcRenderer.invoke('card-size:apply', list); }catch(e){ return { ok:false, msg:String((e && e.message) || e) }; } },
-  onCardSize(fn){
-    const wrap = (e, text) => { try{ fn(String(text || '')); }catch(err){} };
-    ipcRenderer.on('card-size:changed', wrap);
-    return () => { try{ ipcRenderer.removeListener('card-size:changed', wrap); }catch(err){} };
-  },
   /* ---------- #291 #292 与外29 丁组 那三份库文件 ----------
      （data\palettes.yaml 色卡 / data\looks.yaml 外观方案 / data\images.yaml 图片库）
      认哪一份由页面说（'palettes.yaml' / 'looks.yaml' / 'images.yaml'），主进程只搬原文。

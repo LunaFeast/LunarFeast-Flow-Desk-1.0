@@ -56,13 +56,11 @@ function sameBytes(a, b){
   try{ y = fs.readFileSync(b); }catch(e){ return false; }
   return x.length === y.length && x.equals(y);
 }
-/* 页面 + 出厂数据各铺一份进 resources/app，路径形状和树里一模一样：
+/* 页面 + 程序壳各铺一份进 resources/app，路径形状和树里一模一样：
    这样 fdapp:// 的 URL 不变，页面里写的相对路径照样命中。
    同一块盘上改用硬链接铺：兜底那份不额外占地方，整个文件夹拷去别的电脑时链接会自然摊平成普通文件，
    内容一个字不少；链接建不上（跨盘）就退回复制。
-   只有页面走这条。那一份出厂清单（卡片大小）必须真复制（real:true）：
-   它们和用户的 data\ 里那一份是同一个名字，链上去就成了同一个文件 —— 用户改了底本就跟着变，
-   「恢复出厂」那把「他没动过才刷新」的尺就作废了。和出厂组件一个口径。 */
+   只有页面走这条；标了 real:true 的那几档一律真复制 —— 链上去就成了同一个文件，源那边一动底本就跟着变。 */
 function into(src, dst){
   fs.mkdirSync(path.dirname(dst), { recursive:true });
   fs.rmSync(dst, { force:true });
@@ -110,7 +108,7 @@ const SHELL_SKIP = ['smtc-watcher.ps1'];
 
 /* ---------- 这一层该有什么：一张活儿清单，apply 照着铺，plan 照着比 ----------
    五种活儿：
-     file  一个文件（from 是树上那一份）—— 页面产物、两份出厂底本、那一份出厂清单、程序壳那些 .cjs/.ps1
+     file  一个文件（from 是树上那一份）—— 页面产物、两份出厂底本、程序壳那些 .cjs/.ps1
      buf   一个文件（内容是现场从包里取的）—— 词库底本
      gen   一个文件（内容是现场算出来的）—— root.json、package.json
      tree  一整格，先抹后铺 —— 出厂插件那一层（「恢复出厂」取的就是它）
@@ -124,16 +122,10 @@ function jobs(){
   const page = fs.existsSync(当前) ? 当前 : pickLatest(SRC_PAGES, 'Flow_Desk_*.html');
   if(page) out.push({ k:'file', note:'页面兜底', from:page, to:path.join(RES, 'pages', path.basename(page)) });
   else console.log('  ! ' + SRC_PAGES + ' 里没有 Flow_Desk_*.html，页面兜底这份没打进产物');
-  /* 出厂那一份清单（#270）：程序第一次开机照这份铺到用户的 data\ 里（syncLists）。
-     界面文字那一份跟着它的工具一起撤了（外46 八：改字改成直接改源码里的字面量，不进 data\），
-     所以这一格只剩卡片大小 —— 名单里少一个名字，出厂镜像与 audit 第一节才不会再对不上。 */
-  for(const name of ['card-size.yaml'])
-    out.push({ k:'file', real:true, note:'出厂清单 · 卡片大小',
-      from:path.join(SRC_DATA, name), to:path.join(RES, 'data', name) });
   /* 程序壳：src\pack 里所有 .cjs 一个不落，外加 app 层自己的 .ps1。
      为什么不写死名单 —— 2026-10-03 那次「A JavaScript error occurred in the main process：
      Cannot find module './comp-files.cjs'」就是这么来的：main.cjs 新 require 了一份模块，
-     名单没跟着补，程序直接起不来（cardsize.cjs 漏在同一处，它包在 try 里，表现为卡片大小那条设置静默失灵）。
+     名单没跟着补，程序直接起不来。
      下面 checkShellRequires() 是同一类病的检查：铺完就把 require 的名字逐个对一遍，缺一份当场报错。
      SHELL_SKIP 是外20 那一刀：监听的随行脚本（smtc-watcher.ps1 / vol-watcher.ps1）和桥插件的原件
      都在音乐遥控器的包里，app 层不再收一份 —— 同一份东西在程序里最多"运行的那一份 + 出厂那一份"。

@@ -9,7 +9,6 @@ import { icodeEmbed } from '../_vendor/icode/embed.mjs';
 import tree from '../_build/tree.cjs';
 import { assertClean } from '../_build/scan-packs.mjs';
 import uitext from '../pack/uitext.cjs';
-import cardsize from '../pack/cardsize.cjs';
 import { rpKernelSource } from '../_build/rp-kernel.mjs';
 import { 号, 页名 } from '../_build/version.mjs';
 import { PACK_RENAME } from '../_build/pack-rename.mjs';
@@ -37,7 +36,7 @@ if(!assertClean(path.join(TREE.data, 'plugins'), '生成 Flow-Desk 页面')) pro
    fd8-tools.js 是中立工具的 FD 侧适配，必须排在 _shared/ 那几段前面；
    fd5-load.js 排在 fd8 之后：它要交上去的 DATA_PRE / ToolKv 都在那儿定义；
    从前这里还排着一颗 fd7-help.js，为的是帮助文档能在启动流程跑起来之前挂到顶栏 —— 文档整份撤了（外44 六），它跟着摘掉 */
-const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-packs.js','../_shared/sh-load.js','../_shared/sh-color.js','../_shared/sh-ico.js','../_shared/sh-font.js','fd10-size.js','fd2-store.js','fd3-shell.js','fd3-lib.js','fd11-cards.js','fd12-rime-colors.js','fd13-colour-v1.js','fd9-title.js','fd4-builtin.js','fd8-tools.js','fd5-load.js',
+const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-packs.js','../_shared/sh-load.js','../_shared/sh-color.js','../_shared/sh-ico.js','../_shared/sh-font.js','fd2-store.js','fd3-shell.js','fd3-lib.js','fd11-cards.js','fd12-rime-colors.js','fd13-colour-v1.js','fd9-title.js','fd4-builtin.js','fd8-tools.js','fd5-load.js',
   '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js',
   '../_shared/sh-ttml.js',
   '../_shared/sh-mus.js',
@@ -68,9 +67,6 @@ let js = '\n/* ==== 版本号 · 真身在 src\\_build\\version.json，这一趟
    这一份产物里从来不嵌，程序运行时也不读它 —— 它是「GitHub 版本资源助手」那一屏的工作台：
    在那里填一句 → 写回源码那一份 → 重跑下面这三趟 → 界面上就是新句子（2026-10-13 方案甲）。 */
 uitext.refresh(TREE.tree);
-/* #251 · 卡片大小清单：同样只刷新 数据\card-size.yaml（一张卡片两行，用户写过的「你要」留着），
-   不再打一份进产物；盖大小的是 _fd/src/fd10-size.js（从前它躺在 _shared\ 里，可桌面卡片只有 Flow-Desk 有） */
-cardsize.refresh(TREE.tree);
 function add(name, src){
   try{ new vm.Script(src, { filename:name }); }
   catch(e){ console.error('SYNTAX FAIL ' + name + ': ' + e.message); process.exit(1); }

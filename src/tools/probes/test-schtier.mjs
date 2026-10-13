@@ -13,7 +13,6 @@ const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/,
 const ROOT = __树根;
 const SRC = fs.readFileSync(path.join(ROOT, 'data/plugins/schedule/main.js'), 'utf8');
 const SHELL = fs.readFileSync(path.join(ROOT, 'src/_fd/src/fd3-shell.js'), 'utf8');
-const YAML = fs.readFileSync(path.join(ROOT, 'data/card-size.yaml'), 'utf8');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (extra ? ' · ' + extra : '')); } };
 
@@ -76,7 +75,8 @@ const GC = Number(/const GRID_COLS = (\d+), GRID_ROWS = (\d+)/.exec(SHELL)[1]);
 const GR = Number(/const GRID_COLS = \d+, GRID_ROWS = (\d+)/.exec(SHELL)[1]);
 const EA = Number(/const EXPAND_AREA = ([\d.]+)/.exec(SHELL)[1]);
 const EXPAND_AT = GC * GR * EA;
-const factory = (() => { const seg = /日程:\n\s+出厂: *(\d+) *× *(\d+)/.exec(YAML); return seg ? (+seg[1]) * (+seg[2]) : -1; })();
+/* 出厂大小就看这一家自己注册那一句给的 def（从前它抄的是清单里那一行，清单整台撤了） */
+const factory = (() => { const seg = /def:\{\s*w:\s*(\d+),\s*h:\s*(\d+)/.exec(SRC); return seg ? (+seg[1]) * (+seg[2]) : -1; })();
 ok('5 这两档出厂走得到的路上摆（日程出厂 ' + factory + ' 格 < 150 < 300 < 放大那一条闸 ' + EXPAND_AT + ' 格，桌面共 ' + GC + ' × ' + GR + '）',
   factory === 56 && X.TIERS[1].at > factory && X.TIERS[2].at < EXPAND_AT && X.TIERS[2].at <= GC * GR, factory + ' / ' + EXPAND_AT);
 ok('6 判定只吃 C.item 那一格，没有第二套量像素的口径',

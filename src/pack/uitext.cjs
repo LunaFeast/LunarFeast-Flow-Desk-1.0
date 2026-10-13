@@ -246,7 +246,7 @@ const SH_CN = { 'sh-bank-ui':'词库界面', 'sh-banks':'词库', 'sh-code':'改
   'sh-load':'插件加载接线' };
 const FD_CN = { 'fd2-store.js':'存储', 'fd3-lib.js':'三份库文件（色卡 / 外观方案 / 图片库）',
   'fd3-shell.js':'主界面', 'fd4-builtin.js':'内置组件',
-  'fd5-load.js':'插件加载接线', 'fd6-boot.js':'启动', 'fd10-size.js':'卡片大小', 'fd11-cards.js':'色卡',
+  'fd5-load.js':'插件加载接线', 'fd6-boot.js':'启动', 'fd11-cards.js':'色卡',
   'fd12-rime-colors.js':'小企鹅配色那一串色号', 'fd13-colour-v1.js':'内置配色与随包纹理',
   'fd8-tools.js':'中立工具', 'fd9-title.js':'标题栏' };
 const WNW_CN = { 'w0-skin.js':'为写的皮肤与骨架', 'w1-core.js':'基础', 'w2-theme.js':'配色', 'w3-shell.js':'主界面',
@@ -628,10 +628,10 @@ function treeOf(from){
 /* 退休的源码不再扫。这个口子留着：以后再有"文件还在、字不该进清单"的，往这一行里加一个名字就行。
    （原先挂在这上头的 src/_shared/sh-phrase.js —— 旧「提示语」那一半 —— 外20 已经把文件本身删了：
    三棵源码树 44 份 .js 里唯一没被 build.mjs 点名的一份，产物里出现 0 次，git 里随时唤得回来。）
-   uitext.cjs / cardsize.cjs 是这两份清单的生成器本身：它们嘴里念的是"清单怎么写的"说明文字，
+   uitext.cjs 是这一份清单的生成器本身：它嘴里念的是"清单怎么写的"说明文字，
    不是界面上的字，扫进去就成了清单里的脏行（出处那一栏还会是个问号）。 */
 const SKIP_REL = new Set();
-const SKIP_NAME = new Set(['uitext.cjs', 'cardsize.cjs', 'wnw-kernel.js']);
+const SKIP_NAME = new Set(['uitext.cjs', 'wnw-kernel.js']);
 /* 只认 .js / .cjs，不跟着收 .mjs —— 这是量过的，不是漏的：
    这六棵被扫的树里 .mjs 一共九份（src/_fd：build / fd-serve / grad-survey / look-check，
    src/pack：build-app / mirror / publish，src/_wnw 与 src/_wcustom 各一颗 build-kernel），全是敲命令行跑的构建脚本，
@@ -953,36 +953,6 @@ function locate(TREE, edits){
   });
   return { 文件, list, miss };
 }
-/* 下面这一把「把源码里的位置搬到一张已经生成的产物上」是卡片大小那一摊还在用的（#251 往装机那一张页面上盖大小）；
-   界面文字那一摊 2026-10-13 起不再走它 —— 它写回源码，见上面第 8 段。 */
-const PAGE_PAD = 60;
-/* 源码里那一处字面量（off/len 是那一段带引号的原文在那一份源码里的位置）在页面文件里的位置；对不上回 -1
-   两把锚，一把不行退一把（都要求在那一张页面里只出现一处）：
-     宽的那把：前后各取 PAGE_PAD 个字 —— 认得最准，光一句「保存」这种短行也分得开是谁家的；
-     窄的那把：退成它所在的那一整行 —— 上一趟改掉的句子常常就在邻行，宽窗把那一处也带进去了就配不上，
-               而这一行本身还是原样，照样认得出（同一行里被改掉的那些只能算对不上，宁可不改）。 */
-function pageSpan(body, page, pc){
-  if(typeof body !== 'string' || typeof page !== 'string' || !pc || !(pc.len > 0)) return -1;
-  const lit = body.slice(pc.off, pc.off + pc.len);
-  if(!lit) return -1;
-  const 试 = (a, b) => {
-    const anchor = body.slice(a, b);
-    if(!anchor) return -1;
-    const at = page.indexOf(anchor);
-    if(at < 0 || page.indexOf(anchor, at + 1) >= 0) return -1;     /* 认不出，或者不止一处：这一处不动 */
-    const p = at + pc.off - a;
-    return page.slice(p, p + lit.length) === lit ? p : -1;
-  };
-  const 行首 = body.lastIndexOf('\n', Math.max(0, pc.off - 1)) + 1;
-  let 行尾 = body.indexOf('\n', pc.off + pc.len); if(行尾 < 0) 行尾 = body.length;
-  const 宽 = 试(Math.max(0, pc.off - PAGE_PAD), Math.min(body.length, pc.off + pc.len + PAGE_PAD));
-  return 宽 >= 0 ? 宽 : 试(行首, 行尾);
-}
-function readPage(pageFile){
-  if(!pageFile) throw new Error('没给要改的那一张页面文件');
-  try{ return fs.readFileSync(pageFile, 'utf8'); }
-  catch(e){ throw new Error('读不到要改的那一张页面文件：' + pageFile + '（' + ((e && e.code) || (e && e.message) || e) + '）'); }
-}
 /* 新句子按槽序拆回原来那几段字面量：'一共 {1} 项' → ['一共 ', ' 项'] */
 function splitTemplate(text, n){
   const bits = String(text).split(/\{(\d+)\}/);
@@ -1058,7 +1028,6 @@ function refresh(TREE, 丢掉){
 module.exports = { collectAll, groupsOf, render, parse, plan, apply, refresh, tokenize, scanJs, scanHtml,
   listFiles, pageOf, settingPages, packNames, uiTextPath, unesc, resc, splitTemplate, fnMap, fnAt, artifactBuilds,
   checkSyntax:语法闸,          /* 自检台拿「原样读得通 / 改完读不通」这一对反向验这一闸咬得住，别处不另写一把 */
-  pageSpan, readPage, PAGE_PAD,
   yq, kvOf, plainOk,
   P_FD, P_WNW, P_RP, P_MAIN, P_SH, P_PACK, TREE:treeOf(__dirname) };
 

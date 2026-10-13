@@ -105,18 +105,12 @@ const 补铺 = (main.slice(main.indexOf('const WIPE = userWipe();')).match(/^if\
 台.判('清掉过东西就再走一遍摆树（没清就不白跑）', 补铺.includes("if(WIPE.deleted.length)") && 补铺.includes('prepareTrees(TREE)'), 补铺.split('\n')[0]);
 台.判('补铺那一趟的话并进同一笔日志（事后查得到铺了什么）', /WIPE\.log\.push\('清完补铺/.test(补铺));
 台.判('补铺排在清理那一趟后面（顺序反了等于没清）', main.indexOf('const WIPE = userWipe();') < main.indexOf('if(WIPE.deleted.length)'));
-const 铺 = 切(main, 'layList');
-台.判('铺的那一步认「已经有了就一个字不动」（重跑不伤人）', /if\(fs\.existsSync\(work\)\) return true/.test(铺));
+台.判('开机把出厂清单补铺到数据层那一整台撤了（那两份清单都不再由程序往 data\\ 铺）',
+  !/function layList|function syncLists|syncLists\(/.test(main));
 const 镜 = rd('src/pack/mirror.mjs');
-const 出厂段 = 镜.slice(镜.indexOf('/* 出厂那一份清单（#270）'), 镜.indexOf('/* 程序壳：src'));
-台.数('出厂清单那一段抓到多少字', 出厂段.length);
-const 三份 = (切(main, 'syncLists').match(/\[\s*'card-size\.yaml'[^\]]*\]/) || [''])[0];
-台.数('开机补铺那几份', 三份.replace(/\s+/g, ''));
-台.判('补铺只铺那一份程序生成的清单（卡片大小）—— 界面文字那一份不在这一列里了（方案甲：句子改在源码里，程序运行时不读清单）',
-  三份.includes("'card-size.yaml'") && !/ui-text/.test(三份) && 三份.split("'").length === 3, 三份);
-台.判('出厂层里也只剩这一份清单（界面文字那份不进 resources\\app\\data\\）',
-  出厂段.length > 200 && /出厂清单 · 卡片大小/.test(出厂段) && !/出厂清单 · 界面文字/.test(出厂段));
-台.判('用户数据详单不进出厂层（它是用户自己写的那一篇，首次安装就没有它）', !/userdata-list/.test(出厂段) && !/userdata-list/.test(三份), 出厂段.slice(0, 60));
+台.判('出厂层里那一份清单也不打进 resources\\app\\data\\（界面文字与卡片大小都不进）',
+  !/card-size|ui-text|出厂清单/.test(镜), (镜.match(/card-size|ui-text|出厂清单/g) || []).join('、'));
+台.判('用户数据详单不进出厂层（它是用户自己写的那一篇，首次安装就没有它）', !/userdata-list/.test(镜));
 台.判('仓里也没有它的一份（不在公开面、也不在镜像取件处）', !fs.existsSync(ROOT + 'src/pack/data/userdata-list.md'));
 
 /* ---------- 五 · 插件往发布物里走的三条路：两条仍然堵着，一条外46 又铺开了 ----------

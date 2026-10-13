@@ -42,8 +42,8 @@ for(const 禁 of ['require(', 'process.argv', 'nodePath', 'fsNode', '__dirname']
   台.判('桥里没有「' + 禁 + '」', !桥.includes(禁));
 台.判('桥改读壳递进来的那一份门牌（__FD_BOOT__）', 桥.includes('window.__FD_BOOT__'));
 
-/* 通道名里有带连字符的那一族（card-size:read 那种）—— 名段不许把 '-' 漏掉，漏了整族就逃过这一节
-   （2026-10-13 头一版就是这么漏的，卡片大小那四颗当时看着"一颗都不在单外"，其实根本被没扫到） */
+/* 通道名里有带连字符的那一族（'fs:read' 之外还有别家）—— 名段不许把 '-' 漏掉，漏了整族就逃过这一节
+   （2026-10-13 头一版就是这么漏的，当时看着"一颗都不在单外"，其实整族根本被没扫到） */
 const 通道串 = s => [...new Set([...s.matchAll(/(?:invoke|send|on)\('([a-z][a-z-]*:[A-Za-z][A-Za-z]*)'/g)].map(m => m[1]))].sort();
 const 请壳串 = s => [...new Set([...s.matchAll(/(?:invoke|send)\('([a-z][a-z-]*:[A-Za-z][A-Za-z]*)'/g)].map(m => m[1]))].sort();
 const 换算 = n => n.replace(/[-:]/g, '_').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();

@@ -13,7 +13,6 @@ const ROOT = __树根;
 const SRC = fs.readFileSync(path.join(ROOT, 'data/plugins/music-remote/main.js'), 'utf8');
 const SHELL = fs.readFileSync(path.join(ROOT, 'src/_fd/src/fd3-shell.js'), 'utf8');
 const TOOLS = fs.readFileSync(path.join(ROOT, 'src/_fd/src/fd8-tools.js'), 'utf8');
-const YAML = fs.readFileSync(path.join(ROOT, 'data/card-size.yaml'), 'utf8');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (extra ? ' · ' + extra : '')); } };
 
@@ -34,7 +33,8 @@ const GC = Number(/const GRID_COLS = (\d+), GRID_ROWS = (\d+)/.exec(SHELL)[1]);
 const GR = Number(/const GRID_COLS = \d+, GRID_ROWS = (\d+)/.exec(SHELL)[1]);
 const EA = Number(/const EXPAND_AREA = ([\d.]+)/.exec(SHELL)[1]);
 const AT = GC * GR * EA;
-const seg = /音乐遥控器:\n\s+出厂: *(\d+) *× *(\d+)/.exec(YAML);
+/* 出厂大小就看这一家自己注册那一句给的 def（从前它抄的是清单里那一行，清单整台撤了） */
+const seg = /card:\{[^}]*def:\{\s*w:\s*(\d+),\s*h:\s*(\d+)/.exec(SRC);
 const FW = seg ? +seg[1] : -1, FH = seg ? +seg[2] : -1;
 ok('5 外壳那一档要 ' + AT + ' 格才算展开（' + GC + ' × ' + GR + ' 的 ' + (EA * 100) + '%），' +
    '而音乐遥控器出厂 ' + FW + ' × ' + FH + ' = ' + (FW * FH) + ' 格 —— 靠面积那一条它一辈子走不到（图9 就是这么丢的）',

@@ -70,7 +70,7 @@ mod 验判断 {
         /* 2026-10-11 抓到的那批漏，一颗一颗钉住（点名钉，不写「以上全部」那种糊话） */
         for 颗 in ["dataWipe", "appendPageFile", "pageFileExists", "webTitle", "libWrite", "libRead",
                    "codeCatRename", "backupRun", "backupPick", "backupRoots", "setCloseChoice",
-                   "winState", "systemMing", "onRebuildDone", "onIcons", "cardSizeApply"] {
+                   "winState", "systemMing", "onRebuildDone", "onIcons"] {
             assert!(在地板上(颗), "名单上少了这一颗：{}", 颗);
         }
     }

@@ -14,11 +14,7 @@
     if(moved) setTimeout(() => toast('镜像期的 ' + moved + ' 份数据已搬成这台机器上的明文文件'), 900);
   }catch(e){ console.warn('数据后端没就绪，先按镜像模式跑：' + e.message); }
   await Settings.load();
-  /* 卡片大小清单（#251）：读磁盘那一份盖大小，排在组件加载之前 —— 新摆的卡片注册那一刻就吃到清单里的新默认。
-     之后外部编辑器存盘、别的窗口保存，都靠下面接的广播当场跟上。 */
-  try{ await SizeList.boot(); }catch(e){}
   /* 插件在这一刻从 data\plugins\ 加载进来（名单 → 插件清单 → import main.js → 登记）。
-     排在卡片大小清单之后：新摆的卡片吃清单盖过的大小，注册那一刻就得盖上；
      排在 Shell.init 之前：首页那几张卡要摆得出。一家崩了只立它自己那张错误卡。 */
   try{ await PackLoader.load(); }catch(e){ console.warn('插件加载这一趟没走通：' + ((e && e.message) || e)); }
   await Palette.init();
@@ -45,10 +41,6 @@
   /* 还没内嵌进 html 的配方先从 kv 里装回来，首页才摆得出这张卡 */
   if(typeof GenLocal !== 'undefined') await GenLocal.warm();
   await Shell.init();
-  /* 卡片大小清单（#251）补一趟：boot 那一趟读清单时桌上还没有卡片，盖不着。
-     这里排在 Shell.init 之后 —— 程序关着的时候改的清单（包括「把上一轮盖掉的那张恢复回去」），
-     桌上这些没亲手拉过的卡片在这一趟里跟上。 */
-  try{ SizeList.reapply(); }catch(e){}
   /* Flow-Desk.exe 开机静默读一遍系统字体清单；开发服务器里读不到就什么都不做，选择器里那个按钮是唯一入口 */
   Fonts.auto();
   /* 全局那张字体表（标记 / 置顶 / 用过几次）在 FD 里改了就重播一次，展开的组件才跟得上 */

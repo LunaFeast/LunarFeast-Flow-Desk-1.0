@@ -49,9 +49,9 @@ Z.题('四、五棵源码树该扫的一份不漏，那道口关得有理');
     else if(/\.(js|cjs)$/.test(e.name) && !/\.code\.js$/.test(e.name)) 收.push(path.relative(TREE, path.join(d, e.name)).replace(/\\/g,'/'));
   } };
   for(const d of ['src/pack','src/_fd','src/_wnw','src/_shared','data/plugins']) walk(path.join(TREE, d));
-  const 该扫 = 收.filter(x => !/uitext\.cjs|cardsize\.cjs|_wnw\/wnw-kernel\.js/.test(x));
+  const 该扫 = 收.filter(x => !/uitext\.cjs|_wnw\/wnw-kernel\.js/.test(x));
   const 漏 = 该扫.filter(x => !文件.includes(x));
-  Z.判('4 五棵树里每一份 .js / .cjs 都进了扫描名单（除了那两台清单生成器自己和为写内核那颗产物）：漏一份就是那一页的字进不了清单',
+  Z.判('4 五棵树里每一份 .js / .cjs 都进了扫描名单（除了界面文字那台生成器自己和为写内核那颗产物）：漏一份就是那一页的字进不了清单',
     漏.length === 0, 漏);
   /* 为写内核那颗是产物不是源码（同步 GitHub 第 4 条：src\_wnw\src\ 那一批拼出来的一份复制，
      .gitignore 已经关了它）—— 扫它等于把同一批字抄第二遍，所以两头都要指名排掉：

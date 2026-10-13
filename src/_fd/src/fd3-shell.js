@@ -1270,18 +1270,6 @@ function toast(msg, urgent){
   t.textContent = msg; t.classList.add('on');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2200);
 }
-/* ---------- 卡片大小清单的宿主接线（#251） ----------
-   清单在 数据\card-size.yaml：一张卡片两行，「出厂」是源码现在给的大小，「你要」写你要的大小。
-   和界面文字同一套：程序里读写都问主进程（那边盯着文件，一改就广播过来）；
-   本地开发那台服务器没有这一层，就直接向服务器要这一份明文，读的都是 数据\ 里那一个文件。 */
-SizeList.use({
-  read(){ return window.FD_APP && window.FD_APP.cardSizeRead ? window.FD_APP.cardSizeRead() : null; },
-  write(t){ return window.FD_APP && window.FD_APP.cardSizeWrite ? window.FD_APP.cardSizeWrite(t) : { ok:false, msg:'这台机器没连上磁盘' }; },
-  plan(){ return window.FD_APP && window.FD_APP.cardSizePlan ? window.FD_APP.cardSizePlan() : null; },
-  apply(list){ return window.FD_APP && window.FD_APP.cardSizeApply ? window.FD_APP.cardSizeApply(list) : null; },
-  reload(){ return SizeList.reload(); },
-  onChange(fn){ return window.FD_APP && window.FD_APP.onCardSize ? window.FD_APP.onCardSize(fn) : null; }
-});
 /* 第 7 条：提示文字被框子切掉时，鼠标扫过给个原生 tooltip 看全文。
    文案不压短、框子不拉长 —— 装不下还是省略号收着，全文靠悬停。
    挂文档上统一处理，各视图不用每处自己记得写 title；自己写过说明的地方不覆盖。
@@ -1516,8 +1504,6 @@ function registerWidget(def){
   if(!def.id || !def.mount) throw new Error('widget 定义不完整：' + def.id);
   def.def = def.def || { w:5, h:3 };
   def.minW = def.minW || 1; def.minH = def.minH || 1;
-  /* 卡片大小清单（#251）：记下出厂默认，清单里这张卡片改了大小就当场盖上去 */
-  try{ if(typeof SizeList !== 'undefined') SizeList.register(def); }catch(e){}
   Registry.set(def.id, def);
   if(!WIDGET_BASE.has(def.id)) WIDGET_BASE.set(def.id, def);
 }
@@ -1978,8 +1964,8 @@ const Shell = {
             const el = document.querySelector('[data-iid="' + m.it.id + '"]');
             if(el) shell.place(el, m.it);
           }
-          /* 他亲手拉的这一下 = 这张卡归他管：把清单盖过的那一笔（sizeFrom）抹掉，以后改清单不再动它 */
-          Object.assign(it, 落); delete it.sizeFrom; shell.save();
+          /* 他亲手拉的这一下 = 这张卡归他管，往后的默认大小都不动它 */
+          Object.assign(it, 落); shell.save();
           if(动.length || mode === 'resize' || grew !== was) shell.render();
         } else {
           shell.place(card, base); toast('桌面装不下这么多了 · 已回弹');
@@ -2018,8 +2004,6 @@ const Shell = {
               this.layout.items.push({ id:def.id + '-' + Date.now().toString(36), widget:def.id, slot:this.layout.items.length % 5 });
               const it = this.layout.items[this.layout.items.length - 1];
               Object.assign(it, this.firstFit((def.def && def.def.w) || 5, (def.def && def.def.h) || 3));
-              /* 这张卡是照清单的大小摆出来的：记一笔，往后改清单它还跟着变 */
-              try{ SizeList.stamp(it, def); }catch(e){}
               this.save(); Modal.close(); this.render();
             }}, [h('b', {}, has ? '·' : '+'), h('span', {}, def.name)]),
           h('div', { class:'fd-addops' }, [

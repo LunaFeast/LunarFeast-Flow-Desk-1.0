@@ -53,12 +53,7 @@ head('一、出厂镜像 resources\\app\\ 比源那份落后什么');
 {
   const p = mirrorPlan();
   say('  · 内容一致 ' + p.sameCount + ' 份');
-  /* 这两份清单每次开机由程序自己往 data\ 落一次（src\pack\main.cjs:341），他在界面里改过一次字就和出厂那份不一样 ——
-     那是设计如此，不是落差。单列一栏，别混进「要人看一眼」里把真落差淹掉（审查第 17 条：
-     外27 收尾那一次报的 3 件里就有一件是这种噪声）。 */
-  const 运行时自写 = ['ui-text.yaml', 'card-size.yaml'];
-  const 是 = s => 运行时自写.some(n => s.includes(n));
-  for(const s of p.stale) 是(s) ? say('  · 运行时自写的那份 · 人改过算正常：' + s) : bad('不一样：' + s);
+  for(const s of p.stale) bad('不一样：' + s);
   for(const s of p.missing) bad('缺：' + s);
   for(const s of p.extra) bad('多出来的：' + s);
   if(!p.stale.length && !p.missing.length && !p.extra.length) say('  ✓ 一份不差（出包那一趟会自动铺齐）');

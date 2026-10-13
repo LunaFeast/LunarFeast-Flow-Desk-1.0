@@ -387,8 +387,7 @@ const PackLoader = {
    会动盘、会动别人家东西、会起网络的那几颗：dataWipe（一键清空数据层）、appendPageFile 与
    pageFileExists（他文稿那一层的写与问）、backup 那一摊五颗（会往数据层以外写、还认外部目录）、
    libRead / libWrite / onLibChanged（词库跟着功能走，不该由别家直接写）、codeCatRename（整库改名）、
-   webTitle（这一颗是出网的，插件要网得走明面的口径）、cardSize 那几颗（读与列已经挡了，
-   改与套与打开没挡，等于留了一道绕过去的门）、外加 setCloseChoice / systemMing / winState /
+   webTitle（这一颗是出网的，插件要网得走明面的口径）、外加 setCloseChoice / systemMing / winState /
    onRebuild 那两颗 / onIcons。判据只有一条：这一颗是不是「宿主自己的事」—— 是就进地板。
    ============================================================ */
 const APP_DENY = ['packList', 'packSet', 'packFile', 'packImport', 'packWipe', 'rebuild',
@@ -398,7 +397,6 @@ const APP_DENY = ['packList', 'packSet', 'packFile', 'packImport', 'packWipe', '
   'delPageFile', 'pagePath', 'pathOf',
   'dataRead', 'dataWrite', 'dataList', 'dataWipe', 'aboutInfo',
   'libRead', 'libWrite', 'onLibChanged', 'codeCatRename',
-  'cardSizeRead', 'cardSizeWrite', 'cardSizeApply', 'cardSizePlan', 'onCardSize',
   'backupRun', 'backupCheck', 'backupLast', 'backupPick', 'backupRoots',
   'winCtl', 'winState', 'restartApp', 'closeChoice', 'setCloseChoice', 'systemMing',
   'openDir', 'iconsList', 'onIcons', 'dirTree', 'readText', 'fontList', 'onFontList',

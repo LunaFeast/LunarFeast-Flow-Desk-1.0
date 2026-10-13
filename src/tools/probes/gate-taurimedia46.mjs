@@ -33,7 +33,7 @@
         在代码里看得见这句话，不许哪天悄悄删了注释当成已经搬齐（logLine 那两笔原来也在这条账上，
         批六第三步把 data\logs 那一格搬过来了，改口成"照原件落"）；
      九、纯判断那一格（media_rule）不动磁盘、不认识壳，带 30 颗以上测试，全仓测试总数比上一批多；
-     十、覆盖率那一句：已搬 60 / 73（批六那一列插件那两颗也已经跟上），主.rs 顶上那句「还剩几颗没搬」跟着改成 13，四道闸的数撞得上。
+     十、覆盖率那一句：主进程那 63 颗通道全在壳的注册单上，主.rs 顶上不再写「还剩几颗没搬」那一句，五道闸的数撞得上。
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -719,8 +719,8 @@ const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n))
 台.数('覆盖率那一句', '已搬 ' + 已搬.length + ' / ' + 电.length);
 台.判('这一批 13 颗全在已搬名单里', 批.every(x => 已搬.includes(x[0])));
 台.判('已搬总数到了 63（批四那九颗把 45 顶到 54，批五这四颗再顶到 58，批六那两颗再顶到 60，批七那三颗再顶到 63）', 已搬.length === 63);
-台.判('还没搬的照实记着：主进程还剩 ' + (电.length - 已搬.length) + ' 颗', 电.length - 已搬.length === 4);
-台.判('主.rs 顶上那句「还剩几颗没搬」跟着改成 4（界面文字那六颗跟着 #175 撤了；不许写着旧数当已实现）', 壳.includes('剩下的 4 颗'));
+台.判('两头一颗不差：主进程那 ' + 电.length + ' 颗通道全在壳的注册单上', 电.length === 已搬.length && 电.length === 63);
+台.判('主.rs 顶上那句「还剩几颗没搬」整句撤了（壳里一颗不差，不许留着一句旧账当已实现）', !/还没搬|剩下的 4 颗/.test(壳));
 台.判('主.rs 顶上那句也点了这一批那四颗（⑨ 那一段），不是只改了个数',
   壳.includes('⑨ 音乐遥控器那四颗') && 壳.includes('media:dirPick / media:dirSet / media:flag / media:bridge'));
 台.判('主.rs 的注册单上批五那四颗排在 ⑨ 那一段后面（一格一段，不是散着塞的）',
@@ -736,7 +736,7 @@ const 已搬 = 电.filter(n => Object.prototype.hasOwnProperty.call(表, 换(n))
       && 它.includes('已搬.length === 58') === false
       && 它.includes('已搬.length === 54') === false
       && 它.includes('已搬.length === 45') === false;
-  }) && rd('src/tools/probes/gate-tauricomp46.mjs').includes("壳.includes('剩下的 4 颗')"));
+  }) && rd('src/tools/probes/gate-tauricomp46.mjs').includes('整句撤了'));
 台.判('这两本、那一格与这道闸里，一个字节都没写这台机器的盘符、帐户名、私人目录',
   !/(^|[^A-Za-z0-9])[A-Za-z]:[\\/]/.test(动 + 声 + 纯 + rd('src/tools/probes/gate-taurimedia46.mjs')),
   (动 + 声 + 纯).match(/.{0,20}[A-Za-z]:[\\/].{0,20}/g) || []);
