@@ -1594,7 +1594,7 @@ const Gen = {
     const info = [R.desc || '按配方生成', genMeta(R)].filter(Boolean).join(' · ');
     registerTool({
       id:R.id, name:R.name, desc:info, icon:R.icon || 'pencil', recipe:R, ready,
-      /* 卡片大小清单（#251）写进程序时往配方里插的那段：没插过就是 undefined，照旧吃兜底 16 × 12 */
+      /* 配方里写了 card 就用那一对大小，没写就是 undefined —— 宿主那一边照旧吃兜底 16 × 12 */
       card:R.card,
       mount(host){ const v = new GenView(host, R); GEN_VIEWS.push(v); v.boot().then(() => v.paint()); }
     });
