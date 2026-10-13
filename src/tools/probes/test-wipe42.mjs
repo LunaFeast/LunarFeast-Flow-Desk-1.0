@@ -11,6 +11,7 @@
    主进程那颗真删（userWipe）要跑起来才有现场，这一台判的是它的写法和不许动的三样；
    真点一遍归人工闸：他自己开探针浏览器按那三次确认。 */
 import fs from 'node:fs';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 import { ROOT, rd, 切, 记账 } from './lib-slice.mjs';
 
@@ -31,34 +32,49 @@ const 档数 = (fd4.match(/^SetupTabs\.add\(/gm) || []).length;
   && /SetupTabs\.add\('快捷键'/.test(fd4) && /SetupTabs\.add\('数据'/.test(fd4));
 
 /* ---------- 二 · 一键清理的接线 ---------- */
-台.题('二 · 那一颗按钮到主进程这一串接得上');
-const pre = rd('src/pack/preload.cjs'), main = rd('src/pack/main.cjs');
+台.题('二 · 那一颗按钮到壳里这一串接得上');
+const 桥 = rd('src/_tauri/ui/fd-bridge.js');
+/* 整棵源码汇一份，用来判「那一整台撤干净了没有」；src\tools\ 那一格不算（探针嘴里念着这些名是检查用语） */
+function 扫树(认){
+  const 中 = [];
+  (function 走(d){
+    for(const e of fs.readdirSync(d, { withFileTypes: true })){
+      if(e.name === 'node_modules' || e.name.startsWith('.') || (d === path.join(ROOT, 'src') && e.name === 'tools')) continue;
+      const p = path.join(d, e.name);
+      if(e.isDirectory()) 走(p);
+      else if(/\.(js|cjs|mjs|rs|html)$/.test(e.name)) 中.push(p);
+    }
+  })(path.join(ROOT, 'src'));
+  return 中.filter(p => { try{ return 认(fs.readFileSync(p, 'utf8')); }catch(e){ return false; } })
+    .map(p => path.relative(ROOT, p).replace(/\\/g, '/'));
+}
+const 数颗 = rd('src/_tauri/src/tauri_bind/data_cmds.rs');
 const 页面 = 切(fd4, 'tabData');
-const 通道 = (pre.match(/async dataWipe[\s\S]{0,200}?invoke\('([^']+)'/) || [])[1] || '';
-const 挂到 = (main.match(/ipcMain\.handle\('([^']+)'[^)]*\(\)\s*=>\s*\{[\s\S]{0,220}?WIPE_FILE\(\)/) || [])[1] || '';
-台.数('preload 那颗方法走的通道名', 通道);
+const 通道 = (桥.match(/async dataWipe[\s\S]{0,200}?invoke\('([^']+)'/) || [])[1] || '';
+台.数('桥那颗方法走的通道名', 通道);
 台.判('界面上有那一颗「一键清理所有用户数据」', 页面.includes('一键清理所有用户数据'));
-台.判('preload 有 dataWipe 这一颗，走的是 data:wipe', 通道 === 'data:wipe', 通道);
-台.判('主进程挂的通道名和 preload 那一条一模一样', 挂到 === 通道, { 挂到, 通道 });
-const 字条 = (main.match(/const WIPE_FILE = \(\) => path\.join\(DATA_ROOT, '([^']+)'\)/) || [])[1] || '';
-台.数('那张字条落在数据层哪一格', 字条);
-台.判('字条就在 data\\ 根上（不在插件那一格里）', !!字条 && !字条.includes('/') && !字条.includes('\\'), 字条);
-台.判('主进程读写用的都是同一个文件名', main.includes("fs.readFileSync(WIPE_FILE()") && main.includes('fs.writeFileSync(WIPE_FILE()'));
-const 清 = 切(main, 'userWipe');
-台.判('清的那一趟跳过字条自己（不然删不到最后一笔）', 清.includes("'" + 字条 + "'"), 字条);
-台.判('每一项是整格删（目录带里面那份一起）', /rmSync\([\s\S]{0,140}?recursive:\s*true/.test(清));
-台.判('删不掉的记一笔，不静默', /out\.failed\.push/.test(清));
-const KEEP = (main.match(/const WIPE_KEEP = \[([^\]]+)\]/) || [])[1] || '';
-台.数('留着的那几样', KEEP.replace(/\s+/g, ''));
-台.判('留插件那一格（代码与名单不是用户数据）', KEEP.includes("'plugins'"));
-台.判('留原版那一格（导入那一下留的底，跟代码走不是跟数据走）', KEEP.includes("'plugins-factory'"));
-台.判('留日志', KEEP.includes("'logs'"));
-台.判('留搬家那本账', KEEP.includes("'relocate.txt'"));
-const 调用行 = main.split('\n').findIndex(l => /^const WIPE = userWipe\(\);/.test(l));
-const 认领行 = main.split('\n').findIndex(l => l.includes("app.setPath('userData'"));
-台.数('清那一趟在第几行 · 内核认目录在第几行', 调用行 + 1 + ' / ' + (认领行 + 1));
-台.判('清排在内核认领用户目录之前（浏览器存储那格还没被占）', 调用行 >= 0 && 认领行 >= 0 && 调用行 < 认领行);
-台.判('开机那一笔补记进日志（事后能查删了什么）', /WIPE\.log\.forEach/.test(main));
+台.判('桥里有 dataWipe 这一颗，走的是 data:wipe', 通道 === 'data:wipe', 通道);
+台.判('壳里挂的通道名和桥那一条一模一样（注册单上也有）',
+  rd('src/_tauri/src/main.rs').includes('data_cmds::data_wipe') && /pub fn data_wipe/.test(数颗));
+台.判('那张字条就叫 wipe-user.json，落在 data\\ 根上（不在插件那一格里）',
+  rd('src/_tauri/src/core/data_path.rs').includes('pub const 字条名: &str = "wipe-user.json";')
+  && 数颗.includes('let 路 = 格.join(字条名)') && !数颗.includes('userdata'));
+台.判('读写用的都是同一个件名那一颗（不是两处各写一遍名字）',
+  (数颗.match(/字条名/g) || []).length >= 2 && !数颗.includes('"wipe-user.json"'));
+台.判('这一颗一颗都不删（浏览器存储那一格此刻被内核占着，当场删一半比不删更糟）',
+  !/remove_dir|remove_file|fs::remove/.test(数颗));
+台.判('已经排着就不重写，只把时间戳留着', 数颗.includes('already: Some(true)'));
+const 留着 = (rd('src/_tauri/src/core/data_path.rs').match(/pub const 留着那几格: \[&str; 4\] = \[([^\]]+)\]/) || [])[1] || '';
+台.数('留着的那几样', 留着.replace(/\s+/g, ''));
+台.判('留插件那一格（代码与名单不是用户数据）', 留着.includes('"plugins"'));
+台.判('留原版那一格（导入那一下留的底，跟代码走不是跟数据走）', 留着.includes('"plugins-factory"'));
+台.判('留日志', 留着.includes('"logs"'));
+台.判('留搬家那本账', 留着.includes('"relocate.txt"'));
+/* 这一件是明写的缺口，不是已实现：真删排在本机开机那一趟，而开机那一路还没搬进壳 ——
+   所以此刻按下那颗按钮只落一张字条。这条判据钉的是「这句话还写在文件顶上」，
+   哪天有人悄悄把注释撤了、把没搬齐的当成搬齐了，这条就红。 */
+台.判('开机真删那一路还没搬进壳：这句话写在 data:wipe 顶上，不许当成已实现',
+  数颗.includes('真删排在开机那一趟') && 数颗.includes('还没搬'));
 台.题('二 · 三次确认的口径');
 /* 只盯这一颗按钮自己那一段：数据那一档里「断开目录」「导入」也各有一道确认，别混进来数 */
 const 起 = 页面.indexOf('一键清理所有用户数据');
@@ -96,17 +112,14 @@ const 错行 = 标签后.filter(o => {
 台.数('html 标签之间那几处的行号 · 对不上的', 标签后.length + ' · ' + 错行.length);
 台.判('标签之间那句的行号也对得上（从前差一行）', 错行.length === 0, 错行.slice(0, 2).map(o => o.line + ':' + o.text));
 
-/* ---------- 四 · 清完那一趟就得是刚装好的样子（他真点了一遍才量出来的两处） ----------
-   清理排在摆树之后：摆树刚铺好的详单、两份清单，紧接着就被这一趟删了，
-   于是「重启之后就是刚装好的样子」要等再下一趟才成立。而 userdata-list.md 更狠 ——
-   从头到尾没有任何一处把它铺回 data\，清完就永远读不到那一屏。 */
-台.题('四 · 清完当场补铺，那几份别等下一趟');
-const 补铺 = (main.slice(main.indexOf('const WIPE = userWipe();')).match(/^if\(WIPE\.deleted[\s\S]*?^\}/m) || [''])[0];
-台.判('清掉过东西就再走一遍摆树（没清就不白跑）', 补铺.includes("if(WIPE.deleted.length)") && 补铺.includes('prepareTrees(TREE)'), 补铺.split('\n')[0]);
-台.判('补铺那一趟的话并进同一笔日志（事后查得到铺了什么）', /WIPE\.log\.push\('清完补铺/.test(补铺));
-台.判('补铺排在清理那一趟后面（顺序反了等于没清）', main.indexOf('const WIPE = userWipe();') < main.indexOf('if(WIPE.deleted.length)'));
-台.判('开机把出厂清单补铺到数据层那一整台撤了（那两份清单都不再由程序往 data\\ 铺）',
-  !/function layList|function syncLists|syncLists\(/.test(main));
+/* ---------- 四 · 清完那一趟就得是刚装好的样子（这一件还没搬进壳，明写着） ----------
+   从前那一版是主进程开机排第一趟：先按字条删，删过的再走一遍摆树把详单与两份清单补回来，
+   一句「重启之后就是刚装好的样子」才当场成立。壳这一头只落了写字条那一步（见第二节），
+   删与补铺那一整趟还没搬 —— 这一节因此改成钉两件事：缺口写着、程序运行时不再往 data\ 铺那几份。 */
+台.题('四 · 程序运行时不往数据层铺那几份（清完补铺那一趟是另一件，见上）');
+台.判('开机把出厂清单补铺到数据层那一整台没了（整棵源码里 layList / syncLists 一处不剩）',
+  扫树(l => /function layList|function syncLists|syncLists\(/.test(l)).length === 0,
+  扫树(l => /syncLists/.test(l)).join(' | '));
 const pub = rd('src/pack/publish.mjs');
 台.判('发布那一趟不往产物里铺那两份清单（界面文字与卡片大小的名一处不剩）',
   !/card-size|ui-text|出厂清单/.test(pub), (pub.match(/card-size|ui-text|出厂清单/g) || []).join('、'));
@@ -130,21 +143,25 @@ const comp = rd('src/pack/comp-files.cjs'), serve = rd('src/_fd/fd-serve.mjs');
 const 插件落点 = [...pub.matchAll(/made\.set\('([^']+)' \+ m\.id/g)].map(x => x[1]);
 台.判('插件字节只有两个落点（活的与原版各一格），没有第三格（程序代码那一层不收插件）',
   插件落点.join(' ') === 'data/plugins/ data/plugins-factory/', 插件落点.join(' '));
-台.判('开机不再把自带那一层铺成插件（seedMissing 主进程和那颗定义都没了）',
-  !/seedMissing/.test(main) && !/seedMissing/.test(comp));
-台.判('铺插件那一步换成了给老树搬家（从旧位置取过来，目标有了就不动）',
-  /COMP\.adoptOldFactory\(/.test(main) && /adoptOldFactory\(from\)/.test(comp));
-const 留底次数 = (main.match(/keepOriginal\(id\);/g) || []).length;
-台.数('导入留底挂上了几处（开机摊 zip + 导入挑文件 + 导入挑文件夹）', 留底次数);
-台.判('那三处都挂着（少一处就是有一条道装完没底）', 留底次数 === 3 && /function keepOriginal\(id\)/.test(main));
-台.判('留底走的是 comp-files 那颗 keepFactory，先抹旧再整格复制', /keepFactory\(id\)/.test(comp) && /rmSync\(to, \{ recursive:true, force:true \}\)/.test(comp));
+台.判('开机不再把自带那一层铺成插件（seedMissing 那一颗整棵源码里一处不剩）',
+  扫树(l => /seedMissing/.test(fs.readFileSync(l, 'utf8'))).length === 0 && !/seedMissing/.test(comp));
+台.判('铺插件那一步换成了给老树搬家（从旧位置取过来，目标有了就不动 —— 开发那台用的还是 comp-files 那一颗）',
+  /adoptOldFactory\(from\)/.test(comp) && /installFrom|装完|摊开/.test(comp + serve));
+const 留底 = rd('src/_tauri/src/tauri_bind/pack_cmds.rs');
+const 留底次数 = (留底.match(/留一份原版\(&/g) || []).length;
+台.数('壳里导入那一路留底挂上了几处（挑文件 + 挑文件夹）', 留底次数);
+/* 从前那是三处：开机摊 zip 也算一处。首装那一棵树里活的与原版两格都由发布铺好，
+   壳里没有「开机摊包」那一步了，所以此刻是两处 —— 少一处（某条导入道没底）这条就红。 */
+台.判('那两处都挂着（少一处就是有一条道装完没底）', 留底次数 === 2 && /fn 留一份原版\(/.test(留底));
+台.判('留底走的是 comp_rule 那两颗口径（定落点 / 原厂那一家），先抹旧再整格复制',
+  留底.includes('comp_cmds::原厂那一格()') && /rm|remove/.test(留底) && !留底.includes('resources'));
 台.判('原版那一格在数据层（跟着用户的树走，更新包不碰 data\\）',
-  /const ORIG_ROOT = path\.join\(DATA_ROOT, 'plugins-factory'\)/.test(main) && /factory:\(\) => ORIG_ROOT/.test(main));
+  留底.includes('plugins-factory') && /comp_cmds::原厂那一格\(\)/.test(留底));
 台.判('开发服务器指的是同一格（两条通道同一个口径）', /'plugins-factory'/.test(serve) && !/resources', 'app', 'data', 'plugins'/.test(serve));
-const 落地 = 切(main, 'landAsset');
-台.判('随行文件的兜底也跟着换到那一格（不再从 resources\\app 取）',
-  /path\.join\(ORIG_ROOT, id\)/.test(落地) && !/DATA_BUNDLED/.test(落地));
-台.判('这一格不算书名（那道名字闸认它）', /'plugins', 'plugins-factory'/.test(main));
+台.判('随行文件的兜底也跟着换到那一格（壳里取的是活的与原版两格，不再从 resources\\app 取）',
+  留底.includes('comp_cmds::活的那一格()') && !/resources/.test(留底));
+台.判('这一格不算书名（那道名字闸认它）', /"plugins", "plugins-factory"/.test(rd('src/_tauri/src/core/data_path.rs'))
+  || /plugins-factory/.test(rd('src/_tauri/src/core/pack_rule.rs')));
 台.判('首装那份说明改口了（不再说一个插件都不带，改说跟着本体一起出门）',
   !/这一份发布物里一个插件都没有/.test(pub) && !/出厂带的那些包/.test(pub) && /这一份发布物带着/.test(pub));
 台.收尾();
