@@ -16,7 +16,7 @@ const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/,
 const AUDIT = fs.readFileSync(__树根 + '/src/tools/audit.mjs', 'utf8');
 /* 咬位置靠「第八节那一个 ALSO_OK_DUPES」，不咬注释的措辞：
    从前拿一整行带注释的原文当锚点，注释里改了两个字（「现在空」→ 添了三个名单）这台就当场死掉。 */
-const HEAD = "head('八、";
+const HEAD = "head('七、";
 const h0 = AUDIT.indexOf(HEAD);
 if(h0 < 0) throw new Error('第八节在 audit.mjs 里找不着，切不出来');
 const i0 = AUDIT.indexOf('const ALSO_OK_DUPES', h0);

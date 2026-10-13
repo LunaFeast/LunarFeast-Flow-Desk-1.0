@@ -61,8 +61,8 @@ for(const f of ['src/pack/publish.mjs', 'src/pack/main.cjs', 'src/pack/comp-file
     !/一个插件都不|一棵都不进这一棵树|发布物里不许带插件代码/.test(rd(f)));
 }
 台.判('安装说明改口成「带着插件」', pub.includes('这一份发布物带着插件（'));
-台.判('自查那条「程序代码那一层不收插件」还钉着（只换了理由）',
-  闸.includes('出厂镜像里又出现了插件那一格') && 闸.includes('程序代码这一层不收'));
+台.判('自查那条「程序代码这一层不收插件」还钉着（盯的地方从出厂镜像那一格换成 src\\ 那一层）',
+  闸.includes('src\\ 底下有插件的形状') && 闸.includes('程序代码这一层不收') && !/MIRROR/.test(闸));
 
 台.题('五、真跑一趟 publish --dry');
 /* 号跟着「最近那一笔发布提交」取，跟发布脚本同一把尺。单独跑 publish 拿的是 HEAD 那一笔，

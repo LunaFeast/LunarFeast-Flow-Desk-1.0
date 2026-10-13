@@ -5,15 +5,15 @@
 
    为什么要这一台：这一轮查出来的毛病全是同一类 —— 树里多了什么、旧了什么、有什么没人读了，
    而它们一处都不会报错：
-     · 出厂镜像（resources\app\）停在上一次出包那天，更新包却把这一层整层送出去；
      · 同一个监听脚本同时存在五处，其中一处比原件少 1,781 字节；
-     · main.cjs 的兜底点了一个从来没存在过的文件名（vol-watcher.ps1）；
      · src\_shared\sh-phrase.js 三棵源码树里唯一没被 build.mjs 点名的一份，产物里出现 0 次；
-     · 同一个函数在两家各抄了一遍（第七节）—— 2026-10-07 那次人工审翻出来的，
+     · 同一个函数在两家各抄了一遍（第六节）—— 2026-10-07 那次人工审翻出来的，
        esc / randInt / pickOne / shuffle / copyBtn / saveBtnAt 各两份、插件的 ask 三份，
        逐字相同所以当下不报错，分叉之后才变成"同一个操作在一家对、另一家不对"；
-     · 同一段 CSS 声明在两家各抄了一遍、只有选择器不同（第八节 · 外27 第 16 条那一类）——
-       第七节只管函数体，看不见这一类，所以补了一节。
+     · 同一段 CSS 声明在两家各抄了一遍、只有选择器不同（第七节 · 外27 第 16 条那一类）——
+       第六节只管函数体，看不见这一类，所以补了一节。
+   从前第一节对的是出厂镜像那一层（resources\app\ 停在上一次出包那天，更新包却把整层送出去）——
+   那一层随 Electron 一起退了，第一节跟着撤，后面各节序号往上顶一格。
    写死名单又防不住漏 require（checkShellRequires 就是为那次 "Cannot find module './comp-files.cjs'" 加的），
    所以拿一台只读的机器每轮盯一遍，删不删由人决定。
 
@@ -24,10 +24,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { plan as mirrorPlan, TREE_ROOT, PACK_DIR, SRC_DATA, MIRROR } from '../pack/mirror.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = TREE_ROOT;
+/* 三个根自己算（从前跟着出厂镜像那一颗取 —— 那一层随 Electron 一起退了，这台不再借它，
+   免得一台只读的自查反过来咬着一层不存在的东西报一百行假缺） */
+const ROOT = path.resolve(HERE, '..', '..');
+const PACK_DIR = path.join(ROOT, 'src', 'pack');
+const SRC_DATA = path.join(ROOT, 'data');
 /* 这些子树不参与"同一份东西出现几处"的扫描：运行时依赖、产物、存档，重复是它们的样子 */
 const SKIP = new Set(['node_modules', '.git', 'dist', 'update', '备份', 'locales', 'logs',
   'userdata-fd', 'userdata-rp', 'userdata-wnw']);   /* 三份用户目录里是浏览器缓存，文件名没意义 */
@@ -48,25 +51,12 @@ function walk(dir, base){
   return res;
 }
 
-/* ---------- 一、出厂镜像比运行版本落后哪几样 ---------- */
-head('一、出厂镜像 resources\\app\\ 比源那份落后什么');
-{
-  const p = mirrorPlan();
-  say('  · 内容一致 ' + p.sameCount + ' 份');
-  for(const s of p.stale) bad('不一样：' + s);
-  for(const s of p.missing) bad('缺：' + s);
-  for(const s of p.extra) bad('多出来的：' + s);
-  if(!p.stale.length && !p.missing.length && !p.extra.length) say('  ✓ 一份不差（出包那一趟会自动铺齐）');
-}
-
-/* ---------- 二、同一份东西在树里出现几处，其中有没有内容不一样的 ---------- */
-head('二、同一个名字出现多处 · 只报内容不一样的（一样的说明只是备份铺得到位）');
+/* ---------- 一、同一份东西在树里出现几处，其中有没有内容不一样的 ---------- */
+head('一、同一个名字出现多处 · 只报内容不一样的（一样的说明只是备份铺得到位）');
 {
   /* 这一节按"光比名字"找重复，所以两类要先剔掉，不然全是假报：
-     · resources\app\ 底下那一整层 —— 出厂镜像和源那份重名是设计如此，落差在第一节的 plan() 里报，
-       比它详细得多（哪一格、哪一份、为什么该在这儿）；
      · 插件内部的标准名字（main.js / icon.svg / manifest.json / bank.txt / recipe.json）——
-       每家都叫这个名，六家凑一起就成了"六个内容一种名字"，那也是第一节管的事。
+       每家都叫这个名，六家凑一起就成了"六个内容一种名字"，那是内容对不对得上的事，不是重名；
        data\plugins-factory\ 那一格（外43：导入时留的原版）同一条规矩：它本来就是设计好的第二份。 */
   /* 名字一样、内容本来就该不一样的那几份：产物里的 root.json 按它自己的位置重算相对路径，
      package.json 是现场生成的三个 exe 共用入口（见 mirror.mjs）；
@@ -74,14 +64,14 @@ head('二、同一个名字出现多处 · 只报内容不一样的（一样的�
      拿名字配对比它们就是假报。插件内部的标准名字（main.js / icon.svg / manifest.json / bank.txt /
      recipe.json）也一样：每家都叫这个名，六家凑一起就成了"六个内容一种名字"，那是第一节管的事。
      build-kernel.mjs 这一颗有两份 —— 为写那一棵（src\_wnw\）和推演组件定制那一棵（src\_wcustom\）各有一份出
-     内核的脚本，名字照同一套起（外39 定「照为写那一套分」），各拼各的源码、各出各的产物，内容本来就该不一样。 */
-  const SAME_NAME_DIFFERENT_JOB = ['root.json', 'package.json', 'fd-serve.mjs', 'build-kernel.mjs'];
+     内核的脚本，名字照同一套起（外39 定「照为写那一套分」），各拼各的源码、各出各的产物，内容本来就该不一样。
+     build.mjs 同理两份：src\_fd\ 那一颗拼页面，src\_tauri\ 那一颗喊 cargo 编壳 —— 挨着起的名，各干一件事。 */
+  const SAME_NAME_DIFFERENT_JOB = ['root.json', 'package.json', 'fd-serve.mjs', 'build-kernel.mjs', 'build.mjs'];
   const PACK_STANDARD_NAMES = ['main.js', 'manifest.json', 'recipe.json', 'bank.txt', 'icon.svg'];
   const byName = new Map();
   for(const rel of walk(ROOT, '')){
     const n = path.basename(rel);
     if(!/\.(js|cjs|mjs|ps1|dll|md|yaml|json|svg|txt)$/.test(n)) continue;
-    if(rel.replace(/\\/g, '/').startsWith('resources/app/')) continue;
     const m = rel.replace(/\\/g, '/').match(/^data\/(?:plugins|plugins-factory)\/[^/]+\/(.+)$/);
     if(m && PACK_STANDARD_NAMES.indexOf(path.basename(m[1])) >= 0) continue;
     if(SAME_NAME_DIFFERENT_JOB.indexOf(n) >= 0) continue;
@@ -115,19 +105,22 @@ head('二、同一个名字出现多处 · 只报内容不一样的（一样的�
   else hits += dup;
 }
 
-/* ---------- 三、源码树里没被生成脚本点名的 .js ---------- */
-head('三、四棵源码树里没被生成脚本点名的 .js（拼不进产物，就是死源码）');
+/* ---------- 二、源码树里没被生成脚本点名的 .js ---------- */
+head('二、四棵源码树里没被生成脚本点名的 .js（拼不进产物，就是死源码）');
 {
   const 读 = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
+  const 有 = (...p) => exists(path.join(ROOT, ...p));
   /* 一颗出包脚本里点的名 = 那一棵的源码名单。两颗产物自己的名字、还有 '.js' 那种后缀字面量都不算源码。 */
   const 名单 = s => new Set([...s.matchAll(/['"]([^'"]*?\.js)['"]/g)].map(x => path.basename(x[1]))
     .filter(n => n !== 'wnw-kernel.js' && n !== 'wnw-custom-kernel.js' && n.length > 3));
   const named = 名单(读('src', '_fd', 'build.mjs'));
   /* 为写那一棵的名单不归 build.mjs 了（同步 GitHub 第 4 条「为写分离」），推演组件定制那一棵同理
      （外39「推演组件定制本身也要分离出来」）：公开这棵只读一颗产物，名单在它们各自的出包脚本里 ——
-     查死源码要跟着换尺，不然那二十份和那四份全会被报成没人名。 */
-  const namedW = 名单(读('src', '_wnw', 'build-kernel.mjs'));
-  const namedC = 名单(读('src', '_wcustom', 'build-kernel.mjs'));
+     查死源码要跟着换尺，不然那二十份和那四份全会被报成没人名。
+     那一颗出包脚本在这一支上不存在时（功能搬去它自己那条分支了，基础版这一棵就没有 src\_wcustom\）
+     认 null，那一棵明说没量 —— 读不到就抛会把整台顶掉，屏上那颗「查」跟着一起没结果。 */
+  const namedW = 有('src', '_wnw', 'build-kernel.mjs') ? 名单(读('src', '_wnw', 'build-kernel.mjs')) : null;
+  const namedC = 有('src', '_wcustom', 'build-kernel.mjs') ? 名单(读('src', '_wcustom', 'build-kernel.mjs')) : null;
   const 几棵 = [
     ['src/_fd/src', named, 'build.mjs'],
     ['src/_shared', named, 'build.mjs'],
@@ -138,17 +131,19 @@ head('三、四棵源码树里没被生成脚本点名的 .js（拼不进产物�
   for(const [d, 认, 出处] of 几棵){
     const dir = path.join(ROOT, ...d.split('/'));
     if(!exists(dir)) continue;
+    if(!认){ say('  · ' + d + ' 这一棵没量 —— ' + 出处 + ' 不在这一支上（那一件功能住在它自己那条分支上）'); continue; }
     for(const f of fs.readdirSync(dir)){
       if(!f.endsWith('.js') || 认.has(f)) continue;
       bad(d + '/' + f + ' · ' + fs.statSync(path.join(dir, f)).size + ' 字节 · ' + 出处 + ' 没点它的名');
       dead++;
     }
   }
-  if(!dead) say('  ✓ 每一份都被点名了（宿主这边 ' + named.size + ' 个名字，为写 ' + namedW.size + ' 个，推演组件定制 ' + namedC.size + ' 个）');
+  if(!dead) say('  ✓ 点得到名的那几棵每一份都被点名了（宿主这边 ' + named.size + ' 个名字'
+    + (namedW ? '，为写 ' + namedW.size + ' 个' : '') + (namedC ? '，推演组件定制 ' + namedC.size + ' 个' : '') + '）');
 }
 
-/* ---------- 四、插件清单点的随行文件在不在 + 程序那一层干不干净 ---------- */
-head('四、插件清单 assets 点的随行文件 · 包里在不在（出厂那一格已经撤了，见外43）');
+/* ---------- 三、插件清单点的随行文件在不在 + 程序那一层干不干净 ---------- */
+head('三、插件清单 assets 点的随行文件 · 包里在不在（出厂那一格已经撤了，见外43）');
 {
   const packs = path.join(SRC_DATA, 'plugins');
   let n = 0;
@@ -165,17 +160,25 @@ head('四、插件清单 assets 点的随行文件 · 包里在不在（出厂�
   }
   if(!n) say('  · 没有任何包点随行文件');
   else ok(n + ' 处点名的随行文件都在包里');
-  /* 反着钉一条：插件的代码不许进程序代码那一层。外46 起插件跟着本体一起进发布物，只进两格 ——
-     data\plugins\ 和 data\plugins-factory\；resources\app\data\plugins\ 一有东西就是塞错了地方。 */
-  const back = path.join(MIRROR, 'data', 'plugins');
-  if(exists(back)){
-    let k = 0; try{ k = fs.readdirSync(back).length; }catch(err){}
-    bad('出厂镜像里又出现了插件那一格（' + back + ' · ' + k + ' 家）—— 插件只进发布物的 data\\plugins\\ 和 data\\plugins-factory\\，程序代码这一层不收');
-  } else ok('出厂镜像里没有插件那一格 · 程序代码那一层不带插件');
+  /* 反着钉一条：插件的代码不许进程序代码那一层。插件只进两格 ——
+     data\plugins\ 和 data\plugins-factory\；src\ 底下只要冒出一格「插件清单 + main.js」同在一格的样子，
+     就是塞错了地方（这一棵从前还多盯一层 resources\app\data\plugins\，那一层随 Electron 一起退了）。 */
+  const 错处的 = [];
+  const 找包 = (格, 深) => {
+    if(深 > 3 || 错处的.length > 4) return;
+    let 项 = []; try{ 项 = fs.readdirSync(格, { withFileTypes:true }); }catch(e){ return; }
+    const 名 = new Set(项.filter(e => e.isFile()).map(e => e.name));
+    if(名.has('manifest.json') && 名.has('main.js')) 错处的.push(path.relative(ROOT, 格).replace(/\\/g, '/'));
+    for(const e of 项) if(e.isDirectory() && !SKIP.has(e.name)) 找包(path.join(格, e.name), 深 + 1);
+  };
+  找包(path.join(ROOT, 'src'), 1);
+  if(错处的.length) bad('src\\ 底下有插件的形状（插件清单与 main.js 同一格）：' + 错处的.join('、') +
+    ' —— 插件只进 data\\plugins\\ 与 data\\plugins-factory\\，程序代码这一层不收');
+  else ok('src\\ 那一层里没有插件的形状 · 程序代码那一层不带插件');
 }
 
-/* ---------- 五、手工那一步有没有掉链子 ---------- */
-head('五、要靠人手工拷的那一步 · 拷了没有');
+/* ---------- 四、手工那一步有没有掉链子 ---------- */
+head('四、要靠人手工拷的那一步 · 拷了没有');
 {
   /* MusicBee 插件：build-plugin.ps1 出到 src\pack\plugin\dist\，得有人拷进音乐遥控器的包里才会送出去 */
   const built = path.join(PACK_DIR, 'plugin', 'dist', 'mb_FlowDesk.dll');
@@ -201,8 +204,8 @@ head('五、要靠人手工拷的那一步 · 拷了没有');
   if(!diff) say('  ✓ 图标两份源码层一致（' + n + ' 张）');
 }
 
-/* ---------- 六、树里哪些是大块存档（只列，不动） ---------- */
-head('六、树里躺着的大块东西 · 删不删你定，这台工具一个字不动');
+/* ---------- 五、树里哪些是大块存档（只列，不动） ---------- */
+head('五、树里躺着的大块东西 · 删不删你定，这台工具一个字不动');
 {
   const MB = n => (n / 1048576).toFixed(1) + 'MB';
   /* data\ 可以整棵算；备份\ 和 update\ 是禁递归目录 —— 里面的文件夹只报名字，一个字节都不进去数 */
@@ -228,8 +231,8 @@ head('六、树里躺着的大块东西 · 删不删你定，这台工具一个�
   say('  （这一节永远只是列出来给人看，不做任何删除、不挪任何一个文件）');
 }
 
-/* ---------- 七、同一个函数在两处各写一遍、而且函数体逐字相同 ---------- */
-head('七、同一个函数名两处各定义一次 · 只报函数体逐字相同的（真双份，抄一遍的那种）');
+/* ---------- 六、同一个函数在两处各写一遍、而且函数体逐字相同 ---------- */
+head('六、同一个函数名两处各定义一次 · 只报函数体逐字相同的（真双份，抄一遍的那种）');
 {
   /* 为什么只报"逐字相同"：两棵树里同名不同物的东西是设计如此 —— 为写那十七份整段包在一层闭包里
      （见 src\_fd\build.mjs 那段注释：h / toast / Bus / State / Theme / Shell 这些名字两边各有实现），
@@ -285,8 +288,8 @@ head('七、同一个函数名两处各定义一次 · 只报函数体逐字相�
   else say('  · 这些今天都不报错（各家作用域隔开），要等改到其中一份才显形');
 }
 
-/* ---------- 八、同一段 CSS 声明在两处各写一遍（只有选择器不同）---------- */
-head('八、同一段 CSS 声明两处各写一遍 · 第七节只管函数体，这一段管 CSS');
+/* ---------- 七、同一段 CSS 声明在两处各写一遍（只有选择器不同）---------- */
+head('七、同一段 CSS 声明两处各写一遍 · 第六节只管函数体，这一段管 CSS');
 {
   /* 为什么单独一节：外27 收尾那一次人工审的第 16 条 —— 悬浮那一排的衬底 ::before，
      为写那两棵源码里各写了一遍，除类名外逐字相同。那一类机器当时看不见（第七节只比函数体），
@@ -355,8 +358,8 @@ head('八、同一段 CSS 声明两处各写一遍 · 第七节只管函数体�
   else say('  · 这些今天都不报错，要等改到其中一份才显形（合一条规则、选择器并列写就行）');
 }
 
-/* ---------- 九、逐字记录那个文件只许往后面接 ---------- */
-head('九、有没有哪一处想拿「改写」或「删掉」去碰逐字记录那个文件 · 拦的是程序里的路，磁盘上手动改拦不住');
+/* ---------- 八、逐字记录那个文件只许往后面接 ---------- */
+head('八、有没有哪一处想拿「改写」或「删掉」去碰逐字记录那个文件 · 拦的是程序里的路，磁盘上手动改拦不住');
 {
   /* 外28 定的规矩：逐字记录要当得了历史，靠的是"程序里没有改写的那一手"。
      界面上那两条删历史的路已经撤了（每行那枚 ✕、页脚那枚「全清掉」），这一节盯的是别再写回来。
