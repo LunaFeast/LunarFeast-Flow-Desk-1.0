@@ -305,6 +305,9 @@ function pageOf(rel, fn, dyn, packs){
   m = f.match(/^src\/_build\/(p\d)\.js$/); if(m) return { prog:P_RP, page:RP_CN[m[1] + '.js'] || m[1] };
   m = f.match(/^data\/plugins\/([^/]+)\//); if(m) return { prog:P_PACK, page:P[m[1]] || m[1] };
   m = f.match(/^data\/plugins\/([^/]+)\.js$/); if(m) return { prog:P_PACK, page:P[m[1]] || m[1] };
+  /* 壳那一侧（Rust）：命令层与纯判断层各给一页名字，名字表在 4乙 那一段的 RS_CN（没登记的先拿文件名顶上，别回问号） */
+  m = f.match(/^src\/_tauri\/src\/(?:tauri_bind|core)\/([^.]+)\.rs$/); if(m) return { prog:P_MAIN, page:RS_CN[m[1]] || m[1] };
+  m = f.match(/^src\/_tauri\/ui\/([^/]+)\.js$/); if(m) return { prog:P_FD, page:'桥 · 页面请壳的那一层' };
   /* 上面一张表都没认上的（新加的文件、还没起名字的那一类）：至少把「哪个程序的哪一份文件」说全，
      别再回一个光秃秃的「?」让人对着清单猜。文件名带的是相对路径里的最后那一段。 */
   const last = f.split('/').pop();
@@ -446,6 +449,116 @@ function scanJs(rel, src, dyn, packs){
   return rows;
 }
 
+/* ---------- 4乙 扫 Rust：壳那一侧的句子 ----------
+   2026-10-13 他定「新仓不要 Electron 残留」，第一步就是把这一半接进来：壳的主进程是 Rust，
+   那 45 份里有 889 句带汉字的话 —— 其中 699 句住在 #[cfg(test)] 之后（测试自己喂的假数据，上不了界面），
+   生产区 190 句才是界面上看得见的。口径与 js 那一路同一条：见汉字就收（他 2026-10-03 拍的），
+   只排掉四类明确不是界面的 —— 测试区、比较用的常量、控制台打印、崩掉时给开发者看的那一句。 */
+const RS_CN = { win_cmds:'窗口、菜单与托盘', page_cmds:'页面与标签', fs_cmds:'文件读写', pack_cmds:'功能包',
+  media_cmds:'音乐遥控器', backup_cmds:'定期备份', comp_cmds:'组件包', data_cmds:'数据与配置',
+  sys_cmds:'系统与这台机器', img_cmds:'图片', info_cmds:'信息与图标', log_cmds:'日志', grid_cmds:'格子停靠',
+  code_cmds:'改代码', web_cmds:'网页那一层',
+  pack_rule:'功能包（判断）', media_rule:'音乐（判断）', comp_rule:'组件包（判断）', backup_rule:'定期备份（判断）',
+  cat_rename:'改类别与改名（判断）', img_bytes:'图片字节（判断）', zip_pack:'打包与解包（判断）',
+  fs_policy:'哪些地址能碰（判断）', perm_rule:'硬地板名单（判断）', grid_snap:'格子对齐（判断）',
+  log_line:'日志逐行（判断）', page_pick:'挑页面（判断）', pick_policy:'挑文件挑目录（判断）',
+  app_deny:'不认的通道（判断）', ming_mode:'输入方式（判断）', about_info:'关于这一格（判断）',
+  cfg_value:'配置取值（判断）', core:'壳里的一层判断',
+  vol_cmds:'音量那一条（音乐遥控器）', boot_path:'开机那一步（路径）' };
+/* 挂在这些形状上的话不是界面：控制台打印、崩掉时给开发者看的、通道与控件的 id */
+const RS_NOT_CALLS = new Set(['println!','eprintln!','print!','write!','writeln!','panic!','assert!','assert_eq!','assert_ne!','debug_assert!','expect','unreachable!','todo!','with_id','name','id']);
+/* 这些宏的第一颗串是格式串：里面的 {} 是位置槽，改写时要按顺序放回原来那几种形状 */
+const RS_FMT = new Set(['format!','format_args!','write_fmt','bail!','anyhow!']);
+const RS_ATTR_POS = { label:'按钮或一栏旁边的字', title:'对话框顶上的标题', text:'对话框里那句正文', message:'对话框里那句正文',
+  detail:'对话框里更细的一句说明', msg:'临时冒出来的那句话', tooltip:'鼠标停在上面时的那行小字', ok_label:'对话框里那颗钮',
+  cancel_label:'对话框里那颗钮', description:'一句说明', help:'一句说明' };
+function rs测起点(文){ const i = 文.indexOf('#[cfg(test)]'); return i < 0 ? -1 : i; }
+function rs最近函数(文, 位){
+  const 前 = 文.lastIndexOf('\nfn ', 位), 前2 = 文.lastIndexOf('\n    fn ', 位);
+  const 起 = Math.max(前, 前2);
+  if(起 < 0) return '';
+  const m = 文.slice(起, 起 + 120).match(/\bfn\s+([A-Za-z_]\w*)/);
+  return m ? m[1] : '';
+}
+/* 逐字符取字面量：认 "…"、r"…"、r#"…"#，跳过行注释与可套的块注释 */
+function rs串们(文){
+  const 出 = []; let i = 0;
+  while(i < 文.length){
+    const c = 文[i], d = 文[i + 1];
+    if(c === '/' && d === '/'){ i = 文.indexOf('\n', i); if(i < 0) break; continue; }
+    if(c === '/' && d === '*'){ let deep = 1, j = i + 2; while(j < 文.length && deep){ if(文[j] === '/' && 文[j + 1] === '*') deep++; else if(文[j] === '*' && 文[j + 1] === '/') deep--; j++; } i = j; continue; }
+    if(c === "'"){                                                     /* 字符量与生命周期：整段跳掉，别把 ' 当成引号 */
+      const 后 = 文.slice(i + 1, i + 4);
+      if(后[0] === '\\'){ const e = 文.indexOf("'", i + 2); i = e < 0 ? i + 1 : e + 1; continue; }
+      if(后[1] === "'" && 后[0] !== ''){ i += 3; continue; }
+      const m = 文.slice(i).match(/^'[A-Za-z_]\w*(?=[^']|$)/); i += m ? m[0].length : 1; continue;
+    }
+    let 原 = false, 护 = 0;
+    if(c === 'r'){ let j = i + 1; while(文[j] === '#') j++; if(文[j] === '"'){ 原 = true; 护 = j - (i + 1); i = j; } else { i++; continue; } }
+    if(文[i] !== '"'){ i++; continue; }
+    const 止 = 文.indexOf('"' + '#'.repeat(护), i + 1);
+    if(止 < 0){ i++; continue; }
+    const 闭 = 止 + 1 + 护;
+    出.push({ 起:i, 长:闭 - i, 内:文.slice(i + 1, 止), 原, q:'"' });
+    i = 闭;
+  }
+  return 出;
+}
+/* 格式串里的槽：{}、{0}、{名}、{名:格式}；{{ }} 是字面花括号，不算 */
+function rs槽们(内){
+  const 槽 = [];
+  for(let k = 0; k < 内.length; k++){
+    if(内[k] !== '{') continue;
+    if(内[k + 1] === '{'){ k++; continue; }
+    const end = 内.indexOf('}', k);
+    if(end < 0) continue;
+    槽.push({ 形:内.slice(k, end + 1), 位:end + 1 });
+    k = end;
+  }
+  return 槽;
+}
+function scanRust(rel, 文, packs){
+  const f = rel.replace(/\\/g, '/');
+  const 名 = f.split('/').pop();
+  if(名 === 'build.rs' || 名 === 'main.rs') return [];        /* 起窗口那一手在 main.rs，它嘴里念的是这台机器的路径 */
+  const 测 = rs测起点(文);
+  const rows = [];
+  for(const s of rs串们(文)){
+    if(测 >= 0 && s.起 >= 测) continue;                        /* 测试区那 699 句：喂进去的假数据，界面上显示不出来 */
+    const 裸 = unesc(s.内);
+    if(!CN.test(裸)) continue;
+    if(s.原) continue;                                        /* 原始串（r"…"）生产区里没有；哪天有了这一句会报在这里，不当界面字吞掉 */
+    const 前 = 文.slice(Math.max(0, s.起 - 60), s.起);
+    const 后 = 文.slice(s.起 + s.长, s.起 + s.长 + 14);
+    /* 比较用的常量不收：== "…"、!= "…"、matches!(x, "…") —— 那是代码的骨头 */
+    if(/(?:==|!=|<=>)\s*$/.test(前) || /^\s*(?:==|!=)/.test(后)) continue;
+    if(/^fd-/.test(裸)) continue;                                        /* 窗口与控件的 id（「fd-名」那种）：界面上显示不出来 */
+    /* 挂在谁身上 */
+    const 宏 = 前.match(/([A-Za-z_][\w:]*!)\(\s*(?:[^()]{0,40},\s*)?$/);
+    const 段 = 前.match(/\.([A-Za-z_][\w]*)\(\s*(?:[^()]{0,40},\s*)?$/);
+    const 栏 = 前.match(/([A-Za-z_][\w]*)\s*:\s*(?:[^:,{}]{0,40},\s*)?$/);
+    const 谁 = 宏 ? 宏[1] : 段 ? 段[1] : 栏 ? 栏[1] : '';
+    if(RS_NOT_CALLS.has(谁)) continue;
+    /* 带槽的只有格式串那一种：按出现顺序编号成 {1} {2}，写回去时照原形状放回 */
+    let 句 = 裸, 槽 = [];
+    if(宏 && RS_FMT.has(宏[1])){
+      const 打 = rs槽们(s.内);
+      if(打.length){
+        槽 = 打.map(x => x.形);
+        句 = ''; let 前0 = 0;
+        for(let k = 0; k < 打.length; k++){ 句 += unesc(s.内.slice(前0, 打[k].位 - 槽[k].length)) + '{' + (k + 1) + '}'; 前0 = 打[k].位; }
+        句 += unesc(s.内.slice(前0));
+      }
+    }
+    if(!句 || 句.length > TOO_LONG || MULTI.test(句) || NOT_UI.some(re => re.test(句.replace(/\{\d+\}/g, '')))) continue;
+    const pg = pageOf(rel, '', {}, packs);
+    const pos = (栏 && RS_ATTR_POS[栏[1]]) || (宏 && '主程序回给页面的一句话') || (段 && CALL_POS[段[1]]) || '';
+    rows.push({ rel, prog:pg.prog, page:pg.page, fn:rs最近函数(文, s.起), line:文.slice(0, s.起).split('\n').length,
+      text:句, pos, pieces:[{ off:s.起, len:s.长, q:s.q }], 槽, why:(宏 ? '格式串 ' + 宏[1] : 段 ? '方法 ' + 段[1] : 栏 ? '字段 ' + 栏[1] : '壳里的一句') });
+  }
+  return rows;
+}
+
 /* ---------- 5. 扫静态 html：标签之间的字 + title / placeholder ---------- */
 function scanHtml(rel, src, packs){
   const rows = [];
@@ -535,14 +648,14 @@ function listFiles(TREE){
     try{ es = fs.readdirSync(dir, { withFileTypes:true }); }catch(e){ return; }
     for(const e of es){
       const p = path.join(dir, e.name);
-      if(e.isDirectory()){ if(['node_modules','images','userdata-fd','userdata-wnw','userdata-rp','logs','plugin','dist'].includes(e.name)) continue; walk(p); }
-      else if(/\.(js|cjs)$/.test(e.name) && !/\.code\.js$/.test(e.name) && !SKIP_NAME.has(e.name)){
+      if(e.isDirectory()){ if(['node_modules','images','userdata-fd','userdata-wnw','userdata-rp','logs','plugin','dist','target','gen'].includes(e.name)) continue; walk(p); }
+      else if(/\.(js|cjs|rs)$/.test(e.name) && !/\.code\.js$/.test(e.name) && !SKIP_NAME.has(e.name)){
         const rel = path.relative(TREE, p).replace(/\\/g, '/');
         if(!SKIP_REL.has(rel)) out.push(rel);
       }
     }
   };
-  for(const d of ['src/pack', 'src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'data/plugins']) walk(path.join(TREE, d));
+  for(const d of ['src/pack', 'src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/_tauri', 'data/plugins']) walk(path.join(TREE, d));
   for(const f of ['src/_build/p1.js','src/_build/p2.js','src/_build/p3.js','src/_build/p4.js','src/_build/p5.js','src/_build/p6.js'])
     if(fs.existsSync(path.join(TREE, f))) out.push(f);
   for(const f of HTML_FILES) if(fs.existsSync(path.join(TREE, f))) out.push(f);
@@ -558,6 +671,7 @@ function collectAll(TREE){
   let occ = [];
   for(const rel of files){
     if(/\.html$/.test(rel)){ occ = occ.concat(scanHtml(rel, src[rel], packs)); continue; }
+    if(/\.rs$/.test(rel)){ try{ occ = occ.concat(scanRust(rel, src[rel], packs)); }catch(e){ console.log('扫不动 ' + rel + '：' + e.message); } continue; }
     try{ occ = occ.concat(scanJs(rel, src[rel], dyn, packs)); }
     catch(e){ console.log('扫不动 ' + rel + '：' + e.message); }
   }
@@ -569,7 +683,7 @@ function groupsOf(occ){
   for(const o of occ){
     const key = o.prog + '\u0000' + o.page + '\u0000' + o.text;
     if(!g.has(key)) g.set(key, { prog:o.prog, page:o.page, text:o.text, fn:o.fn, pos:o.pos || '', at:[] });
-    g.get(key).at.push({ rel:o.rel, line:o.line, pieces:o.pieces, slots:o.slots, why:o.why, pos:o.pos || '' });
+    g.get(key).at.push({ rel:o.rel, line:o.line, pieces:o.pieces, slots:o.slots, why:o.why, pos:o.pos || '', 槽:o.槽 });
   }
   return [...g.values()].sort((a, b) => (a.prog + ' ' + a.page + ' ' + a.text).localeCompare(b.prog + ' ' + b.page + ' ' + b.text, 'zh'));
 }
@@ -787,7 +901,7 @@ function locate(TREE, edits){
     if(!每份.has(rel)) 每份.set(rel, { rel, 文:src[rel] || '', 下刀:[], 已下:new Set() });
     return 每份.get(rel);
   };
-  const 丢 = (e, to, del) => miss.push({ prog:e.prog, page:e.page, from:e.from, to, del });
+  const 丢 = (e, to, del, 话) => miss.push({ prog:e.prog, page:e.page, from:e.from, to, del, 话 });
   for(const e of (edits || [])){
     /* del = 「这句不要了」：这一句在界面上不显示，写进源码就是把它那句字面量掏空 */
     const del = !!e.del;
@@ -795,11 +909,14 @@ function locate(TREE, edits){
     if((!to && !del) || to === e.from) continue;
     const hit = groups.find(x => x.prog === e.prog && x.page === e.page && x.text === e.from);
     if(!hit){ 丢(e, to, del); continue; }
+    /* 带位置槽的那一句（Rust 的格式串）不许掏空：槽留下了，实参就对不上，那份直接编不过 */
+    if(del && hit.at.some(a => a.槽 && a.槽.length)){ 丢(e, to, del, '那一句里还有位置槽，掏空会把槽留在格式串里'); continue; }
     const at = [];
     for(const a of hit.at){
       const body = src[a.rel];
       const 份 = 取(a.rel);
-      const vals = splitTemplate(to, a.pieces.length);
+      const 槽 = a.槽 || [];                        /* Rust 格式串里那几颗位置槽（{}、{名}），一颗一格 */
+      const vals = splitTemplate(to, a.pieces.length + 槽.length);
       const 刀 = [];
       let 早下过 = false;
       for(let k = 0; k < a.pieces.length; k++){
@@ -808,6 +925,16 @@ function locate(TREE, edits){
         if(份.已下.has(键)){ 早下过 = true; continue; }              /* 这一处前头已经写过：整处跳过，不写第二遍 */
         if(!(pc.len > 0) || pc.off < 0 || pc.off + pc.len > body.length ||
            !位置对得上(body, pc)){ 刀.length = 0; break; }              /* 位置认不出：整处都不动 */
+        if(槽.length){
+          /* Rust 的格式串必须是一整颗字面量（format! 不许把几段拼起来），所以整颗重写：
+             段与段之间按源码里原来那几种槽形状放回（{} 与 {名} 各归各），一颗都不改形状 */
+          const 段 = vals.slice(0, 槽.length + 1);
+          let 串 = '';
+          for(let t = 0; t < 槽.length; t++) 串 += resc(段[t], pc.q) + 槽[t];
+          串 += resc(段[槽.length], pc.q);
+          刀.push({ at:pc.off, len:pc.len, 文字: pc.q + 串 + pc.q });
+          continue;
+        }
         const esc = resc(vals[k] === undefined ? '' : vals[k], pc.q);
         /* 位置（off/len）吃的是一段带引号的字面量，写回去就得把引号重新裹上；
            静态 html 里标签之间和属性里的字（q 是 html/attr）本来没引号，不裹。 */
