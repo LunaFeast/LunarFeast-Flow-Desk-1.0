@@ -144,9 +144,15 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   const 真 = (() => { try { const out = execFileSync(process.execPath, ['src/_build/release.mjs', '--看'],
       { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return { 码: 0, 文: out }; }
     catch (e) { return { 码: e.status, 文: String((e && (e.stdout || e.stderr)) || (e && e.message) || e) }; } })();
-  台.判('5 真跑一趟 --看（盘上此刻就是脏的）：跑到底、不崩，并把那一句提醒打出来 · 退出码 ' + 真.码,
-    真.码 === 0 && /--看 照量：盘上 \d+ 处没提交/.test(真.文) && !/invalid object name/.test(真.文),
-    真.文.split(/\r?\n/).find(l => l.includes('照量')) || '');
+  /* 这一台不挑盘上脏不脏：脏的时候那句提醒必须出来，干净的时候必须不出现（出现了就是拿假数吓人）。
+     两种情形都要求 --看 跑到底 —— 顶上那一句「再跑一次 --看…」是最后一行，没跑到就是中途崩了。 */
+  const 脏 = (() => { try { return execFileSync('git', ['-C', ROOT, 'status', '--porcelain'], { encoding: 'utf8' })
+      .split(/\r?\n/).filter(Boolean).length; } catch (e) { return -1; } })();
+  台.数('跑这一台的时候盘上几处没提交', 脏 + ' 处');
+  台.判('5 真跑一趟 --看：跑到底、不崩，那句「盘上 N 处没提交」跟着现场走（现在 ' + 脏 + ' 处）· 退出码 ' + 真.码,
+    真.码 === 0 && /再跑一次 --看/.test(真.文) && !/invalid object name/.test(真.文) &&
+    (脏 > 0 ? /--看 照量：盘上 \d+ 处没提交/.test(真.文) : !/照量：盘上 \d+ 处没提交/.test(真.文)),
+    真.文.split(/\r?\n/).find(l => l.includes('照量')) || (脏 > 0 ? '脏着却没提醒' : '干净时没多话'));
   const 清 = fs.readFileSync(ROOT + 'data/推送清单.txt', 'utf8');
   台.判('6 量完的清单上六家一个形状（为写那格的副题也是「这一家的代码在 plugin/why-not-write 那一支」）',
     (清.match(/^【.*】这一家的代码在 plugin\/[\w-]+ 那一支$/gm) || []).length === 6 &&
