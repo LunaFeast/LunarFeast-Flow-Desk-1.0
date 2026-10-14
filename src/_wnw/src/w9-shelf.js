@@ -330,11 +330,11 @@ Shelf.view = {
     inp.focus();
     inp.addEventListener('keydown', e => { if(e.isComposing || e.keyCode === 229) return; if(e.key === 'Enter') wnwRoot().querySelector('.wnw-panel-foot .wnw-btn').click(); });
   },
-  groupDlg(){
+  groupDlg(重开){
     const d = Shelf.data;
     const box = h('div', { class:'wnw-col' });
     const inp = h('input', { class:'wnw-input', placeholder:'新分组名' });
-    box.appendChild(h('div', { class:'wnw-row' }, [inp, h('button', { class:'wnw-btn mini', onclick:async () => { if(!inp.value.trim()) return; await Shelf.addGroup(inp.value.trim()); inp.value = ''; this.draw(); this.groupDlg(); }, html:icoMarkup('plus') })]));
+    box.appendChild(h('div', { class:'wnw-row' }, [inp, h('button', { class:'wnw-btn mini', onclick:async () => { if(!inp.value.trim()) return; await Shelf.addGroup(inp.value.trim()); inp.value = ''; this.draw(); this.groupDlg(true); }, html:icoMarkup('plus') })]));
     for(const g of d.groups)
       box.appendChild(h('div', { class:'wnw-item', style:'flex-wrap:nowrap' }, [
         h('span', { class:'ttl' }, g.name),
@@ -343,16 +343,18 @@ Shelf.view = {
         h('button', { class:'wnw-btn mini', onclick:async () => {
           const n = d.books.filter(b => b.groupId === g.id).length;
           if(!await wnwAsk('删掉分组「' + g.name + '」？' + (n ? '这 ' + n + ' 本书回到没分组那一档，书本身一本不动。' : '这个分组里没书。'))) return;
-          await Shelf.delGroup(g.id); this.draw(); this.groupDlg();
+          await Shelf.delGroup(g.id); this.draw(); this.groupDlg(true);
         } }, '删')
       ]));
-    Overlay.open('分组', box);
+    /* 加完一个分组、删完一个分组，这一张是自己重开自己的：必须走 redraw 把旧那份扔掉。
+       不这么办的话旧那份被压进 below，"新建分组"要按两次关闭才退得掉（议题 15）。 */
+    Overlay.open('分组', box, null, 重开 ? { redraw: true } : null);
   },
-  seriesDlg(){
+  seriesDlg(重开){
     const d = Shelf.data;
     const box = h('div', { class:'wnw-col' });
     const inp = h('input', { class:'wnw-input', placeholder:'新系列名（比如：某某世界观）' });
-    box.appendChild(h('div', { class:'wnw-row' }, [inp, h('button', { class:'wnw-btn mini', onclick:async () => { if(!inp.value.trim()) return; await Shelf.addSeries(inp.value.trim()); inp.value = ''; this.draw(); this.seriesDlg(); }, html:icoMarkup('plus') })]));
+    box.appendChild(h('div', { class:'wnw-row' }, [inp, h('button', { class:'wnw-btn mini', onclick:async () => { if(!inp.value.trim()) return; await Shelf.addSeries(inp.value.trim()); inp.value = ''; this.draw(); this.seriesDlg(true); }, html:icoMarkup('plus') })]));
     for(const s of d.series)
       box.appendChild(h('div', { class:'wnw-item', style:'flex-wrap:nowrap' }, [
         h('span', { class:'ttl' }, s.name),
@@ -360,10 +362,10 @@ Shelf.view = {
         h('span', { style:'flex:1' }),
         h('button', { class:'wnw-btn mini', onclick:async () => {
           if(!await wnwAsk('删掉系列「' + s.name + '」？这个系列名单会没，' + s.books.length + ' 本书本身一本不动。')) return;
-          await Shelf.seriesDel(s.id); this.draw(); this.seriesDlg();
+          await Shelf.seriesDel(s.id); this.draw(); this.seriesDlg(true);
         } }, '删')
       ]));
-    Overlay.open('系列', box);
+    Overlay.open('系列', box, null, 重开 ? { redraw: true } : null);
   }
 };
 

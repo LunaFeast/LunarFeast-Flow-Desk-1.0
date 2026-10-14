@@ -104,6 +104,27 @@ pub fn 命令递的是名字吗(串: &str) -> bool {
     串 == "pick"
 }
 
+/* ---------- MusicBee 那一家的近路（2026-10-14 议题 16 补上） ----------
+   监听脚本 smtc-watcher.ps1 里"递命令"那一段从前没搬进壳：MusicBee 的命令不走系统 Try*，
+   而是往 players\musicbee-cmd.txt 写一行明文，由装进 MusicBee 的那颗桥插件去执行。
+   为什么绕这一道（主人 2026-10-05：「音乐遥控器以前不会抢系统媒体键，现在会抢，我不需要他抢」）：
+   系统那一路要会话先向系统声明 IsPlayEnabled，一声明，键盘与耳机上那颗硬件媒体键就归了这个会话；
+   插件那边那五枚按钮全关着，所以既按得动又不抢键。没搬的后果就是议题 16 报的那一句：
+   钉住 MusicBee 时上一首 / 播放暂停 / 下一首 三枚全没反应（系统 Try* 递过去，MusicBee 不接）。 */
+
+/// 那一行明文落在哪一份文件
+pub const 桥命令件名: &str = "musicbee-cmd.txt";
+
+/// 会话的发布者是不是 MusicBee（名字里含这一段就算，大小写不论）
+pub fn 是音乐蜂(身份: &str) -> bool {
+    身份.to_lowercase().contains("musicbee")
+}
+
+/// 递过去的那一行正文：seek 带位置，其余就一个命令名（脚本里同一句）
+pub fn 桥命令正文(命令: &str, 进度: i64) -> String {
+    if 命令 == "seek" { format!("seek:{}", 进度) } else { 命令.to_string() }
+}
+
 /// pos 那一栏：不是数当 0，负的一律按 0（原件 1046 行 Math.max(0, Number(msg.pos) || 0)）
 pub fn 进度取值(给: Option<f64>) -> i64 {
     match 给 {
@@ -947,6 +968,21 @@ mod 验判断 {
     fn 挑不着会话那两句是全角冒号收尾的那两句() {
         assert_eq!(没会话那句, "此刻没有播放器在报会话");
         assert_eq!(钉住没会话那句, "钉住的那家此刻没有会话：");
+    }
+
+    #[test]
+    fn 音乐蜂那一家的近路认名字与递正文() {
+        /* 会话的发布者名字各家写法不一（进程名带后缀、大小写不一），含这一段就算 */
+        assert!(是音乐蜂("MusicBee.exe"));
+        assert!(是音乐蜂("musicbee"));
+        assert!(是音乐蜂("MusicBee"));
+        assert!(!是音乐蜂("Spotify.exe"));
+        assert!(!是音乐蜂("Windows Media Player"));
+        /* 文件名叫那个（桥插件盯的就是这一份），正文 seek 带位置、其余就一个命令名 */
+        assert_eq!(桥命令件名, "musicbee-cmd.txt");
+        assert_eq!(桥命令正文("toggle", 0), "toggle");
+        assert_eq!(桥命令正文("next", 0), "next");
+        assert_eq!(桥命令正文("seek", 82660), "seek:82660");
     }
 
     #[test]
