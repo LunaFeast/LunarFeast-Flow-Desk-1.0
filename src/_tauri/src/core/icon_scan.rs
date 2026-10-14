@@ -82,8 +82,12 @@ pub fn 段编码(段: &str) -> String {
     出
 }
 
-/// 一条地址：fdapp://app/<层内相对，逐段编码>?at=<改到毫秒>。
-/// 门牌三层里先认数据层（带 data/ 开头），再认页面层，其余按树根算相对 —— 跟主进程那颗 toUrl 同一顺序。
+/// 一条地址：**根相对** `/<层内相对，逐段编码>?at=<改到毫秒>`。
+/// 为什么不写死门牌：Windows 上 WebView2 只把 `http://fdapp.localhost/…` 当本地内容，
+/// 页面自己的 `location` 就是那个样子（`location.protocol` 是 `http:`）。CSS 里写 `fdapp://app/…`
+/// 等于让本地页面去引一个它够不着的 scheme —— 图标遮罩与底纹全部取不到，屏幕上就是一块纯色或干脆空着
+/// （2026-10-14 他报「大量图标不显示 / 不居中」量到的就是这个）。根相对写法三种门牌下都落得对：
+/// 壳里 `http://fdapp.localhost/icons/x.svg`、Electron 的 `fdapp://app/icons/x.svg`、开发那台服务器也一样。
 /// 尾巴上那个 at：同名换一张图，光是内容变了不算，页面手里那张旧的靠这个数作废。
 pub fn 地址(树: &str, 页: &str, 数: &str, 文件: &str, 改到: u64) -> Option<String> {
     if let Some(相) = 剥根(数, 文件) {
@@ -95,7 +99,7 @@ pub fn 地址(树: &str, 页: &str, 数: &str, 文件: &str, 改到: u64) -> Opt
 
 fn 拼地址(头: &str, 相: &str, 改到: u64) -> String {
     let 段: Vec<String> = 相.split('/').map(段编码).collect();
-    format!("fdapp://app/{}{}?at={}", 头, 段.join("/"), 改到)
+    format!("/{}{}?at={}", 头, 段.join("/"), 改到)
 }
 
 /// 这一趟要不要真扫一遍：没扫过、或者上回已经过了半秒
@@ -145,21 +149,21 @@ mod 验判断 {
     }
 
     #[test]
-    fn 地址按三层门牌拼并逐段编码() {
+    fn 地址按三层根相对拼并逐段编码() {
         let 树 = "某处\\一棵树";
         let 页 = "某处\\一棵树\\pages";
         let 数 = "某处\\一棵树\\data";
         assert_eq!(
             地址(树, 页, 数, "某处\\一棵树\\icons\\open.svg", 123).unwrap(),
-            "fdapp://app/icons/open.svg?at=123"
+            "/icons/open.svg?at=123"
         );
         assert_eq!(
             地址(树, 页, 数, "某处\\一棵树\\pages\\纹理.svg", 7).unwrap(),
-            "fdapp://app/%E7%BA%B9%E7%90%86.svg?at=7"
+            "/%E7%BA%B9%E7%90%86.svg?at=7"
         );
         assert_eq!(
             地址(树, 页, 数, "某处\\一棵树\\data\\images\\一张.png", 9).unwrap(),
-            "fdapp://app/data/images/%E4%B8%80%E5%BC%A0.png?at=9"
+            "/data/images/%E4%B8%80%E5%BC%A0.png?at=9"
         );
         assert_eq!(地址(树, 页, 数, "某处\\另一棵\\icons\\x.svg", 1), None);
     }

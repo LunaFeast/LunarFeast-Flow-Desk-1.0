@@ -1139,7 +1139,7 @@ const REL_KINDS = [ { k:'上级', c:'#e05a5a' }, { k:'同级', c:'#e59445' }, { 
    是整段代码求值到这一行就断，后面的全都不再定义 —— 先认宿主那份，认不到才按协议自己算。
    从前按 iframe 那层深度算的那一份公式不对，留的是这个名、换的是这个值 —— 数据层、插件目录、图片落盘、历史快照全都跟着它走。 */
 const WNW_DATA_PRE = typeof DATA_PRE === 'string' ? DATA_PRE
-  : (window.FD_APP && location.protocol === 'fdapp:') ? '../../data/' : '../';
+  : (window.FD_APP && (location.protocol === 'fdapp:' || window.__FD_BOOT__)) ? '../../data/' : '../';
 const TOOL_HOST = {
   id:'wnw',
   /* DB 是本文件上面的 const，用 getter 等到运行期再取 */

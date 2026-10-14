@@ -335,7 +335,7 @@ export function 合进那条支(支, 源, 选项){
   try{ git(TREE, ['merge-base', '--is-ancestor', 从头, 支头]);
     return { 支, 从, 动了: false, 话: '「' + 从 + '」那一笔已经全在「' + 支 + '」里，这一趟不用合' }; }catch(e){}
   let 树 = '';
-  try{ 树 = String(git(TREE, ['merge-tree', '--write-tree', 支头, 从头])).split(/\r?\n/)[0]; }
+  try{ 树 = String(git(TREE, ['-c', 'core.quotepath=false', 'merge-tree', '--write-tree', 支头, 从头])).split(/\r?\n/)[0]; }
   catch(e){
     /* merge-tree 砸出来的那几行是「<模式> <对象号> <第几眼>\t<路径>」，一份文件三行 —— 只要那份文件的名字。 */
     const 撞 = [...new Set(String((e && e.stdout) || '').split(/\r?\n/).slice(1)

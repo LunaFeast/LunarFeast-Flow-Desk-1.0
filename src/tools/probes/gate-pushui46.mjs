@@ -139,10 +139,9 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
 台.题('七、界面那一屏说的还是那六条');
 台.判('一屏里能看见：会不会动、号从哪一串到哪一串、动了哪些份、更新描述',
   ['会不会动', '现在挂的号', '动了哪些份', '更新描述'].every(k => pg.includes(k)));
-台.判('那一份单的框把话说全：空着、别的字一律不送；pr.mjs 那一头那份单里 main、assemble 那条拼装的分支、tag、集成分支都写明不推',
-  pg.includes('一个字节都不送') && pg.includes('这一趟一个字节都不送') &&
-  pr.includes('main：不推（只能你人工合并）· assemble 那条拼装的分支：不推 · tag：不推') &&
-  pg.includes('合并由你在 GitHub 网页上人工点'));
+台.判('那一份单的框把话说全：这一趟还没跑、一个字节都没送、要看的就是"送哪几条分支、哪几条永不上远程、合并申请朝哪儿发"；pr.mjs 那一头那份单里 main、assemble 那条拼装的分支、tag、集成分支都写明不推',
+  pg.includes('一个字节都没送') && pg.includes('合并申请朝哪儿发') &&
+  pr.includes('main：不推（只能你人工合并）· assemble 那条拼装的分支：不推 · tag：不推'));
 台.判('「开始发」先把界面上改的两样写回文件再起那一趟（不让他改了没存就发）',
   pg.includes("if(await 存(true)) 跑('发'") && pg.includes('async function 存'));
 台.判('这一台自己的头部注释说清它不实现发布动作（他读脚本一眼就知道边界）',
@@ -162,9 +161,9 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
   台.判('4 屏上那行话跟着改口：问不出写「盘上问不出（git 叫不动）」，只有真量到 0 处才写「本地改动都提交完了」',
     pg.includes('对.脏 < 0 ?') && pg.includes('盘上问不出') && pg.includes("'本地改动都提交完了'") &&
     pg.includes('git坏 = 对.git好 === false') && pg.includes('id="git警"'));
-  台.判('5 四颗钮一起不亮（量 / 提交 PR / 打包发版 / 重建集成分支），不让人对着假数点下去',
+  台.判('5 四颗钮一起不亮（重新量一遍 / 推送并建合并申请 / 打包发版 / 打这一枚），不让人对着假数点下去',
     pg.includes('取(\'量\').disabled = 对.在跑 || git坏') && pg.includes('底 = !对.清单在 || 对.在跑 || git坏') &&
-    pg.includes('取(\'发\').disabled = !对.清单在 || git坏') && pg.includes('n === 0 || 跑着 || git坏'));
+    pg.includes('取(\'发\').disabled = !对.清单在 || git坏') && pg.includes('取(\'自测\').disabled = 对.在跑 || git坏'));
   台.判('6 双击那个起台的先认一遍系统路径、再往那几个常见位置找 git，找不到就把话说在前头（且没写死本机绝对路径）',
     bat.includes('where git >nul 2>nul') && bat.includes('%ProgramFiles%\\Git\\cmd') &&
     bat.includes('%USERPROFILE%\\.qoder-cn\\bin\\git\\cmd') && bat.includes('这一台找不到 git') &&
