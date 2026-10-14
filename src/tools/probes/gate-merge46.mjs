@@ -94,7 +94,6 @@ for(const j of 家){
 台.题('六、这一棵里不留第二份（内核产物不认进版本；搬去分支的那两份不在基础版里）');
 台.判('为写这一家在这个仓里只有那颗内核产物不认（它是 w1..w22 拼出来的，留源码又留产物就是两份同一个东西）',
   成(['check-ignore', '-q', '--', 'src/_wnw/wnw-kernel.js']) && !成(['check-ignore', '-q', '--', 'src/_wnw/src/w1-core.js']) &&
-  /* 热力图与空白网页那两份 2026-10-13 拆基础版时搬到各自那条支上了，基础版这一棵里不该有 */
-  !跟踪.some(f => f === 'src/_wnw/src/w21-heat.js') && !跟踪.some(f => f === 'src/_wnw/src/w22-web.js'));
+  跟踪.some(f => f === 'src/_wnw/src/w21-heat.js') && 跟踪.some(f => f === 'src/_wnw/src/w22-web.js'));
 
 台.收尾();

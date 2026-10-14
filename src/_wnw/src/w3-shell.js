@@ -1678,7 +1678,9 @@ const Overlay = {
     }
     const panel = h('div', { class:'wnw-panel' + (opt && opt.wide ? ' wide' : '') + (opt && opt.vwide ? ' vwide' : '') +
       /* set：定死 1080×680 的那一档，只有设置用 */
-      (opt && opt.set ? ' set' : '') }, [
+      (opt && opt.set ? ' set' : '') +
+      /* hist：访问历史 / 收藏那一档，窄一档，不许摊到所在那一块的边上 */
+      (opt && opt.hist ? ' hist' : '') }, [
       h('div', { class:'wnw-panel-head' }, [h('b', {}, title), h('span', { style:'flex:1' }),
         h('button', { class:'wnw-btn mini w-txt', html:icoMarkup('close') + '关闭', onclick:() => this.close() })]),
       /* 设置那一档（set）：滚只许滚右栏 —— 外层一滚，左边那列竖标签就跟着往上溜 */
