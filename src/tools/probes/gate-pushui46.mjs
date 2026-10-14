@@ -97,8 +97,8 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
 台.题('四、最后那一个字还是他亲手给的（2026-10-14 换的形状：点下去先摊单，敲对了那个字才起子进程）');
 台.判('确认那一个字只认 push-list.mjs 导出的那一颗，这一台没自己写死（往 import 那一串里加名字不算改这一条）',
   /import \{[^}]*确认词[^}]*\} from '\.\/push-list\.mjs'/.test(ui) && !/'推'/.test(ui));
-台.判('往远程送东西的那三道（提交 PR / 推勾中的那几项 / 第一次推 main）起子进程之前一律先过 收字 这一道',
-  (存路.match(/if\(!收字\(res, 身\)\) return;/g) || []).length === 3,
+台.判('往远程送东西的那两道（推送这一轮的改动 / 推勾中的那几项）起子进程之前一律先过 收字 这一道',
+  (存路.match(/if\(!收字\(res, 身\)\) return;/g) || []).length === 2,
   (存路.match(/if\(!收字\(res, 身\)\) return;/g) || []).length);
 台.判('收字 比的还是 push-list 那一颗；不对就 400 并报名字，子进程根本不起',
   /function 收字\(res, 身\)\{/.test(ui) && ui.includes('if(答 !== 确认词)') && ui.includes('发(res, 400,') &&
@@ -107,13 +107,13 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
   (ui.match(/stdin\.write\(/g) || []).length === 0 && ui.includes('子.stdin.end();'));
 台.判('起了真跑那一道必带 --已确认（屏上已经敲过那个字，pr.mjs 那头不再问第二遍）',
   ui.includes("['src/_build/pr.mjs', '--提交PR', '--已确认']") &&
-  ui.includes("['src/_build/pr.mjs', '--推前瞻支', '--推=' + 项.join(','), '--已确认']") &&
-  ui.includes("['src/_build/pr.mjs', '--建远程main', '--已确认']"));
-台.判('那一份单不在界面里另写一套：/api/摊单 直接叫 pr.mjs 那三颗算好的（提交单 / 前瞻单 / 建远程单）',
-  ui.includes('建远程单().单') && ui.includes('前瞻单(递).单') && ui.includes('提交单().单') &&
-  /if\(路 === '\/api\/摊单'\)/.test(ui));
-台.判('pr.mjs 那三颗摊单全是只读的：一根指针都不挪（update-ref 只在 本轮那一支 与 --开这一轮的支 那两道里）',
-  ['建远程单', '前瞻单', '提交单', '看那一支'].every(f => !/update-ref/.test(切(pr.replace(/^export /gm, ''), f))));
+  ui.includes("['src/_build/pr.mjs', '--推前瞻支', '--推=' + 项.join(','), '--已确认']"));
+台.判('那一份单不在界面里另写一套：/api/摊单 直接叫 pr.mjs 那两颗算好的（提交单 / 前瞻单）',
+  ui.includes('前瞻单(递).单') && ui.includes('提交单().单') && /if\(路 === '\/api\/摊单'\)/.test(ui));
+台.判('pr.mjs 那两颗摊单全是只读的：一根指针都不挪（update-ref 只在 本轮那一支 与 --开这一轮的支 那两道里）',
+  ['前瞻单', '提交单', '看那一支'].every(f => !/update-ref/.test(切(pr.replace(/^export /gm, ''), f))));
+台.判('往远程送东西这一台只有那两个口子：没有"推 main"那一颗 —— 第一次建远程 main 那一颗用完就整块拆了（2026-10-14 上午他敲字推的那一次）',
+  !/建远程/.test(ui) && !/建远程/.test(pg) && !/建远程/.test(pr) && !/'push'[^\n]*'main'/.test(pr));
 台.判('屏上是点钮 → 先拿单 → 才开那一格输入框，日志中段不再冒框',
   pg.includes('async function 摊着来(') && pg.includes('function 开确(') && pg.includes("取('确').classList.add('开')") &&
   !pg.includes("全.includes('确认词：')") && !pg.includes('取(\'确\').classList.remove(\'开\');\n  跑着'));
@@ -155,9 +155,9 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
   台.判('2 现场那一眼：问不出报 脏 = -1（不是 0），并带 git好 / git话 给屏上说；问不出就不问合并状态、不列前瞻支',
     ui.includes('脏: 脏单 ? 脏单.length : -1') && ui.includes('git好: 问脏.好 && 问站.好') &&
     ui.includes('if(支 && 问脏.好 && 支名收(支))') && ui.includes('前瞻: 问脏.好 ? 本地前瞻支() : []'));
-  台.判('3 那十五道要动 git 的（量 / 同步 / 开支 / 落笔 / 推项 / 查 / 快进 / 删支 / 自测 / 完整 / 提交 PR / 第一次推 main / 摊单 / 打包发版 / 重建集成分支）' +
+  台.判('3 那十四道要动 git 的（量 / 同步 / 开支 / 落笔 / 推项 / 查 / 快进 / 删支 / 自测 / 完整 / 提交 PR / 摊单 / 打包发版 / 重建集成分支）' +
     '起子进程之前各问一次，问不出就 503 什么都不做',
-    (ui.match(/git不中\(res\)/g) || []).length === 15 && ui.includes('const 叫得动git') && ui.includes('发(res, 503,'),
+    (ui.match(/git不中\(res\)/g) || []).length === 14 && ui.includes('const 叫得动git') && ui.includes('发(res, 503,'),
     (ui.match(/git不中\(res\)/g) || []).length);
   台.判('4 屏上那行话跟着改口：问不出写「盘上问不出（git 叫不动）」，只有真量到 0 处才写「盘上干净」',
     pg.includes('对.脏 < 0 ?') && pg.includes('盘上问不出') && pg.includes("'盘上干净'") &&

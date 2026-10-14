@@ -51,6 +51,7 @@ const 开支 = 切出(pr, '看那一支') + 切出(pr, '本轮那一支');
 const 落笔 = 切出(pr, '落笔到支');
 const 开PR = 切出(pr, '开PR');
 const 在用 = 切出(pr, '支名在用');
+const 远程话 = 切出(pr, '远程没main话');
 const 要确认 = 切出(pr, '要他确认');
 const 快进 = 切出(rep, '各家快进');
 const 分家 = 切出(rep, '分家');
@@ -61,23 +62,18 @@ const 代码 = 文 => String(文).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \
 const pr码 = 代码(pr), rel码 = 代码(rel);
 
 /* ---------- 一 ---------- */
-/* 往远程推 main 的那一手（2026-10-14 加）：只有 --建远程main 这一颗，而且它先问远程有没有那一根，
-   已经有了就当场停 —— 所以这一颗一辈子只用得上一次，覆盖不到 main 上原有的东西。下面几道钉的就是这个边界。 */
-const 建远程块 = (() => { const 码 = 代码(pr); const a = 码.indexOf("has('--建远程main')"), b = 码.indexOf("has('--提交PR')");
-  return a >= 0 && b > a ? 码.slice(a, b) : ''; })();
-const 建远程单码 = 切出(pr, '建远程单');
-台.题('一、推这一手只推一条支：main、tag、拼装那一棵、自动合并都不在 pr.mjs 里（唯一的例外是第一次建远程 main）');
-台.判('代码里 push 只有两处：推支（推被点名的那一条支）与 --建远程main（第一次建远程那一根）—— 别处一处都没有',
-  (pr码.match(/'push'/g) || []).length === 2 && 推支.includes("'push', '-u', 远端, 名") &&
-  建远程块.includes("'push', '-u', 单.远端, 'main'"), (pr码.match(/'push'/g) || []).length);
-台.判('提交PR 与 推前瞻支 那两串里没有把 main 推上去的那一手（git 那两个参数 "' + "'push" + '"' + "' 与 'main' 同在一句里，只许出现在第一次那一颗）",
-  !/'push'[^\n]*'main'/.test(代码(pr).replace(建远程块, '')) && !/'push', 'origin', 'main'/.test(pr码));
-台.判('第一次那一颗先验"远程还没有 main"（已经有了当场停）；公开面那道闸扫的是一棵里全部进仓的文本（那时还没有可比对的基线）',
-  建远程单码.includes('if(表.main) 停(') && 建远程单码.includes("公开面闸('main', 远端, '全部')"));
-台.判('第一次那一颗只推 main 这一根：一趟就一次 push、没有 --force、没有 --tags；摊单先 return、要他敲字与 --不推 都排在 push 之前',
-  (建远程块.match(/'push'/g) || []).length === 1 && !/--force/.test(建远程块) && !/--tags/.test(建远程块) &&
-  建远程块.indexOf('if(报单)') < 建远程块.indexOf("'push'") && 建远程块.indexOf('要他确认') < 建远程块.indexOf("'push'") &&
-  建远程块.indexOf('不推') < 建远程块.indexOf("'push'"));
+/* 2026-10-14 上午那一下"建出远程第一根 main"（--建远程main）已经用完并整块拆掉了：
+   这一节因此回到最严的那一条 —— 这一颗里连一次"推 main"都不许出现，push 只许出现在 推支 那一处。
+   留一道记录在这儿：拆之前它是有过的，拆完要有闸钉住"别哪天又长回来"。 */
+台.题('一、推这一手只推一条支：main、tag、拼装那一棵、自动合并都不在 pr.mjs 里（第一次建远程 main 那一颗已经拆了）');
+台.判('代码里 push 只有一处，就是 推支 里那一处', (pr码.match(/'push'/g) || []).length === 1 && 推支.includes("'push', '-u', 远端, 名"),
+  (pr码.match(/'push'/g) || []).length);
+台.判('没有任何一条路推 main：push 与 main 这两个参数不同在一句里，也没有 push origin main 那一串',
+  !/'push'[^\n]*'main'/.test(pr码) && !/'push', 'origin', 'main'/.test(pr码));
+台.判('第一次那一颗整块拆干净了：这一颗与那一屏里「建远程」这三个字一处都不留（连注释里都不许留成一枚还能按的钮）',
+  !/建远程/.test(pr) && !/建远程/.test(rd('src/_build/push-ui.mjs')) && !/建远程/.test(rd('src/_build/push-ui.html')));
+台.判('远程那一头万一没有 main（那一根被人删了、或这台挂错了远程）：同步那一道照样当场停，报的是人话，而且不替你重建那一根',
+  同步.includes('if(!表.main) 停(远程没main话(表))') && 远程话.includes('这一颗什么都不推') && 远程话.includes('这一颗不替你重建 main 那一根'));
 台.判('没有 --force、没有 -f、没有强推那一手', !/--force/.test(pr码) && !/'-f'/.test(pr码));
 台.判('没有 --tags（tag 只在本地打，推 tag 这一轮不做）', !/--tags/.test(pr码));
 台.判('推支 那一颗点名挡掉 main 与拼装那一棵', 推支.includes("名 === 'main' || 名 === 拼装支") && 推支.includes('不推 '));
@@ -86,9 +82,6 @@ const 建远程单码 = 切出(pr, '建远程单');
   推支.indexOf('支名可用(名)') < 推支.indexOf('公开面闸(名, 远端)') && 推支.indexOf('公开面闸(名, 远端)') < 推支.indexOf("'push', '-u', 远端, 名"));
 台.判('不自动合并：没有 gh pr merge、没有 --auto、不跑 git merge', !/'pr', 'merge'/.test(pr) && !/--auto/.test(pr) && !/'merge'/.test(pr));
 台.判('建完 PR 就停：开PR 那一颗里没有第二趟 git 写活', !/execFileSync\('git'/.test(开PR));
-台.判('代码里 push 只有两处：推支（被点名的那一条功能支）与 --建远程main（第一次建远程那一根）',
-  (pr码.match(/'push'/g) || []).length === 2 && 推支.includes("'push', '-u', 远端, 名") &&
-  建远程块.includes("'push', '-u', 单.远端, 'main'"), (pr码.match(/'push'/g) || []).length);
 台.判('release.mjs 里一处 push 都没有（打包那一颗什么都不推）', !/'push'/.test(rel) && !/push origin/.test(rel));
 
 /* ---------- 二 ---------- */
@@ -191,8 +184,8 @@ const 建远程单码 = 切出(pr, '建远程单');
   /return 改\.filter\(f => 归那一家\(f\) !== job\)/.test(独有) && !/'notes'/.test(独有));
 台.判('已经在 main 后面那一支不挪（纯快进的那一格先问 is-ancestor）',
   快进.includes('是祖先(支头, 头)') && /merge-base', '--is-ancestor', 甲, 乙/.test(切出(rep, '是祖先')));
-台.判('六家不再各自开 PR：pr.mjs 里 push 只有那两处（推支 与 第一次建远程 main），快进那一趟只在合进 main 之后才跑',
-  (pr码.match(/'push'/g) || []).length === 2 && pr.includes('还没被合进 main，六家那一支先不快进'));
+台.判('六家不再各自开 PR：pr.mjs 里 push 只有 推支 那一处（第一次建远程 main 那颗已拆），快进那一趟只在合进 main 之后才跑',
+  (pr码.match(/'push'/g) || []).length === 1 && pr.includes('还没被合进 main，六家那一支先不快进'));
 
 /* ---------- 六 ---------- */
 台.题('六、那条支还没合进 main 就拒绝打包');
@@ -281,7 +274,7 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 提交分支:'feature/46-tauri-dat
 台.判('端口、只听 127.0.0.1、随机码、坏编码不砸台、往远程送东西那三道起子进程前先核他敲的那个字 —— 一条都没退化',
   ui.includes("服务器.listen(PORT, '127.0.0.1'") && /PORT \|\| 8792/.test(ui) && /const 码 = crypto\.randomBytes/.test(ui) &&
   /req\.headers\['x-push-code'\] !== 码/.test(ui) && ui.includes('try{ return decodeURIComponent(u); }catch(e){ return u; }') &&
-  (ui.match(/if\(!收字\(res, 身\)\) return;/g) || []).length === 3 && ui.includes('子.stdin.end();') &&
+  (ui.match(/if\(!收字\(res, 身\)\) return;/g) || []).length === 2 && ui.includes('子.stdin.end();') &&
   (ui.match(/stdin\.write\(/g) || []).length === 0);
 台.判('那一屏不再写「几根指针都推上去」：那份单由 pr.mjs 摊（那一颗里写明 main、拼装那一棵、tag、集成分支都不推），屏上只说"这一趟还没跑，一个字节都没送"',
   !pg.includes('那几根指针') && pg.includes('这一趟还没跑，一个字节都没送') &&
@@ -318,7 +311,7 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
 台.判('src/tools/本地路径.cjs 不算进扫描面（它本来就不进仓）', 不扫.has('src/tools/本地路径.cjs'));
 台.判('pr.mjs 推之前真调用它：公开面闸 排在 push 那一行之前，对的就是 origin/main 到这条支（第一次推 main 那一趟没有基线可比，对的是"进仓的全部文本"）',
   推支.indexOf('公开面闸(名, 远端)') < 推支.indexOf("'push', '-u', 远端, 名") &&
-  pr.includes("const 比 = 对 || (远端 || 远端名()) + '/main'") && 建远程单码.includes("公开面闸('main', 远端, '全部')"));
+  pr.includes("const 比 = 对 || (远端 || 远端名()) + '/main'"));
 台.判('--不推 也照扫（这一道量的是公开面干不干净，不是为推才装的）', 推支.indexOf('公开面闸(名, 远端)') < 推支.indexOf('选项.不推'));
 台.判('命中就非零退出并列是哪一份哪一行', /process\.exit\(1\)/.test(scn) && scn.includes("h.份 + ':' + h.行号"));
 台.判('闸（gate-tauri46）用的是同一颗，没有第二份判据（也不许把那一串串抄进闸里 —— 抄进去这一份自己就漏了）',

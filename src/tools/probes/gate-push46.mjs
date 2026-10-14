@@ -106,16 +106,15 @@ delete process.env.FD_底号;
 台.判('确认不过就走不到推：那一颗回 false，--提交PR 那一串里 推支 与 开PR 都排在它后面且有 if(!要他确认) 挡着',
   要确认.includes('return false') && /if\(!要他确认\(/.test(pr) &&
   pr.indexOf('要他确认(') < pr.indexOf('推支(支.名') && pr.indexOf('推支(支.名') < pr.indexOf('开PR(支.名'));
-台.判('脚本里没有任何一条路会不经确认就 push：release.mjs 一处 push 都没有；pr.mjs 两处 —— 推支（要他敲字之后）与 --建远程main（第一次那一下，也要他敲字、而且远程已经有 main 就当场拒）',
-  !/'push'/.test(rel) && (pr码.match(/'push'/g) || []).length === 2 &&
+台.判('脚本里没有任何一条路会不经确认就 push：release.mjs 一处 push 都没有；pr.mjs 只剩 推支 那一处（要他敲字之后才走到），第一次建远程 main 那一颗已经在 2026-10-14 整块拆了',
+  !/'push'/.test(rel) && (pr码.match(/'push'/g) || []).length === 1 &&
   (() => { const 手 = pr.slice(pr.indexOf("has('--提交PR')"));
     return /if\(!要他确认\(/.test(手) && 手.indexOf('要他确认(') < 手.indexOf('推支(支.名') && 手.indexOf('推支(支.名') < 手.indexOf('开PR(支.名'); })() &&
-  (() => { const 第 = pr.slice(pr.indexOf("has('--建远程main')"), pr.indexOf("has('--提交PR')"));
-    return 第.indexOf('要他确认') < 第.indexOf("'push'") && 第.indexOf('不推') < 第.indexOf("'push'"); })());
-台.判('推的那一头：功能支只推被点名的那一条；main 只在"远程还没有那一根"那一次被推（那一颗自己拒第二遍），没有 --tags、没有 --force、没有拼装那一棵',
+  !/建远程/.test(pr码), (pr码.match(/'push'/g) || []).length);
+台.判('推的那一头只有被点名的那一条功能支：代码里没有 push 与 main 同一句、没有 --tags、没有 --force、没有拼装那一棵',
   !/--tags/.test(pr码) && !/--force/.test(pr码) && !/'-u', 远端, 拼装支/.test(pr码) &&
-  pr.includes("if(表.main) 停(") && /'push', '-u', 单\.远端, 'main'/.test(pr码) &&
-  (pr码.match(/'push'[^\n]*'main'/g) || []).length === 1, (pr码.match(/'push'[^\n]*'main'/g) || []).join(' ⹂ '));
+  (pr码.match(/'push'[^\n]*'main'/g) || []).length === 0 && !/'push', 'origin', 'main'/.test(pr码),
+  (pr码.match(/'push'[^\n]*'main'/g) || []).join(' ⹂ '));
 台.判('试跑那一格（--不推）绕不出确认：确认排在 推支 之前，--不推 只在 push 那一行前面挡一下（公开面那道闸照跑）',
   /const 不推 = has\('--不推'\)/.test(pr) && 推支.indexOf('公开面闸(名, 远端)') < 推支.indexOf('选项.不推') &&
   推支.indexOf('选项.不推') < 推支.indexOf("'push', '-u', 远端, 名") && pr.indexOf('要他确认(') < pr.indexOf('推支(支.名'));
