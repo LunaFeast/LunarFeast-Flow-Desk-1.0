@@ -997,6 +997,14 @@ async fn 办一条(
             return;
         }
     };
+    /* MusicBee 这一家改走插件那一行明文，不走系统 Try*（为什么，见 media_rule 里 桥命令件名 那一段注释，
+       议题 16）。写不过去（那一格被占、插件正在删）照旧落回系统那一路，不把命令吞掉。 */
+    if 判::是音乐蜂(&信息[第几].身份) {
+        if 递桥命令(&判::桥命令正文(命令, 进度)) {
+            播回显(壳, 台账, json!({ "ev": "cmd", "cmd": 命令, "ok": true, "via": "plugin", "app": 信息[第几].身份 }));
+            return;
+        }
+    }
     let 成 = 办命令(&会们[第几], 命令, 进度).await;
     播回显(
         壳,
@@ -1102,6 +1110,21 @@ fn 写一份(名: &str, 值: &str) -> 一个成不成 {
         Ok(()) => 得(true, String::new()),
         Err(e) => 得(false, e.to_string()),
     }
+}
+
+/// 往 MusicBee 那颗桥插件递一行明文（players\musicbee-cmd.txt）。
+/// 写成了回真，一格都写不动回假 —— 回假调用方就落回系统 Try* 那一路。
+/// 与写一份小抄不同的两处：每一句都得真落盘（同一句按两次是"暂停再播放"，内容没动也要重写），
+/// 而且不补换行（脚本那头 WriteAllText 写的就是光秃秃那一句）。
+fn 递桥命令(正文: &str) -> bool {
+    let 格 = 小抄格();
+    let 到 = 格.join(判::桥命令件名);
+    let 时 = 格.join(format!("{}.tmp", 判::桥命令件名));
+    if std::fs::create_dir_all(&格).is_err() { return false; }
+    if std::fs::write(&时, 正文.as_bytes()).is_err() { return false; }
+    /* 脚本用的是 File.Replace；这一头没有那一颗，先删再改名，效果同一：中间不留半份 */
+    if std::fs::symlink_metadata(&到).is_ok() && std::fs::remove_file(&到).is_err() { return false; }
+    std::fs::rename(&时, &到).is_ok()
 }
 
 /// playState() 那一格：五栏一名不落

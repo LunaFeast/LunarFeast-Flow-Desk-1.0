@@ -74,6 +74,11 @@ fn 发出去(件: &str, 头: Option<(u64, Option<u64>)>) -> Response<Vec<u8>> {
                 return 回(StatusCode::RANGE_NOT_SATISFIABLE, "text/plain; charset=utf-8", Vec::new());
             }
             let 止 = 止.unwrap_or(总 - 1).min(总 - 1);
+            /* 倒过来的区间（bytes=9-1 这一类）：切下去就是 begin <= end 不成立，
+               而这一颗跑在 WebView2 回资源的回调里 —— panic 撤不回去，整个程序当场没。 */
+            if 止 < 起 {
+                return 回(StatusCode::RANGE_NOT_SATISFIABLE, "text/plain; charset=utf-8", Vec::new());
+            }
             let 片 = 全[起 as usize..=止 as usize].to_vec();
             let 头串 = format!("bytes {}-{}/{}", 起, 止, 总);
             Response::builder()
@@ -103,16 +108,31 @@ pub fn 注册页面协议<'a, R: tauri::Runtime>(壳: tauri::Builder<R>) -> taur
     壳.register_uri_scheme_protocol(
         "fdapp",
         |_ctx: UriSchemeContext<'_, R>, 请求: tauri::http::Request<Vec<u8>>| {
-            let (树, 页, 数) = 三个格();
-            let 相 = 地址拆相对(&请求.uri().to_string());
-            match 找一份(&树, &页, &数, &相) {
-                Some(件) => 发出去(&件, 区间(&请求)),
-                None => 回(
-                    StatusCode::NOT_FOUND,
-                    "text/plain; charset=utf-8",
-                    format!("这一棵树里没有这一份：{}", 相).into_bytes(),
-                ),
-            }
+            /* 这一颗是 WebView2 回资源时的回调：里头的错撤不回去，一 panic 整个程序就没（不是报错、
+               是闪退）。底下每一处判断吃的都是页面上递进来的地址，挡不完，所以在这儿兜一道：
+               兜住只少一张图，不许再少一个程序（2026-10-14 整本导入闪退那一摊的教训）。 */
+            let 出 = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let (树, 页, 数) = 三个格();
+                let 相 = 地址拆相对(&请求.uri().to_string());
+                match 找一份(&树, &页, &数, &相) {
+                    Some(件) => 发出去(&件, 区间(&请求)),
+                    None => 回(
+                        StatusCode::NOT_FOUND,
+                        "text/plain; charset=utf-8",
+                        format!("这一棵树里没有这一份：{}", 相).into_bytes(),
+                    ),
+                }
+            }));
+            出.unwrap_or_else(|岔| {
+                /* 兜住不等于当没发生：照运行日志那一手记一笔（那一颗绝不抛、绝不回错），
+                   下一回再有这一类，屏上那本日志里看得见是哪一份、哪一句。 */
+                let 一句 = 岔.downcast_ref::<String>().map(|s| s.as_str())
+                    .or_else(|| 岔.downcast_ref::<&str>().copied())
+                    .unwrap_or("说不出来的一句");
+                crate::tauri_bind::log_cmds::记一笔("取资源",
+                    format!("这一份取的时候壳里出了岔子：{} · 地址 {}", 一句, 请求.uri()));
+                回(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "取这一份时壳里出了岔子".into())
+            })
         },
     )
 }

@@ -2200,8 +2200,14 @@ class ChView{
     const box = this.sideBox;
     if(!box) return;
     /* 正在这一栏里写批注（图10 那一格草稿）就别重画它：dirty() 每敲一下都走这一趟，
-       重画会把草稿那一格连光标一起换掉 —— 从前那条路走不通才改用弹框。 */
-    if(box.contains(document.activeElement)) return;
+       重画会把草稿那一格连光标一起换掉 —— 从前那条路走不通才改用弹框。
+       但这道闸不能把「收起」那颗也吞掉：那颗钮自己就长在这一栏里，点它之前浏览器先给它焦点，
+       于是这一趟整个当"他在写字"返回了，收起按下去一点反应没有（议题 7）。
+       模式切换那条路能收起，就是因为焦点那会儿早离开这一栏了。 */
+    const 焦点是颗钮 = !!(document.activeElement && document.activeElement.tagName === 'BUTTON');
+    if(焦点在栏里且是钮()) { /* 点的是这一栏自己的按钮：往下走，把这一栏收起来 */ }
+    else if(box.contains(document.activeElement)) return;
+    function 焦点在栏里且是钮(){ return box.contains(document.activeElement) && 焦点是颗钮; }
     box.innerHTML = '';
     /* 词格这一档不接批注与修订痕迹那一栏：那一栏数的是 c.paras 上的段，这一档的正文不在那儿 */
     const lyric = !!this.c && this.c.mode === LYRIC_MODE;
