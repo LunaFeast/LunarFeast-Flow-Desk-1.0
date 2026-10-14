@@ -127,53 +127,48 @@ const 丙 = 砸(['--看', '--带=heat-map']);
   发布文.includes('摊打包那一棵(TREE,') && 发布文.includes("那棵.撤()") && 发布文.includes('} finally {') &&
   发布文.includes('cwd:跑在') && !/worktree/.test(rd('src/_build/plugin-repos.mjs')));
 
-台.题('四 · 屏上那一栏（他点名的「这个选择也做到小助手当中去」）');
-台.判('1 那一栏八行从名单那一份读，屏上不抄第二份名单',
-  台文.includes("from './forward-features.mjs'") && 台文.includes('八项: 问脏.好 ? 八项名单.map') &&
-  !/词格模式/.test(屏文) && 屏文.includes('画八项(对.八项)'));
-台.判('2 一条一格：那颗勾、分支起没起、这一棵带不带、这一项动的是哪几处（details 摊开）',
-  屏文.includes("data-项=") && 屏文.includes('分支还没起来') && 屏文.includes('这一项动的是哪几处') &&
-  屏文.includes('function 带中()'));
+台.题('四 · 屏上那一屏（2026-10-14 他把拆分撤了：功能那八项的勾选从屏上撤了，名单与命令还在）');
+台.判('1 名单还是只有一份：后端从 forward-features 那一份读，屏上不抄第二份名单',
+  台文.includes("from './forward-features.mjs'") && !/词格模式/.test(屏文) &&
+  !屏文.includes('画八项') && !屏文.includes('id="八项"'));
+台.判('2 屏上不再摆那一栏（八项都在 main 里，没有"这一枚带哪几项"可挑）：那一格、那颗勾、那段摊开都没了',
+  !屏文.includes('data-项=') && !屏文.includes('function 带中') && !屏文.includes('分支还没起来'));
 台.判('2b 那一格不再说"摘"与"已拆"（新仓里没勾的那几条分支不参与合并，屏上不许留旧模型的说法）',
   !/摘/.test(屏文 + 台文 + 名单文) && !/已拆/.test(屏文 + 台文 + 名单文) &&
   !/摘掉没勾的|有改法|strips\.mjs/.test(发布文),
   ((屏文 + 台文 + 名单文 + 发布文).match(/.{0,12}摘.{0,12}/g) || []).slice(0, 3).join(' ⹂ '));
-台.判('3 分支没起来的那一条勾都点不动；点打包把勾中的那几项递给 --带',
-  屏文.includes("' disabled'") && 屏文.includes('带: 带的.join') && 台文.includes("身.带"));
+台.判('3 打包那颗只递一件事：这一枚不带哪几家插件（内部 id 屏上不露，递给命令那一刻才出现）',
+  屏文.includes("不带: 不带的.join") && 台文.includes('身.不带'));
 台.判('4 那一栏只在这台开发用的屏上，装好的软件里读不到它（走的是本地那一屏，不进 pages\\）',
   !/八项/.test(rd('src/_fd/src/fd3-shell.js')) && !/forward-features/.test(rd('src/_fd/build.mjs')));
-台.判('5 一屏改成一条流水（他 2026-10-13：「结构混乱」「给我按照流程一步一个按钮」）：十步一步一行、每行一颗钮，' +
-  '从前那两栏的标题不许长回来',
-  (屏文.match(/class="步"/g) || []).length === 10 &&
-  (屏文.match(/<b>第 \d+ 步 ·/g) || []).length === 10 &&
-  !屏文.includes('<h2 class="区">一、') && !屏文.includes('<h2 class="区">二、') &&
-  屏文.includes('id="格"') && 屏文.indexOf('id="格"') > 屏文.indexOf('第 3 步') &&
-  屏文.indexOf('id="八项"') > 屏文.indexOf('第 4 步') && 屏文.indexOf('id="自测"') > 屏文.indexOf('第 5 步') &&
-  屏文.indexOf('id="只在"') > 屏文.indexOf('第 6 步') && 屏文.indexOf('id="pr"') > 屏文.indexOf('第 7 步') &&
-  屏文.indexOf('id="发"') > 屏文.indexOf('第 10 步'), (屏文.match(/<b>第 \d+ 步 ·[^<]*/g) || []).map(s => s.slice(3, 9)).join('|'));
-const 那十四颗 = ['同步', '开支', '量', '存', '落笔', '推项', '自测', '集成', '完整', 'pr', '查', '快进', '删支', '发'];
-台.判('6 十四颗钮一颗不落：屏上有 id、脚本里点了有反应、后端那一条路接得到命令',
-  那十四颗.every(id => 屏文.includes('id="' + id + '"') && 屏文.includes("取('" + id + "').onclick")) &&
-  那十四颗.every(id => id === '存' || 台文.includes("'/api/" + id + "'")),
-  那十四颗.filter(id => !台文.includes("'/api/" + id + "'")).join('、') || '全接上');
+台.判('5 一屏六块一条流水（他 2026-10-14：「重做那个版本与推送的页面，现在的太啰唆了」）：一块一行标题、每块几颗钮，十步那种长解释全删',
+  (屏文.match(/class="步"/g) || []).length === 6 &&
+  (屏文.match(/<b>[一二三四五六] · /g) || []).length === 6 &&
+  !/第 \d+ 步/.test(屏文) && !屏文.includes('<h2 class="区">') &&
+  屏文.indexOf('id="格"') > 屏文.indexOf('二 · 说清楚') &&
+  屏文.indexOf('id="自测"') > 屏文.indexOf('三 · 打一枚安装包') &&
+  屏文.indexOf('id="pr"') > 屏文.indexOf('四 · 推到远程') &&
+  屏文.indexOf('id="发"') > 屏文.indexOf('六 · 打包发版'), (屏文.match(/<b>[一二三四五六] · [^<]*/g) || []).map(s => s.slice(3, 8)).join('|'));
+const 那十三颗 = ['同步', '开支', '量', '存', '落笔', '自测', '开产物', '先摊', 'pr', '查', '快进', '删支', '发'];
+台.判('6 十三颗钮一颗不落：屏上有 id、脚本里点了有反应、后端那一条路接得到命令（存与先摊那两颗不动 git，本来就没有那一道后端）',
+  那十三颗.every(id => 屏文.includes('id="' + id + '"') && 屏文.includes("取('" + id + "').onclick")) &&
+  那十三颗.every(id => id === '存' || id === '先摊' || 台文.includes("'/api/" + id + "'")),
+  那十三颗.filter(id => !台文.includes("'/api/" + id + "'") && id !== '存' && id !== '先摊').join('、') || '全接上');
 const 手文 = rd('src/_build/pr.mjs');
 台.判('7 从前缺的那几步现在有命令可跑：同步主干 / 开这一轮的支 / 删本地已发布支（都只挪指针、不碰工作树、不推）',
   手文.includes("has('--同步主干')") && 手文.includes("has('--开这一轮的支')") && 手文.includes("has('--删本地已发布支')") &&
   手文.includes("['update-ref', 'refs/heads/main', 远, 本]") && 手文.includes("['update-ref', '-d', 'refs/heads/' + 名]"));
 台.判('8 反向验：删支那一颗先核对（main 里没有它那一笔、两边内容也对不上就停），同步那一颗见本地多写就不动',
   /还差\.length && !内容一样/.test(手文) && /main 只是那一根的镜像/.test(手文) && !/update-ref[^\n]*main[^\n]*--force/.test(手文));
-台.判('9 第 6 步那颗「用这一棵打安装包」：那条合好的分支没起来就不亮并说为什么；=完整 那一档不再挡',
-  屏文.includes('状.集成在') && 屏文.includes('先在下面勾中要合的功能分支') && 屏文.includes('把勾中的几条合到一起') &&
-  台文.includes('集成在:') &&
-  发布文.includes("自测档 === '完整' ? 集成分支名 : 'HEAD'") && !/还差一步：那一棵是干净的一棵/.test(发布文));
-台.判('10 第 4 步顶上那句说清楚了两处勾选互不相干（勾这些不决定推哪几条分支）',
-  屏文.includes('不决定推哪几条分支') && 屏文.indexOf('不决定推哪几条分支') > 屏文.indexOf('第 4 步') &&
-  屏文.indexOf('不决定推哪几条分支') < 屏文.indexOf('第 5 步'));
-台.判('12 推送这一头也可选（他 2026-10-13：「那推送里有没有？可不可以选择？不可选择就不对」）：' +
-  'pr.mjs 多一道 --推前瞻支，屏上第 7 步右边那八格勾哪几项才推哪几条前瞻支、各建一个 PR',
-  手文.includes("has('--推前瞻支')") && 手文.includes('一颗都没勾') &&
-  屏文.includes('id="推项"') && 屏文.includes('function 画推项') && 台文.includes("'/api/推项'") &&
-  台文.includes("'--推前瞻支'"));
+台.判('9 那条合好的分支与 =完整 那一档只剩命令与后端（屏上那两颗钮撤了）：发布那一串照旧认 集成分支名 当基点',
+  !屏文.includes('id="完整"') && !屏文.includes('id="集成"') && !屏文.includes('状.集成在') &&
+  台文.includes('集成在:') && 发布文.includes("自测档 === '完整' ? 集成分支名 : 'HEAD'") && !/还差一步：那一棵是干净的一棵/.test(发布文));
+台.判('10 屏上没有"两处勾选互不相干"那类解释句了（六块一屏，一块一行标题；包里带什么只剩插件那一栏）',
+  !屏文.includes('不决定推哪几条分支') && 屏文.includes('这一枚不带哪几家插件'));
+台.判('12 按功能项分别推那一道只剩命令与后端（屏上那八格勾撤了）：pr.mjs 的 --推前瞻支 与 /api/推项 都还在，' +
+  '屏上没有那颗钮也没有那张格',
+  手文.includes("has('--推前瞻支')") && 手文.includes('一颗都没勾') && 台文.includes("'/api/推项'") &&
+  台文.includes("'--推前瞻支'") && !屏文.includes('id="推项"') && !屏文.includes('function 画推项'));
 {
   const 推 = (参数, 在) => { try { const out = execFileSync(process.execPath, ['src/_build/pr.mjs'].concat(参数),
       { cwd: 在 || ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return { 码: 0, 文: out }; }
@@ -186,11 +181,7 @@ const 手文 = rd('src/_build/pr.mjs');
     (一.文.split(/\r?\n/).find(l => l.includes('停下来')) || '') + ' ⹂ ' + (二.文.split(/\r?\n/).find(l => l.includes('停下来')) || ''));
   try{ fs.rmSync(单沙, { recursive: true, force: true }); }catch(e){}
 }
-台.判('14 摘法只往一棵临时的树上使：他的开发那一棵八项全在，删代码这一步在打包那一趟里（不勾才摘）',
-  fs.existsSync(ROOT + 'src/_wnw/src/w21-heat.js') &&
-  rd('src/_build/strips.mjs').includes('仓里、盘上他那一棵一个字节都不动') &&
-  发布文.includes('摘掉没勾的(那棵.目录, 没勾)') && 发布文.includes('这几项没勾，但它们的摘法还没登记'));
-台.判('11 第 4 步那两栏全是勾，没有一处要他手打内部名字（插件那七家一家一格、名字从家表取；内部 id 只在递给命令那一刻出现）',
+台.判('11 屏上那一栏全是勾，没有一处要他手打内部名字（插件那几家一家一格、名字从家表取；内部 id 只在递给命令那一刻出现）',
   屏文.includes('function 画插件家') && 台文.includes('插件家: 家表.map') && 屏文.includes('data-家=') &&
   !屏文.includes('id="简装不带"') && !/placeholder="[^"]*id，逗号分隔/.test(屏文) &&
   !/(music-remote|your-sentences|singbit-input-practice|why-not-write)/.test(屏文),

@@ -138,9 +138,10 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   台.判('12 不带的落到发布那一趟的 --skip=（publish 里那一颗已经把两格与货架一起挑掉，这里不另写一份挑货的）',
     /'--skip=' \+ 不带\.join\(','/.test(自) && 自.includes("'src/pack/publish.mjs'") &&
     自.includes('家表.some(j => j.id === id)') && !自.includes("'--skip=notes'"));
-  台.判('13 屏上那两栏勾完直接递给这一道（插件那几家一家一格、功能那八项一项一格，屏上不露内部名字、不要他手打）',
+  台.判('13 屏上那一栏勾完直接递给这一道（插件那几家一家一格，屏上不露内部名字、不要他手打；功能那八项的勾 2026-10-14 随拆分一起从屏上撤了，后端那两头照旧收）',
     rd('src/_build/push-ui.html').includes('id="插件家"') && rd('src/_build/push-ui.html').includes('function 不带的家') &&
-    rd('src/_build/push-ui.html').includes('带: 带的.join') && !rd('src/_build/push-ui.html').includes('简装不带') &&
+    rd('src/_build/push-ui.html').includes('不带: 不带的.join') && !rd('src/_build/push-ui.html').includes('简装不带') &&
+    !rd('src/_build/push-ui.html').includes('id="八项"') &&
     rd('src/_build/push-ui.mjs').includes('身.不带') && rd('src/_build/push-ui.mjs').includes('身.带'));
 }
 

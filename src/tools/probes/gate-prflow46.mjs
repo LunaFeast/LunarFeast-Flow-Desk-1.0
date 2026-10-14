@@ -20,6 +20,7 @@
    能真跑的（第三、第七、第九那些形状与判据）一律真跑，不拿正则糊过去。
    ============================================================ */
 import os from 'node:os';
+import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { rd, 记账, 切, ROOT } from './lib-slice.mjs';
@@ -389,20 +390,50 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
     重.includes('下轮.push(名)') && 重.includes('跳的') && 重.includes('撞单') &&
     !/throw new Error\('合到「/.test(重) && 合.includes('不许切到 '));
   {
-    /* 真跑这一颗：拿一对已知会撞的（heat-map 先合上，lyric-grid 就与它撞在同一份文件上）。
-       落到一根临时那根 ref 上，跑完删掉 —— 他那几根指针一根不碰（下面那条尺量的就是这个）。 */
-    const 试名 = 'tmp/闸验跳过', 删 = () => { try{ execFileSync('git', ['-C', ROOT, 'update-ref', '-d', 'refs/heads/' + 试名]); }catch(e){} };
-    let 果 = null, 抛话 = '';
-    const 前2 = 根();
-    try{ 果 = 重建集成分支(['feature/new/heat-map', 'feature/new/lyric-grid'], { 集成分支: 试名 }); }
-    catch(e){ 抛话 = String((e && e.message) || e); }
-    finally{ 删(); }
-    台.判('7 真跑：一条撞车的后面那条合得上的照样合上去，撞车那条进 跳的 并点名撞在哪几份（临时那一根跑完删掉，他那几根指针一根没动）',
-      !!果 && !抛话 && 果.合了.length === 1 && 果.合了[0].支 === 'feature/new/heat-map' &&
-      果.跳的.join() === 'feature/new/lyric-grid' && 果.撞单.length === 1 &&
-      果.撞单[0].撞.some(p => /build-kernel\.mjs/.test(p)) && 根() === 前2,
+    /* 真跑要一对会撞车的分支。八项都合回 main 之后，仓里现成的分支两两都不撞了，所以这一节自己造：
+       同一份文件两边各写一行 → 撞；再造一笔把两行都收进来 → 那根"已经齐"的支。
+       造的只有提交对象与四根临时 ref（跑完全删）+ 一根临时索引文件，他那几根指针一根不碰。 */
+    const 件 = 'data/gate-clash.txt';
+    const 索引 = path.join(os.tmpdir(), 'fd-闸验索引-' + process.pid);
+    const 环 = { ...process.env, GIT_DIR: path.join(ROOT, '.git'), GIT_INDEX_FILE: 索引 };
+    const 造跑 = (参, 入) => execFileSync('git', 参, { env:环, encoding:'utf8', ...(入 === undefined ? {} : { input:入 }) }).trim();
+    const 跑 = 参 => execFileSync('git', ['-C', ROOT, ...参], { encoding:'utf8' }).trim();
+    const 那根 = 名 => { try{ return 跑(['rev-parse', 名]); }catch(e){ return ''; } };
+    const 底 = 跑(['rev-parse', 'main']);
+    const 造一笔 = (内容, 父, 另些父) => {
+      造跑(['read-tree', 父]);
+      const 块 = 造跑(['hash-object', '-w', '--stdin'], 内容);
+      造跑(['update-index', '--add', '--cacheinfo', '100644,' + 块 + ',' + 件]);
+      const 树 = 造跑(['write-tree']);
+      const 参2 = ['commit-tree', 树];
+      for(const p of [父].concat(另些父 || [])) 参2.push('-p', p);
+      return 造跑(参2, '');   // 说明空着：这一台往他历史里落的每一笔都不该带一个字
+    };
+    const 甲名 = 'feature/new/gate-clash-a', 乙名 = 'feature/new/gate-clash-b', 试名 = 'tmp/闸验跳过', 退名 = 'tmp/闸验退回';
+    let 果 = null, 抛话 = '', 前 = '', 后 = '', 抛二 = '', 前2 = 根();
+    try{
+      const 甲 = 造一笔('甲的这一行\n', 底), 乙 = 造一笔('乙的这一行\n', 底);
+      跑(['update-ref', 'refs/heads/' + 甲名, 甲]); 跑(['update-ref', 'refs/heads/' + 乙名, 乙]);
+      果 = 重建集成分支([甲名, 乙名], { 集成分支: 试名 });
+      const 丙 = 造一笔('甲的这一行\n乙的这一行\n', 甲, [乙]);   // 两行都在的那一棵 = "已经齐"
+      跑(['update-ref', 'refs/heads/' + 退名, 丙]);
+      前 = 那根(退名);
+      try{ 重建集成分支([甲名, 乙名], { 集成分支: 退名 }); 抛二 = '没抛：那一根被从两条退成了一条'; }
+      catch(e){ 抛二 = String((e && e.message) || e); }
+      后 = 那根(退名);
+    }catch(e){ 抛话 = String((e && e.message) || e); }
+    finally{
+      for(const 名 of [甲名, 乙名, 试名, 退名]){ try{ 跑(['update-ref', '-d', 'refs/heads/' + 名]); }catch(e){} }
+      try{ fs.rmSync(索引, { force: true }); }catch(e){}
+    }
+    台.判('7 真跑：一条撞车的后面那条合得上的照样合上去，撞车那条进 跳的 并点名撞在哪几份（他那几根指针一根没动）',
+      !!果 && !抛话 && 果.合了.length === 1 && 果.合了[0].支 === 甲名 && 果.跳的.join() === 乙名 &&
+      果.撞单.length === 1 && 果.撞单[0].撞.some(p => p === 件) && 根() === 前2,
       果 ? '合了 ' + 果.合了.map(x => x.支).join('、') + ' · 跳的 ' + 果.跳的.join('、') +
         ' · 撞在 ' + (果.撞单[0] || {}).撞?.join('、') : '抛了：' + 抛话.slice(0, 120));
+    台.判('10 退回保护（真跑）：那一根已经装着两条时，一条一条重合只合得上 1 条 —— 必须原样退回并停下（按一颗钮把齐的退成缺的，就是丢东西）',
+      /退回成/.test(抛二) && 前.length === 40 && 后 === 前 && 根() === 前2,
+      前.slice(0, 7) + ' → ' + 后.slice(0, 7) + ' · ' + 抛二.split(/\r?\n/)[0].slice(0, 70));
   }
   台.判('8 --提交PR 那一串里这两下排在 要你确认 与 推支 之前，确认那一格还多列一行"本地已经合过"',
     提PR.indexOf('合进那条支(支.名,') < 提PR.indexOf('要他确认(') &&
@@ -410,27 +441,6 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
   台.判('9 集成分支那一条名字只有一份：支类表 那条「集成」正则就是拿它钉出来的（改天换名不会两处不一样）',
     lst.includes('export const 集成分支名 =') && lst.includes('正则: 钉死(集成分支名)') &&
     认支类(集成分支名).类 === '集成' && 可推远程(集成分支名).行 === false, 集成分支名);
-  {
-    /* 退回保护真跑：把一根临时 ref 摆在「八项已经齐」那一棵上，再按老规矩一条一条重合 ——
-       那三条撞车的只能合上 5 项，这一趟必须把那一根**原样退回**并停下。跑完删掉临时那一根。 */
-    const 八条 = ['feature/new/blank-web', 'feature/new/card-weight', 'feature/new/dock-two-column', 'feature/new/gen-log',
-      'feature/new/heat-map', 'feature/new/lyric-grid', 'feature/new/music-dock', 'feature/new/wnw-custom'];
-    const 试名 = 'tmp/闸验退回';
-    const 那根 = () => { try{ return String(execFileSync('git', ['-C', ROOT, 'rev-parse', 试名], { encoding:'utf8' })).trim(); }catch(e){ return ''; } };
-    let 前 = '', 抛话 = '';
-    try{
-      execFileSync('git', ['-C', ROOT, 'update-ref', 'refs/heads/' + 试名, 'feature/new/all-features']);
-      前 = 那根();
-      重建集成分支(八条, { 集成分支: 试名 });
-      抛话 = '没抛：那一根被从八项退成了几项';
-    }catch(e){ 抛话 = String((e && e.message) || e); }
-    const 后 = 那根();
-    try{ execFileSync('git', ['-C', ROOT, 'update-ref', '-d', 'refs/heads/' + 试名]); }catch(e){}
-    台.判('10 退回保护（真跑）：那一根已经装着八项时，一条一条重合只合得上 5 项 —— 必须原样退回并停下（按一颗钮把齐的退成缺的，就是丢东西）',
-      前 === '' || (/退回成/.test(抛话) && 后 === 前),
-      前 === '' ? '（这一棵还没有 feature/new/all-features 那一根，这一道没得上）'
-        : 前.slice(0, 7) + ' → ' + 后.slice(0, 7) + ' · ' + 抛话.split(/\r?\n/)[0].slice(0, 70));
-  }
 }
 
 /* ---------- 十四、只在本地那一条清单（他 2026-10-12 第 5 件）---------- */
@@ -447,17 +457,15 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
     !/['"]fetch['"]|['"]push['"]|update-ref/.test(代码(切出(rep, '本地前瞻支'))) &&
     代码(切出(rep, '本地前瞻支')).includes('catch(e){ continue; }'),
     (代码(切出(rep, '本地前瞻支')).match(/['"]fetch['"]|['"]push['"]|update-ref/g) || []).join('、'));
-  台.判('4 屏上那一条在：一格一支、标「只在本地」、勾一颗、多了哪几笔与哪几份都摊得开',
-    pg.includes('function 画前瞻') && pg.includes('只在本地') && pg.includes("data-支=") &&
-    pg.includes('多了哪几笔') && pg.includes('多了哪几份') && pg.includes('相对基础版多'));
-  台.判('5 那条合好的分支名字从服务端递过来（页面不写死），「把勾中的几条合到一起」那颗拿勾中的那几条去叫 --重建集成分支',
-    ui.includes('集成: 集成分支名') && pg.includes('集成名 = 对.集成') && !/local\/all-features-test/.test(pg) &&
+  台.判('4 屏上不再摆那一栏（2026-10-14 他把拆分撤了：八项都在 main 里，没有"只在本地的那几条"可挑）：那一格、那颗钮、那种勾都不在屏上',
+    !pg.includes('function 画前瞻') && !pg.includes('id="只在"') && !pg.includes('id="八项"') &&
+    !pg.includes('id="推项格"') && !pg.includes('id="集成"') && !pg.includes('id="完整"'),
+    ['画前瞻', 'id="只在"', 'id="八项"', 'id="推项格"', 'id="集成"', 'id="完整"'].filter(s => pg.includes(s)).join('、') || '屏上六样都没有');
+  台.判('5 命令与后端那两道还在（--重建集成分支 与 /api/集成 照旧能跑），只是不再占屏上一块',
     ui.includes("路 === '/api/集成'") && ui.includes("'--重建集成分支', '--支=' + 列.join(',')") &&
-    pg.includes("跑('集成', '把勾中的几条合到一起', { 支: 列 })"));
-  台.判('6 一条都没勾时后端 400、前端也不起那一趟（不拿空列表去挪那一根）',
-    ui.includes("if(!列.length){ 发(res, 400, '一条支都没勾") && pg.includes('一条都没勾：先在上面那几条功能分支里勾'));
-  台.判('7 点下「把勾中的几条合到一起」之前先复述一遍要合谁、说清这一条从 main 重新起且旧的不删（挪分支位置的手不留悄悄）',
-    pg.includes('if(!confirm(') && pg.includes('这一条先从本地 main 重新起') && pg.includes('拼装那一条一个字不动') && pg.includes('全程不推远程'));
+    ui.includes("路 === '/api/完整'") && pr.includes("'--重建集成分支'"));
+  台.判('6 一条都没勾时后端 400（不拿空列表去挪那一根）',
+    ui.includes("if(!列.length){ 发(res, 400, '一条支都没勾"));
 }
 
 台.收尾();
