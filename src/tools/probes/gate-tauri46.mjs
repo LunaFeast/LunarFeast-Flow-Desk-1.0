@@ -212,4 +212,15 @@ const 门牌 = 壳里('src/tauri_bind/page_cmds.rs');
 台.判('注释把为什么认两样说清了（Windows 改写成一串 http://…localhost，光看协议会当成开发那台）',
   /WebView2|改写/.test(工具) && 工具.includes('http://fdapp.localhost'));
 
+台.题('十九、取资源那一路不许把整个程序带倒（2026-10-14 整本导入与双击章节闪退那一摊）');
+const 那一格 = 壳里('src/core/boot_path.rs');
+台.判('页面递进来的地址比的是字节，不许再拿一串字的前八枚字节去切还原回中文的那一段（三个字的书名第九个字节，第 8 枚落在一个字中间）',
+  那一格.includes('段[1].as_bytes()') && !那一格.includes('let 头 = 段[1]'));
+台.判('那一颗回调整个裹在撤不回去的那一手上：错撤不出去就会当场没，所以兜一道，兜住只回一张 404',
+  门牌.includes('catch_unwind') && 门牌.includes('AssertUnwindSafe'));
+台.判('兜住那一笔要在运行日志里留得下一行（用记一笔那一颗，它绝不抛、绝不回错），别只当没发生',
+  门牌.includes('log_cmds::记一笔'));
+台.判('倒过来的区间（bytes=9-1 这一类）先挡回去，不许直接下刀切那一段',
+  门牌.includes('if 止 < 起'));
+
 台.收尾();

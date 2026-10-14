@@ -34,8 +34,13 @@ pub fn 用户数据直取(virt: &str) -> bool {
     let 换过 = virt.replace('\\', "/");
     let 段: Vec<&str> = 换过.split('/').filter(|x| !x.is_empty()).collect();
     段.len() >= 2 && 段[0].eq_ignore_ascii_case("data") && {
-        let 头 = 段[1];
-        头.len() > 8 && 头[..8].eq_ignore_ascii_case("userdata") && matches!(头.as_bytes()[8], b'-' | b'.')
+        /* 比的是字节，不拿一串字的前八枚去切：这一串是地址还原回来的，用户的插图就落在数据层的
+           书名底下（data/<书名>/assets/xxx.png，见页面 Img.dir 那一颗），书名三个字共九个字节，
+           第 8 枚落在一个字中间 —— 按字切下去就是「byte index is not a char boundary」。
+           这一颗跑在 WebView2 回资源的回调里，错撤不回去，整个程序当场没
+           （2026-10-14 整本导入与双击章节闪退那一摊的根）。 */
+        let 字 = 段[1].as_bytes();
+        字.len() > 8 && 字[..8].eq_ignore_ascii_case(b"userdata") && matches!(字[8], b'-' | b'.')
     }
 }
 
@@ -88,6 +93,18 @@ mod 验判断 {
         assert!(!用户数据直取("data/plugins/notes/main.js"));
         assert!(!用户数据直取("data/userdata"));
         assert!(!用户数据直取("词.yaml"));
+    }
+
+    /* 2026-10-14 闪退那一摊：这一段从前拿 头[..8] 切，中文书名一进地址就在这个字节上炸，
+       而炸在 WebView2 回资源的回调里撤不回去 —— 整个程序没。这里钉的就是「不许炸」。 */
+    #[test]
+    fn 中文目录名不许按字节切坏() {
+        assert!(!用户数据直取("data/叠纸梦/x.png"));                 /* 三字书名 = 9 字节，第 8 枚在字中间 */
+        assert!(!用户数据直取("data/奇迹暖暖的背景音/img-1.png"));
+        assert!(!用户数据直取("data/ab/x"));                        /* 短于一枚前缀 */
+        assert!(!用户数据直取("data/userdata界/x"));                  /* 第九枚字节是中文：不算 userdata 那一格 */
+        assert!(用户数据直取("data/userdata-wnw/歌词/一.txt"));        /* 前缀对得上，后面跟着中文照样拦 */
+        assert!(!用户数据直取("pages/userdata-fd/x"));                /* 不是 data 底下的那一格就不算 */
     }
 
     #[test]
