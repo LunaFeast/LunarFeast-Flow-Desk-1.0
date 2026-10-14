@@ -17,9 +17,12 @@
    对账走发布脚本自己吐的那一份路径清单（--dry --json）：
    dist\ 那一格是产物，不许当核对面去翻，所以"包里有什么"由脚本自己报。
    ============================================================ */
+import fs from 'node:fs';
+import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { 记账, rd, ROOT } from './lib-slice.mjs';
 import { 家 } from '../../_build/plugin-repos.mjs';
+import { 私人串清单 } from '../../_build/public-scan.mjs';
 
 const 台 = 记账('gate-tauripublish46.mjs');
 
@@ -120,5 +123,47 @@ const 壳 = rd('src/pack/sfx.cs');
   /Path\.Combine\(dest, "src"\)/.test(壳) && /it\.Name\.StartsWith\("src\/"\)/.test(壳));
 台.判('data\\ 那一层还是从头到尾不碰（包里一个 data\\ 开头的路径都没有，除插件那两格）',
   /data\/plugins\//.test(壳) && 脏().length === 0);
+
+台.题('七、开发那一层与这台自己的位置，一个字节都不许跟着包出门（2026-10-14 他量出来的那一件）');
+{
+  /* 他原话：「为什么用户安装的版本也有GitHub小助手这些东西！这不是该打包给用户的东西！泄露我的GitHub信息怎么办！」
+     量出来是真的：装出去的那一棵里当时有 src\tools\ 整格 110 份（探针、自查、audit、start-fd.bat、那台小助手 push-fd.bat）、
+     src\_build\ 里推送发布那一摊 10 份，还有 src\tools\本地路径.cjs —— 那一份记着这台的位置（D:\Rust、E:\MyFiles、CLion 那一串）。
+     根因：src 这一层从前是照着**盘上**走的，而 .gitignore 只挡得住仓，挡不住"盘上有的就被打进包"；
+     公开面那道闸量的也是仓里进版本的文本，所以它对这一层整个是瞎的。这一节就是补那道瞎掉的闸。 */
+  const 单 = 包.清单 || [];
+  台.判('装出去的那一棵里没有 src\\tools\\ 那一份（探针、自查、audit、两颗 .bat、本地路径 全在这一格）',
+    单.length > 100 && 单.filter(k => k.startsWith('src/tools/')).length === 0,
+    单.filter(k => k.startsWith('src/tools/')).length + ' 份');
+  台.判('推送与发布那一摊十份不在包里（pr / release / push-ui 两份 / push-list / public-scan / plugin-repos / forward-features / ico-index / packs）',
+    ['pr.mjs', 'release.mjs', 'push-ui.mjs', 'push-ui.html', 'push-list.mjs', 'public-scan.mjs',
+     'plugin-repos.mjs', 'forward-features.mjs', 'ico-index.mjs', 'packs.mjs']
+      .every(名 => !单.some(k => k === 'src/_build/' + 名)));
+  台.判('这台自己的位置那份（src\\tools\\本地路径.cjs）与编译中间产物 sfx-stub.exe 都不在包里 —— 它们都进了盘、都没进版本，正是从前那一层照盘上走会带走的两种',
+    !单.includes('src/tools/本地路径.cjs') && !单.includes('src/tools/本地路径.mjs') && !单.includes('src/pack/sfx-stub.exe'));
+  台.判('这一层只认"进了版本的那几份"：src 底下每一份都在 git 的名单里（问不出 git 时发布脚本当场停，不照盘上兜底）',
+    (() => {
+      /* -z 这一枚不能省：不带它，git 会把中文文件名转义成 "...\345\243..." 那种写法，一比就"查无此份"（假红） */
+      const 管 = new Set(String(execFileSync('git', ['-C', ROOT, 'ls-files', '-z'], { encoding:'utf8' }))
+        .split('\0').filter(Boolean).map(s => s.replace(/\\/g, '/')));
+      const 没 = 单.filter(k => k.startsWith('src/')).filter(k => !管.has(k));
+      return 没.length === 0;
+    })(), (() => {
+      const 管 = new Set(String(execFileSync('git', ['-C', ROOT, 'ls-files', '-z'], { encoding:'utf8' }))
+        .split('\0').filter(Boolean).map(s => s.replace(/\\/g, '/')));
+      return 单.filter(k => k.startsWith('src/')).filter(k => !管.has(k)).slice(0, 5).join(' 、');
+    })());
+  const 串 = 私人串清单().串.map(x => (x && x.串) || String(x)).concat(['LunarFeast']);
+  const 中 = [];
+  for(const 相 of 单){
+    if(!/\.(mjs|cjs|js|json|txt|html|md|bat|rs|yaml|css)$/i.test(相)) continue;
+    let 文 = '';
+    try{ 文 = fs.readFileSync(path.join(ROOT.replace(/[\\/]$/, ''), 相), 'utf8'); }catch(e){ continue; }
+    for(const s of 串) if(文.includes(s)) 中.push(相 + ' → ' + s);
+  }
+  台.判('逐份扫这一棵要带出去的文本：这台的位置、帐户名、GitHub 那串名字，一处都不许有（现量 ' +
+    单.filter(k => /\.(mjs|cjs|js|json|txt|html|md|bat|rs|yaml|css)$/i.test(k)).length + ' 份文本、' + 串.length + ' 串）',
+    中.length === 0, 中.slice(0, 6).join(' ⹂ '));
+}
 
 台.收尾();

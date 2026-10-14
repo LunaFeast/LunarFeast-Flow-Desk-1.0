@@ -133,6 +133,27 @@ function addLayer(pre, dir, skip){
   }
 }
 const inNodeModules = rel => rel.split('/').includes('node_modules');
+/* ---------- 开发那一层不带走（2026-10-14 他量出来的）----------
+   装出去的那一棵里当时躺着：src\tools\ 整格 110 份（探针、自查、audit、start-fd.bat、那台小助手 push-fd.bat）
+   与 src\_build\ 里推送发布那一摊（pr.mjs / release.mjs / push-ui.mjs / push-ui.html / push-list.mjs /
+   public-scan.mjs / plugin-repos.mjs / forward-features.mjs / ico-index.mjs / packs.mjs）。
+   这些是"做这个程序"用的，不是程序本身，也不是给用户的东西。名单只写这一处，闸读这一份（gate-tauripublish46 第七节）。 */
+export const 开发层 = [
+  /^tools\//,
+  /^_build\/(plugin-repos|pr|release|push-ui|push-list|public-scan|forward-features|ico-index|packs)\.(mjs|html)$/,
+];
+const 是开发层 = rel => 开发层.some(打 => 打.test(rel));
+/* 没进版本的一律不带走：这台自己的位置记在 src\tools\ 底下那一颗不进仓的路径表里（ Rust 与那几格素材、工区、
+   存档都写在那一份上），它本来就靠 .gitignore 挡在仓外 —— 可从前这一层是照着**盘上**走的，
+   所以 2026-10-14 量到它跟着 setup 出了门。现在这一层只认「这一棵里被版本管着的那几份」；
+   问不出 git 就当场停，不拿"照盘上走"兜底（宁可不出包，也不带一台的私货出门）。 */
+const 进版本 = (() => {
+  let 出 = '';
+  try{ 出 = execFileSync('git', ['-C', TREE, 'ls-files', '-z'], { encoding:'utf8' }); }
+  catch(e){ throw new Error('问不出这一棵里哪些份进了版本（git ls-files 没跑成）：' + String((e && (e.stderr || e.message)) || e) +
+    '\n  src 这一层不照盘上走了 —— 从前就是这么把 src\\tools\\本地路径.cjs 装进发布物的。'); }
+  return new Set(String(出).split('\0').filter(Boolean).map(s => s.split(path.sep).join('/')));
+})();
 
 /* 一、运行时那一层：编出来的那颗 exe（进包改名成整棵树唯一的门牌）+ WebView2 那颗加载器 */
 {
@@ -144,8 +165,9 @@ const inNodeModules = rel => rel.split('/').includes('node_modules');
 }
 /* 二、页面层：当前这一支号那一张页 */
 addLayer('pages/', PAGES, rel => superseded(rel));
-/* 三、源码：重新生成页面要读的（node_modules 一个字节都不带 —— 生成页面只用 node 自带模块） */
-addLayer('src/', path.join(TREE, 'src'), rel => inNodeModules(rel) || /(^|\/)\.[^/]/.test(rel));
+/* 三、源码：重新生成页面要读的（node_modules 一个字节都不带 —— 生成页面只用 node 自带模块）。
+   两道闸：开发那一层不带走（上面 开发层 那份名单）、没进版本的一律不带走（这台的位置就住在这一类里）。 */
+addLayer('src/', path.join(TREE, 'src'), rel => inNodeModules(rel) || /(^|\/)\.[^/]/.test(rel) || 是开发层(rel) || !进版本.has('src/' + rel));
 /* 四、图标与随包素材那两格：取的是出厂那一份（src\pack\icons\、src\pack\material\），铺到树根同名那一格。
    运行时只认树根这一层 —— 图标那张表（info_cmds 收 icons\ 顶上与往下一层子格）、
    页面里 material/textures\ 那些相对地址，都从 <树根>\ 取；少了这两层，图标那一屏是空的、内置纹理取不到。
