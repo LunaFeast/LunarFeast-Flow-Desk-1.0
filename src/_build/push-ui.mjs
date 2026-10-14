@@ -579,13 +579,13 @@ const 服务器 = http.createServer(async (req, res) => {
     return;
   }
 
-  if(路 === '/api/量'){ if(git不中(res)) return; 起(['src/_build/release.mjs', '--看'], '重新量一遍（--看：仓里一个字节不写）', res); return; }
+  if(路 === '/api/量'){ if(git不中(res)) return; 起(['src/_build/release.mjs', '--看'], '重新量一遍（只量现场，往那张表里落一份，仓里的代码一个字节不写）', res); return; }
   /* 流程那几步一步一颗（他 2026-10-13：「给我按照流程一步一个按钮」「步骤缺失」）：
      第 1 / 2 / 8 / 9 步从前没有按钮，第 6 步只有「重建集成分支」没有「从那一棵打这一枚」。 */
-  if(路 === '/api/同步'){ if(git不中(res)) return; 起(['src/_build/pr.mjs', '--同步主干'], '同步本地 main（fetch 之后只把那根指针快进，工作树不动）', res); return; }
+  if(路 === '/api/同步'){ if(git不中(res)) return; 起(['src/_build/pr.mjs', '--同步主干'], '把远程 main 拉到本地（只把本地 main 挪到同一笔，工作树里的一份文件都不动）', res); return; }
   if(路 === '/api/开支'){
     if(git不中(res)) return;
-    起(['src/_build/pr.mjs', '--开这一轮的支'], '开这一轮那条支（从本地 main 起一根，已存在就不重开）', res); return;
+    起(['src/_build/pr.mjs', '--开这一轮的支'], '起这一轮的分支（从本地 main 起一条新的；已经有同名的就不重开、也不改写）', res); return;
   }
   /* 第 7 步的另一半：推哪几项上远程（勾中的那几项，各自那条功能支才推、才建 PR；没勾的一条都不推）。
      这一道要他先在屏上那份单下面敲进框里那一个字 —— 框里的字不对，子进程根本不起了。 */
@@ -596,20 +596,20 @@ const 服务器 = http.createServer(async (req, res) => {
     if(!项.length){ 发(res, 409, '一颗都没勾：这一颗只推你点名的那几项的功能支。要推基础那一支，用「推送这一轮的改动」。'); return; }
     if(!收字(res, 身)) return;
     起(['src/_build/pr.mjs', '--推前瞻支', '--推=' + 项.join(','), '--已确认'],
-      '推勾中的那几项上远程（一项一条功能支、各自建一个 PR；没勾的一条都不推）', res); return;
+      '推勾中的那几项上远程（一项一条分支、各自建一个 PR；没勾的一条都不推）', res); return;
   }
   /* 第 3 步的后半：把盘上这一轮的改动按路径落到各支（本地那一半，不扫不推不建 PR）——
      从前这一颗没有，屏上只有「① 提交 PR」那一整条道，于是"落笔"这一步只能走到推送才发生：
      八项功能一直拆不进仓，卡的就是这一颗（2026-10-13 他：「为什么没有勾，安装包还有！！到底拆了没有」）。 */
   if(路 === '/api/落笔'){
     if(git不中(res)) return;
-    起(['src/_build/pr.mjs', '--开支落笔'], '落笔到各支（同步 → 开支 → 把这一轮动的份按路径送回各自那一支；不扫公开面、不推、不建 PR）', res); return;
+    起(['src/_build/pr.mjs', '--开支落笔'], '按分支提交到本地（同步 → 起分支 → 把这一轮动过的文件按路径送回各自那条分支；不扫公开面、不推远程、不建 PR）', res); return;
   }
-  if(路 === '/api/查'){ if(git不中(res)) return; 起(['src/_build/pr.mjs', '--查合并'], '查合并那一眼（这一轮那条支进 main 了没）', res); return; }
-  if(路 === '/api/快进'){ if(git不中(res)) return; 起(['src/_build/pr.mjs', '--各家快进'], '各家指针接到 main（只挪指针，不改写已有的一笔）', res); return; }
+  if(路 === '/api/查'){ if(git不中(res)) return; 起(['src/_build/pr.mjs', '--查合并'], '问一句：这一轮那条分支进 main 了没', res); return; }
+  if(路 === '/api/快进'){ if(git不中(res)) return; 起(['src/_build/pr.mjs', '--各家快进'], '把插件那几条分支接到 main 后面（只挪分支的位置，已经推出去的一笔都不改写）', res); return; }
   if(路 === '/api/删支'){
     if(git不中(res)) return;
-    起(['src/_build/pr.mjs', '--删本地已发布支'], '删本地那条已经发完的支（还没进 main 的一颗不删）', res); return;
+    起(['src/_build/pr.mjs', '--删本地已发布支'], '删本地那条已经合并的分支（还没进 main 的一条都不删）', res); return;
   }
   /* 第 6 步那一枚：从本地集成分支那一棵出（全功能），同样不提交、不打 tag、不推 */
   if(路 === '/api/完整'){
@@ -617,7 +617,7 @@ const 服务器 = http.createServer(async (req, res) => {
     const 身 = await 读体(req);
     const 不带 = String((身 && 身.不带) || '').split(',').map(s => s.trim()).filter(Boolean);
     起(['src/_build/release.mjs', '--打自测包=完整'].concat(不带.length ? ['--不带=' + 不带.join(',')] : []),
-      '从集成分支那一棵打这一枚（第 6 步：全功能那一枚，只在这台机器上）' + (不带.length ? ' · 整家不带 ' + 不带.join('、') : ''), res);
+      '用合好的这一棵打一枚安装包（第 6 步：带功能的那一枚，只在这台机器上）' + (不带.length ? ' · 整家不带 ' + 不带.join('、') : ''), res);
     return;
   }
   /* 「打本地自测包」那一道（他 2026-10-13 指出来的：流程第 3 步「本地打包简装版，我手动测试」在推送与合并之前，
@@ -630,7 +630,7 @@ const 服务器 = http.createServer(async (req, res) => {
     const 参 = ['src/_build/release.mjs', '--打自测包']
       .concat(不带.length ? ['--不带=' + 不带.join(',')] : [])
       .concat(带.length ? ['--带=' + 带.join(',')] : []);
-    起(参, '打本地自测包（流程第 3 步：从工作树站的这一棵出简装版；不提交、不打 tag、一个字节都不推）' +
+    起(参, '打这一枚安装包（用你电脑上现在这份代码；不提交、不打版本号标记、一个字节都不推远程）' +
         (不带.length ? ' · 不带 ' + 不带.join('、') : '') + (带.length ? ' · 额外带上 ' + 带.join('、') : ''), res);
     return;
   }
@@ -643,7 +643,7 @@ const 服务器 = http.createServer(async (req, res) => {
     const 列 = 身 && Array.isArray(身.支) ? 身.支.map(s => String(s).trim()).filter(Boolean) : [];
     if(!列.length){ 发(res, 400, '一条支都没勾：重建集成分支要知道把哪几条本地前瞻支合上去。'); return; }
     起(['src/_build/pr.mjs', '--重建集成分支', '--支=' + 列.join(',')],
-      '重建集成分支（从本地 main 起一根，把勾中的那几条前瞻支一条一条合上去；不推远程）', res);
+      '把勾中的几条功能分支合到一起（从本地 main 起一条，一条一条合上去；只在本地，不推远程）', res);
     return;
   }
   /* 两颗按钮的先后（2026-10-11 新规矩）：先「提交 PR」，他人工合并之后才轮到「打包发版」。
@@ -661,7 +661,7 @@ const 服务器 = http.createServer(async (req, res) => {
     const 缺 = 等字的格(读清单显示(文));
     if(缺.length){ 发(res, 409, '这几格还空着，要他手动填了才落笔：' + 缺.join('、') + '\n  参照文字就在清单里那一笔底下的 # 行，改成你自己那句再点。'); return; }
     if(!收字(res, 身)) return;
-    起(['src/_build/pr.mjs', '--提交PR', '--已确认'], '提交 PR（摊单→同步→开支→落笔→扫公开面→推支→建 PR，建完就停）', res);
+    起(['src/_build/pr.mjs', '--提交PR', '--已确认'], '推送这一轮的改动（先摊单 → 同步 → 起分支 → 按分支提交到本地 → 扫公开面 → 推这条分支 → 建 PR，建完就停）', res);
     return;
   }
   /* 往远程送东西的两道口子都在上面（提交 PR / 推勾中的那几项）：这一台没有、也不会再有"推 main"那一颗。
@@ -684,7 +684,7 @@ const 服务器 = http.createServer(async (req, res) => {
         ' merge --ff-only ' + 状.远端 + '/main（这一台不自动合、不 rebase、不 reset），再来打包。\n查合并那一眼：' + 状.一眼);
       return;
     }
-    起(['src/_build/release.mjs', '--照清单发'], '打包发版（取号→拼装→生成→出厂镜像→打包→本地 tag；最后那一眼只列，不推）', res);
+    起(['src/_build/release.mjs', '--照清单发'], '打包发版（取版本号 → 把各家拼成一棵 → 生成页面 → 铺出厂那一份 → 出安装包 → 本地打版本号标记；最后只列一遍现场，不推远程）', res);
     return;
   }
   发(res, 404, '没这一格');

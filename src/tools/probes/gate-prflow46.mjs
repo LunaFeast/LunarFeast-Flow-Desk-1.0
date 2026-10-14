@@ -250,7 +250,7 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 提交分支:'feature/46-tauri-dat
 /* ---------- 八 ---------- */
 台.题('八、那一屏：两颗按钮的先后与顶上那一格');
 台.判('「提交 PR」起的是 pr.mjs --提交PR 那一整手，日志流回同一屏（屏上已经敲过那个字，所以带 --已确认）',
-  ui.includes("['src/_build/pr.mjs', '--提交PR', '--已确认']") && ui.includes('推支→建 PR'));
+  ui.includes("['src/_build/pr.mjs', '--提交PR', '--已确认']") && ui.includes('建 PR，建完就停'));
 台.判('「打包发版」起的是 release.mjs --照清单发，标题里不再写「等你确认」',
   ui.includes("['src/_build/release.mjs', '--照清单发']") && !ui.includes('最后等你确认'));
 台.判('没合并就点打包：后端当场回绝那句「先合并 PR，再打包」，界面上那颗也先不亮',
@@ -412,14 +412,14 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
   台.判('4 屏上那一条在：一格一支、标「只在本地」、勾一颗、多了哪几笔与哪几份都摊得开',
     pg.includes('function 画前瞻') && pg.includes('只在本地') && pg.includes("data-支=") &&
     pg.includes('多了哪几笔') && pg.includes('多了哪几份') && pg.includes('相对基础版多'));
-  台.判('5 集成分支那一根名字从服务端递过来（页面不写死），重建那颗拿勾中的那几条去叫 --重建集成分支',
+  台.判('5 那条合好的分支名字从服务端递过来（页面不写死），「把勾中的几条合到一起」那颗拿勾中的那几条去叫 --重建集成分支',
     ui.includes('集成: 集成分支名') && pg.includes('集成名 = 对.集成') && !/local\/all-features-test/.test(pg) &&
     ui.includes("路 === '/api/集成'") && ui.includes("'--重建集成分支', '--支=' + 列.join(',')") &&
-    pg.includes("跑('集成', '重建集成分支', { 支: 列 })"));
+    pg.includes("跑('集成', '把勾中的几条合到一起', { 支: 列 })"));
   台.判('6 一条都没勾时后端 400、前端也不起那一趟（不拿空列表去挪那一根）',
-    ui.includes("if(!列.length){ 发(res, 400, '一条支都没勾") && pg.includes('一条都没勾：先在那几条前瞻支上勾'));
-  台.判('7 点下「重建集成分支」之前先复述一遍要合谁、说清那一根从 main 重新起且旧的不删（挪指针的手不留悄悄）',
-    pg.includes('if(!confirm(') && pg.includes('那一根先从本地 main 重新起') && pg.includes('旧 assemble 那一支一个字不动') && pg.includes('全程不推远程'));
+    ui.includes("if(!列.length){ 发(res, 400, '一条支都没勾") && pg.includes('一条都没勾：先在上面那几条功能分支里勾'));
+  台.判('7 点下「把勾中的几条合到一起」之前先复述一遍要合谁、说清这一条从 main 重新起且旧的不删（挪分支位置的手不留悄悄）',
+    pg.includes('if(!confirm(') && pg.includes('这一条先从本地 main 重新起') && pg.includes('拼装那一条一个字不动') && pg.includes('全程不推远程'));
 }
 
 台.收尾();

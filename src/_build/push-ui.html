@@ -110,11 +110,11 @@
   <!-- 一屏一条流水：按 AGENTS.md 那两步流程，一步一行、一步一颗按钮（2026-10-13 他：「给我按照流程一步一个按钮」）。
        每行左边写这一步干什么、右边那颗按钮就是这一步，按不动的时候那一行自己说为什么。 -->
   <div class="步">
-    <div class="步头"><b>第 1 步 · 同步本地 main</b><span class="步话">本地 main 只是远程那一根的镜像：这一颗 fetch 之后照原样快进，不在它上面写东西。</span><span style="flex:1"></span><button id="同步">同步 main</button></div>
+    <div class="步头"><b>第 1 步 · 把远程 main 拉到本地</b><span class="步话">远程 main 上有的新东西，这一颗照原样接到本地 main 后面（只挪位置，不改任何一份文件）。本地 main 上要是压着远程没有的东西，它停下来报给你，不自己搬。</span><span style="flex:1"></span><button id="同步">同步 main</button></div>
     <div class="步话" id="同步话"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 2 步 · 开这一轮那条支</b><span class="步话">从本地 main 起一根；四类名字照规矩来（重构 / 新增 / 优化 / 集成）。</span><span style="flex:1"></span><button id="开支">开这一条支</button></div>
+    <div class="步头"><b>第 2 步 · 起这一轮的分支</b><span class="步话">从本地 main 起一条新分支；名字按四类挑（重构 / 新增 / 优化 / 本地合起来测）。这一轮的改动只往这条分支上写，main 一个字不动。</span><span style="flex:1"></span><button id="开支">起这一条分支</button></div>
     <div class="行">
       <label for="型">分支类型</label><select id="型"></select>
       <label for="支">提交分支</label><input type="text" id="支" placeholder="feature/tweak/…" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -122,7 +122,7 @@
     </div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 3 步 · 说清楚这一轮改了什么</b><span class="步话">「重新量一遍」量出这一轮的现场（哪几家会动、版本号会变成什么）；下面每一格的字都归你填，空着的那一笔就不写。填完点「写进各支（本地提交）」，改动才真的进了仓 —— 不写，第 4 步那些勾永远还报「这条分支还没开出来」。</span><span style="flex:1"></span><button id="量">重新量一遍</button><button id="存">保存这五样</button><button id="落笔">写进各支（本地提交）</button></div>
+    <div class="步头"><b>第 3 步 · 说清楚这一轮改了什么</b><span class="步话">「重新量一遍」量出这一轮的现场（哪几家会动、版本号会变成什么）；下面每一格的字都归你填，空着的那一笔就不写。填完点「按分支提交到本地」，改动才真的进了仓 —— 不提交，第 4 步那些勾还会报「这条分支没开出来」。</span><span style="flex:1"></span><button id="量">重新量一遍</button><button id="存">保存这五样</button><button id="落笔">按分支提交到本地</button></div>
     <div class="行">
       <label for="基线">版本基线</label><input type="text" id="基线" placeholder="1.0.0-alpha" autocomplete="off"><span class="状态" id="基线注"></span>
     </div>
@@ -137,31 +137,31 @@
     <div class="只在" id="八项"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 5 步 · 本地打包，你手动测</b><span class="步话">拿你电脑上现在这一棵出，跑三趟（生成页面 → 编壳 → 出发布物），不提交、不打 tag、不推。Flow-Desk 得先退干净。</span><span style="flex:1"></span><button id="自测">打本地这一枚</button></div>
-    <div class="步头" style="border-top:0"><b>这一枚包在哪</b><span class="步话" id="产说话">正在看产物那一格……</span><span style="flex:1"></span><button id="开产物">打开那一格</button></div>
+    <div class="步头"><b>第 5 步 · 打一枚安装包，你自己装自己测</b><span class="步话">用你电脑上现在这份代码，跑三趟：生成页面 → 编程序壳 → 出安装包。不提交、不打版本号标记、不推远程。装之前先把 Flow-Desk 退干净。</span><span style="flex:1"></span><button id="自测">打这一枚安装包</button></div>
+    <div class="步头" style="border-top:0"><b>安装包在哪个文件夹</b><span class="步话" id="产说话">正在看那个文件夹……</span><span style="flex:1"></span><button id="开产物">打开这个文件夹</button></div>
     <div class="只在" id="产物"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 6 步 · 本地全功能那一枚（可选）</b><span class="步话">把勾中的那几条功能分支合到集成分支上，再从那一棵打一枚 —— 这一根只在你电脑上，永不进远程。</span><span style="flex:1"></span><button id="集成">重建集成分支</button><button id="完整">从集成分支打这一枚</button></div>
+    <div class="步头"><b>第 6 步 · 把几项功能合到一起，再打一枚（只在你电脑上）</b><span class="步话">把上面勾中的那几条功能分支合到一条本地分支上，再从那一棵打一枚安装包。这条本地分支永远不进远程。</span><span style="flex:1"></span><button id="集成">把勾中的几条合到一起</button><button id="完整">用这一棵打安装包</button></div>
     <div class="只在" id="只在"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 7 步 · 推上去，发合并申请（PR）</b><span class="步话">两件事分开按，各推各的分支，互不牵连。</span></div>
-    <div class="组头"><b>7A · 这一轮的改动（推上去，向主版本 main 发合并申请）</b><span class="组话" id="七A话">这一颗走的是这一轮那条功能支，一路八步：同步 → 开分支 → 把改动写进仓 → 查有没有把本机地址带出去 → 推 → 建 PR。合并由你在 GitHub 网页上人工点。</span></div>
-    <div class="步头" style="border-top:0"><span class="步话" id="为什么不亮"></span><span style="flex:1"></span><button id="先摊">先摊开：这一趟要推什么</button><button id="pr" class="主">推送这一轮的改动</button></div>
-    <div class="组头"><b>7B · 勾中的那几项功能（各自一条分支，各发一份合并申请）</b><span class="组话">上面第 4 步勾的是"装进包里测"，这里勾的是"推上远程留档"。没勾的一项都不推，留在本地。</span></div>
+    <div class="步头"><b>第 7 步 · 推到远程，请 main 合并（发 PR）</b><span class="步话">两件事分开按，各推各的分支，互不牵连。</span></div>
+    <div class="组头"><b>7A · 这一轮的改动（推上去，请 main 合并）</b><span class="组话" id="七A话">这一颗走的是这一轮那条分支，一路八步：同步 → 起分支 → 把改动提交到本地 → 查有没有把本机地址带出去 → 推 → 建 PR。合并由你在 GitHub 网页上亲手点。</span></div>
+    <div class="步头" style="border-top:0"><span class="步话" id="为什么不亮"></span><span style="flex:1"></span><button id="先摊">先看一眼要推什么</button><button id="pr" class="主">推送这一轮的改动</button></div>
+    <div class="组头"><b>7B · 勾中的那几项功能（各自一条分支，各发一份合并申请）</b><span class="组话">上面第 4 步勾的是"装进包里测"，这里勾的是"推到远程留个档"。没勾的一项都不推，留在本地。</span></div>
     <div class="只在" id="推项格"></div>
     <div class="步头" style="border-top:0"><span class="步话" id="推项话"></span><span style="flex:1"></span><button id="推项">推勾中的那几项</button></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 8 步 · 你在 GitHub 网页上人工合并</b><span class="步话">这台不合并：你核对 diff、亲手点 Squash and merge，并勾上合并后删掉远程那条支。这一颗只是问一眼「合进去没有」。</span><span style="flex:1"></span><button id="查">查合并那一眼</button></div>
+    <div class="步头"><b>第 8 步 · 你在 GitHub 网页上亲手合并</b><span class="步话">这台不合并：你核对 diff、亲手点 Squash and merge，并勾上合并后删掉远程那条分支。这颗按钮只是去问一句：合进去没有。</span><span style="flex:1"></span><button id="查">问一句：合进去没有</button></div>
     <div class="步话" id="查话"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 9 步 · 本地收尾</b><span class="步话">再同步一次 main，然后把这一轮发完的那条支从本地删掉（没合进 main 的那一颗都不删）。</span><span style="flex:1"></span><button id="快进">各家指针接到 main</button><button id="删支">删本地已发布的那条支</button></div>
+    <div class="步头"><b>第 9 步 · 本地收尾</b><span class="步话">再同步一次 main，然后把这一轮发完的那条分支从本地删掉（还没合进 main 的一条都不删）。</span><span style="flex:1"></span><button id="快进">把插件那几条分支接到 main 后面</button><button id="删支">删本地那条已经合并的分支</button></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 10 步 · 打包发版（版本号认主版本 main 上最新那一笔）</b><span class="步话">这一颗要三样都齐：盘上干净、站在 main 或全功能那一棵、这一轮那条支已经合进 main。插件家的号、tag、发布物一起落。</span><span style="flex:1"></span><button id="发">打包发版</button></div>
+    <div class="步头"><b>第 10 步 · 打包发版（版本号取 main 上最新那一笔）</b><span class="步话">这一颗要三样都齐：盘上干净、站在 main 或合好的那一棵、这一轮那条分支已经合进 main。插件各家的版本号、标记、安装包一起落。</span><span style="flex:1"></span><button id="发">打包发版</button></div>
   </div>
 </div>
 
@@ -234,8 +234,8 @@ async function 问(){
     : 对.脏 ? '<b class="坏">盘上 ' + 对.脏 + ' 处没提交</b>' : '盘上干净';
   const 开 = 对.开着 ? '<b class="坏">Flow-Desk 开着</b>（要打包先退干净）' : 'Flow-Desk 没开着';
   git坏 = 对.git好 === false;
-  取('git警').innerHTML = git坏 ? '<b class="坏">' + 文(对.git话 || '这一台叫不动 git') + '</b> —— 量、提交 PR、打包发版、重建集成分支这四颗全不亮：换得到 git 的那个终端里跑 <b>node src\\_build\\push-ui.mjs</b>，或者把 git 装进系统路径再重开这一台。' : '';
-  取('状态').innerHTML = '站在 <b>' + 对.站 + '</b> 那一支 · ' + 脏 + ' · ' + 开 +
+  取('git警').innerHTML = git坏 ? '<b class="坏">' + 文(对.git话 || '这一台叫不动 git') + '</b> —— 量、推送、打包发版、把功能合到一起这四颗全不亮：换得到 git 的那个终端里跑 <b>node src\\_build\\push-ui.mjs</b>，或者把 git 装进系统路径再重开这一台。' : '';
+  取('状态').innerHTML = '你这份代码现在在 <b>' + 对.站 + '</b> 这条分支上 · ' + 脏 + ' · ' + 开 +
     ' · 清单那一格 <b>' + 对.清单名 + '</b>' + (对.清单在 ? '' : '（还没有，先点「重新量一遍」）');
   取('基线').value = (表 && 表.基线) || 对.账上底号;
   取('基线注').textContent = '源码那一格现在是 ' + 对.账上底号;
@@ -302,7 +302,7 @@ function 等字(){
   取('快进').disabled = 情; 取('删支').disabled = 情;
   取('完整').disabled = 情 || !(状.集成在);
   取('完整').title = 状.集成在 ? '从本地集成分支那一棵打这一枚（全功能，不推任何东西）'
-    : '本地还没有集成分支那一根 —— 先在下面勾中要合的前瞻支、点「重建集成分支」';
+    : '本地还没有那条合好的分支 —— 先在下面勾中要合的功能分支，点「把勾中的几条合到一起」';
   /* 灰掉的钮必须自己说为什么灰 —— 点在一颗灰钮上什么也不发生，他那句「提交PR为什么毫无反应」就是这么来的 */
   const 合 = (状.支名合) || {}, 话 = [];
   if(缺.length) 话.push('还等 ' + 缺.length + ' 笔的提交说明：<b class="坏">' + 文(缺.join('、')) + '</b>');
@@ -351,7 +351,7 @@ function 画前瞻(列){
   const 盒 = 取('只在');
   const 钮 = 取('集成');
   if(!列 || !列.length){ 盒.innerHTML = ''; 钮.disabled = true; 钮.title = '本地没有还没合进 main 的前瞻支'; return; }
-  盒.innerHTML = '<div class="标">只在本地、还没合进 main 的功能分支（基础版 = 本地 main；这一屏一个字都不往远程推）· 勾上哪几条，「重建集成分支」就把它们一条一条合到 ' + 文(集成名) + ' 上</div>' +
+  盒.innerHTML = '<div class="标">只在本地、还没合进 main 的功能分支（基础版 = 本地 main；这一屏一个字都不往远程推）· 勾上哪几条，「把勾中的几条合到一起」就把它们一条一条合到 ' + 文(集成名) + ' 上</div>' +
     列.map(x => '<div class="条"><label><input type="checkbox" data-支="' + 编(x.名) + '" checked>合上去</label> ' +
       '<b>' + 文(x.名) + '</b> · ' + 文(x.类) + '支 · ' +
       (x.已推 ? '<b>已经推上远程，还没合进 main</b>' : '<b class="坏">只在本地</b>（远程还没有它）') +
@@ -374,8 +374,8 @@ function 画产物(对){
   const 全 = 列.filter(x => x.档 === '全功能');
   话.innerHTML = 全.length ? '全功能那一枚就在这一格：<b>' + 文(全[0].名) + '</b> · ' + 全[0].MB + ' MB · 打于 ' + 文(全[0].时候) +
       '（功能 ' + (全[0].功能 || []).length + ' 项）'
-    : 列.length ? '<b class="坏">这一格里还没有标成「全功能」的那一枚</b> —— 上面第 6 步先「重建集成分支」（勾中要合的那几条功能支），再点「从集成分支打这一枚」'
-    : '还没打过：第 5 步那颗「打本地这一枚」跑完，这一格就会出现那一个 setup.exe';
+    : 列.length ? '<b class="坏">这一格里还没有标成「全功能」的那一枚</b> —— 上面第 6 步先「把勾中的几条合到一起」，再点「用这一棵打安装包」'
+    : '还没打过：第 5 步那颗「打这一枚安装包」跑完，这个文件夹里就会出现那一个 setup.exe';
   盒.innerHTML = 列.length ? '<div class="标">那一格：' + 文(对.产物格) + '（新的在前；每一枚底下那颗按下去，资源管理器开在那一格并选中它）。' +
       '名字上分得开：从集成分支那一棵打的那一枚，文件名里多那一段 <b>full</b>；主版本那条链打出来的没有这一段。' +
       '这一段只在文件名上 —— 装好之后软件里读不到任何"哪一种包"的字样。</div>' +
@@ -493,10 +493,10 @@ async function 跑(路, 标题, 身){
   const 缺 = [...document.querySelectorAll('textarea[data-会动="1"]')].filter(t => !t.value.trim()).map(t => t.dataset.名);
   if(!取('说明').value.trim() && !confirm('顶上「本轮说明」那一格还空着（主程序那一笔的提交说明就从这一格来）。\n\n还是要点落笔吗？空着的话主程序那一笔这一趟不落，命令会当场停下来等你填。')) return;
   if(缺.length && !confirm('还有 ' + 缺.length + ' 笔的「更新描述」空着：' + 缺.join('、') + '\n\n空着的那几笔这一趟不落（命令会点名等你填哪几笔）。还是要点吗？')) return;
-  if(await 存(true)) 跑('落笔', '落笔到各支');
+  if(await 存(true)) 跑('落笔', '按分支提交到本地');
 };
 取('开支').onclick = async () => { if(await 存(true)) 跑('开支', '开这一轮那条支'); };
-取('查').onclick = () => 跑('查', '查合并那一眼');
+取('查').onclick = () => 跑('查', '问一句：合进去没有');
 /* 第 7 步右边那颗：只推你勾中的那几项的功能支，各自建一个 PR；没勾的一条都不推。
    点下去先让 pr.mjs 把"要推的是哪几条支、各自那一笔在哪"摊成一份单（/api/摊单），他在那份单下面敲那一个字才真跑。 */
 取('推项').onclick = () => {
@@ -505,15 +505,15 @@ async function 跑(路, 标题, 身){
   摊着来('推前瞻支', '推勾中的那几项上远程 —— 一条支一份合并申请', 项.join(','),
     词 => 跑('推项', '推勾中的那几项', { 项: 项.join(','), 词 }));
 };
-取('快进').onclick = () => { if(confirm('把插件那几家各自那一支接到 main 后面？\n\n只挪指针：已有的一笔都不改写；哪一家那一支上有 main 里没有的东西（真分叉）会停下来报是哪一家。')) 跑('快进', '各家指针接到 main'); };
-取('删支').onclick = () => { const 名 = 取('支').value.trim(); if(confirm('删本地那一条已经发完的支？\n\n要删的是：' + (名 || '（顶上「提交分支」那一格还空着）') + '\n\n这一颗先核对它有没有进 main（压成一笔合进去的也算，比的是两边内容）：没进的绝不删。远程那一条是你在网页上合并时勾的那一下删，这台不推。')) 跑('删支', '删本地已发布的那条支'); };
+取('快进').onclick = () => { if(confirm('把插件那几条分支接到 main 后面？\n\n只挪分支的位置：已经推出去的一笔都不改写；哪一条上有 main 里没有的东西（真分叉）会停下来报是哪一条。')) 跑('快进', '把插件那几条分支接到 main 后面'); };
+取('删支').onclick = () => { const 名 = 取('支').value.trim(); if(confirm('删本地那一条已经合并完的分支？\n\n要删的是：' + (名 || '（顶上「提交分支」那一格还空着）') + '\n\n这一颗先核对它有没有进 main（压成一笔合进去的也算，比的是两边内容）：没进的绝不删。远程那一条是你在网页上合并时勾的那一下删掉的，这台不推。')) 跑('删支', '删本地那条已经合并的分支'); };
 /* 那几家插件全勾着的时候说什么：家数从后端那张家表现量（屏上写死一个「七」字，2026-10-14 撤卡片默认大小那一台之后就成了假话） */
 function 全带话(){ return '\n\n插件那 ' + ((状.插件家 || []).length) + ' 家全勾着 —— 这一枚全带。'; }
 取('完整').onclick = () => {
   const 不带的 = 不带的家();
   const 话 = 不带的.length ? '\n\n插件这一枚不带：' + 不带的.map(id => 家的名(状.插件家, id)).join('、') : 全带话();
-  if(confirm('从本地集成分支那一棵打这一枚？\n\n那一根上有你勾中的那几条功能支（第 6 步「重建集成分支」合上去的），插件那几家一起合进来。\n\n不提交、不打 tag、不推远程；跑那一趟要几分钟。' + 话))
-    跑('完整', '从集成分支打这一枚', { 不带: 不带的.join(',') });
+  if(confirm('用合好的这一棵打一枚安装包？\n\n那一棵上有你勾中的那几条功能分支（第 6 步「把勾中的几条合到一起」合上去的），插件那几家一起合进来。\n\n不提交、不打版本号标记、不推远程；跑那一趟要几分钟。' + 话))
+    跑('完整', '用这一棵打安装包', { 不带: 不带的.join(',') });
 };
 /* 第 5 步：本地打这一枚自己手动测 —— 在第 7 步推送与第 8 步合并之前，
    这一档不提交、不落清单、不打 tag、不推任何东西（那两步要的「盘上干净」「已合进 main」这儿不适用）。
@@ -525,10 +525,10 @@ function 全带话(){ return '\n\n插件那 ' + ((状.插件家 || []).length) +
     ? '\n\n插件不带的那几家：' + 不带的.map(id => 家的名(状.插件家, id)).join('、') + '（它们活的一份与原版那一份都不进包，货架上也不摆）'
     : 全带话();
   const 话2 = 带的.length
-    ? '\n\n功能额外带上那几项：' + 带的.map(id => 家的名(状.八项, id)).join('、') + '\n（勾中的那几条分支合到一棵临时的树上打，你正站着的这一棵一个字不动。）'
+    ? '\n\n功能额外带上那几项：' + 带的.map(id => 家的名(状.八项, id)).join('、') + '\n（勾中的那几条分支合到一份临时的代码上打，你正用的这一份一个字不动。）'
     : '\n\n功能那八格全没勾 —— 打的就是你现在站的这一棵上有的那些。';
   if(confirm('打一个本地自测包？\n\n从工作树现在站的这一棵出（盘上没提交的改动也一起打进去），跑三趟：生成页面 → 铺出厂镜像 → 出发布物。' + 话1 + 话2 +
-    '\n\n不提交、不打 tag、不推远程 —— 装完你手动测，测过了再走第 7 步「推送 + 建 PR」。Flow-Desk 得先退干净。'))
+    '\n\n不提交、不打版本号标记、不推远程 —— 装完你自己测，测过了再走第 7 步「推送这一轮的改动」。Flow-Desk 得先退干净。'))
     跑('自测', '打本地自测包', { 不带: 不带的.join(','), 带: 带的.join(',') });
 };
 取('存').onclick = () => 存(false);
@@ -536,11 +536,11 @@ function 全带话(){ return '\n\n插件那 ' + ((状.插件家 || []).length) +
    它会从本地 main 重新起那一根，所以点下去之前先复述一遍要合谁 —— 看清楚再点。 */
 取('集成').onclick = () => {
   const 列 = 勾中();
-  if(!列.length){ 取('提示').textContent = '一条都没勾：先在那几条前瞻支上勾「合上去」。'; return; }
+  if(!列.length){ 取('提示').textContent = '一条都没勾：先在上面那几条功能分支里勾「合上去」。'; return; }
   if(!confirm('要把这 ' + 列.length + ' 条合到 ' + 集成名 + ' 上：\n  ' + 列.join('\n  ') +
-    '\n\n那一根先从本地 main 重新起（原来那一根上的笔照旧留在仓里，旧 assemble 那一支一个字不动）；' +
+    '\n\n这一条先从本地 main 重新起（原来那条上的提交照旧留在仓里，拼装那一条一个字不动）；' +
     '合到一半撞车就停下来报是哪一条，不自动解。全程不推远程。')) return;
-  跑('集成', '重建集成分支', { 支: 列 });
+  跑('集成', '把勾中的几条合到一起', { 支: 列 });
 };
 /* ---------- 往远程送东西那三道：先把单摊在眼前，敲对了那一个字才起子进程 ----------
    摊单那一份是 src\_build\pr.mjs 现算的（/api/摊单，纯读：一根指针都不挪、一个字节都不推），
