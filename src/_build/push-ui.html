@@ -59,6 +59,9 @@
   .图预览{ margin-top:7px; height:56px; display:flex; align-items:center; }
   .图预览 img{ max-height:56px; max-width:120px; }
   .只在{ margin-top:14px; }
+  .组头{ display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; margin-top:14px; font-size:13.5px; }
+  .组头 b{ font-weight:600; }
+  .组话{ color:var(--淡); font-size:13px; }
   /* 一步一行（他 2026-10-13：「给我按照流程一步一个按钮」）：左边第几步与这一句白话，右边那一颗就是这一步 */
   .步{ border:1px solid var(--线); border-left:4px solid var(--淡); background:var(--块); border-radius:3px; padding:10px 14px 12px; margin-top:10px; }
   .步头{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
@@ -112,7 +115,7 @@
     </div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 3 步 · 说清楚这一轮改了什么</b><span class="步话">「重新量一遍」量出这一轮的现场（哪几家会动、号会变成什么）；下面每一格的字都归你填，空着那一笔就不落。填完点「落笔到各支」，改动才真的进了仓 —— 不落笔，第 4 步那些勾永远还是"还没拆"。</span><span style="flex:1"></span><button id="量">重新量一遍</button><button id="存">保存这五样</button><button id="落笔">落笔到各支</button></div>
+    <div class="步头"><b>第 3 步 · 说清楚这一轮改了什么</b><span class="步话">「重新量一遍」量出这一轮的现场（哪几家会动、版本号会变成什么）；下面每一格的字都归你填，空着的那一笔就不写。填完点「写进各支（本地提交）」，改动才真的进了仓 —— 不写，第 4 步那些勾永远还报「这条分支还没开出来」。</span><span style="flex:1"></span><button id="量">重新量一遍</button><button id="存">保存这五样</button><button id="落笔">写进各支（本地提交）</button></div>
     <div class="行">
       <label for="基线">版本基线</label><input type="text" id="基线" placeholder="1.0.0-alpha" autocomplete="off"><span class="状态" id="基线注"></span>
     </div>
@@ -120,20 +123,28 @@
     <div class="格" id="格"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 4 步 · 挑这一枚包里带什么</b><span class="步话">只影响打出来这一枚的内容，<b>不决定推哪几条分支</b>：插件那七家一家一格，功能那八项一项一格。装好的软件里不出现这一栏的任何字。</span></div>
+    <div class="步头"><b>第 4 步 · 挑这一枚包里带什么</b><span class="步话">这一步只管<b>装出来的那一枚里有什么</b>，跟推不推分支没关系（推分支在第 7 步）。装好的软件里不出现这一栏的任何字。</span></div>
+    <div class="组头"><b>本来就有的插件</b><span class="组话">这七家跟着软件一起装在仓里，一格一家；不勾的那家这一枚包里不带。</span></div>
     <div class="只在" id="七家"></div>
+    <div class="组头"><b>额外加进来的功能</b><span class="组话">这八项各自住在一条自己的分支上，<b>不在主版本里</b>；勾中哪几项，打这一枚时才把它们合进来测。</span></div>
     <div class="只在" id="八项"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 5 步 · 本地打包，你手动测</b><span class="步话">从工作树站的这一棵出，跑三趟（生成页面 → 铺出厂镜像 → 出发布物），不提交、不打 tag、不推。Flow-Desk 得先退干净。</span><span style="flex:1"></span><button id="自测">打本地这一枚</button></div>
+    <div class="步头"><b>第 5 步 · 本地打包，你手动测</b><span class="步话">拿你电脑上现在这一棵出，跑三趟（生成页面 → 编壳 → 出发布物），不提交、不打 tag、不推。Flow-Desk 得先退干净。</span><span style="flex:1"></span><button id="自测">打本地这一枚</button></div>
+    <div class="步头" style="border-top:0"><b>这一枚包在哪</b><span class="步话" id="产说话">正在看产物那一格……</span><span style="flex:1"></span><button id="开产物">打开那一格</button></div>
+    <div class="只在" id="产物"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 6 步 · 本地全功能那一枚（可选）</b><span class="步话">把勾中的那几条本地前瞻支合到集成分支上，再从那一棵打一枚 —— 这一根永不进远程。</span><span style="flex:1"></span><button id="集成">重建集成分支</button><button id="完整">从集成分支打这一枚</button></div>
+    <div class="步头"><b>第 6 步 · 本地全功能那一枚（可选）</b><span class="步话">把勾中的那几条功能分支合到集成分支上，再从那一棵打一枚 —— 这一根只在你电脑上，永不进远程。</span><span style="flex:1"></span><button id="集成">重建集成分支</button><button id="完整">从集成分支打这一枚</button></div>
     <div class="只在" id="只在"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 7 步 · 推送并建 PR</b><span class="步话">基础那一支（这一轮那条支）走左边这颗：同步 → 开支 → 落笔 → 扫公开面 → 要你亲手敲一个「推」字 → 推 → 建 PR。<b>功能那八项推不推，是右边那八格的事</b>：勾中哪几格，才推哪几条前瞻支、各建一个 PR；没勾的一条都不推，留在本地。</span><span style="flex:1"></span><button id="pr" class="主">推送基础那一支</button><button id="推项">推勾中的那几项</button></div>
+    <div class="步头"><b>第 7 步 · 推上去，发合并申请（PR）</b><span class="步话">两件事分开按，各推各的分支，互不牵连。</span></div>
+    <div class="组头"><b>7A · 这一轮的改动（推上去，向主版本 main 发合并申请）</b><span class="组话">走的是这一轮那条支，一颗按钮一路跑到底：同步 → 开分支 → 把改动写进仓 → 查有没有把本机地址带出去 → 要你亲手敲一个「推」字 → 推 → 建 PR。合并由你在 GitHub 网页上人工点。</span></div>
+    <div class="步头" style="border-top:0"><span class="步话" id="为什么不亮"></span><span style="flex:1"></span><button id="pr" class="主">推送这一轮的改动</button></div>
+    <div class="组头"><b>7B · 勾中的那几项功能（各自一条分支，各发一份合并申请）</b><span class="组话">上面第 4 步勾的是"装进包里测"，这里勾的是"推上远程留档"。没勾的一项都不推，留在本地。</span></div>
     <div class="只在" id="推项格"></div>
+    <div class="步头" style="border-top:0"><span class="步话" id="推项话"></span><span style="flex:1"></span><button id="推项">推勾中的那几项</button></div>
   </div>
   <div class="步">
     <div class="步头"><b>第 8 步 · 你在 GitHub 网页上人工合并</b><span class="步话">这台不合并：你核对 diff、亲手点 Squash and merge，并勾上合并后删掉远程那条支。这一颗只是问一眼「合进去没有」。</span><span style="flex:1"></span><button id="查">查合并那一眼</button></div>
@@ -143,7 +154,7 @@
     <div class="步头"><b>第 9 步 · 本地收尾</b><span class="步话">再同步一次 main，然后把这一轮发完的那条支从本地删掉（没合进 main 的那一颗都不删）。</span><span style="flex:1"></span><button id="快进">各家指针接到 main</button><button id="删支">删本地已发布的那条支</button></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 10 步 · 打包发版（号钉在 main 那一笔）</b><span class="步话">这一颗要三样都齐：盘上干净、站在 main 或拼装那一棵、这一轮那条支已经合进 main。七家的号、tag、发布物一起落。</span><span style="flex:1"></span><button id="发">打包发版</button></div>
+    <div class="步头"><b>第 10 步 · 打包发版（版本号认主版本 main 上最新那一笔）</b><span class="步话">这一颗要三样都齐：盘上干净、站在 main 或全功能那一棵、这一轮那条支已经合进 main。七家的号、tag、发布物一起落。</span><span style="flex:1"></span><button id="发">打包发版</button></div>
   </div>
 </div>
 
@@ -238,6 +249,7 @@ async function 问(){
   画七家(对.七家);
   画八项(对.八项);
   画推项(对.八项);
+  画产物(对);
   底 = !对.清单在 || 对.在跑 || git坏;
   取('pr').disabled = 底;
   取('发').disabled = !对.清单在 || git坏 || !(合 && 合.本地);
@@ -252,6 +264,17 @@ function 等字(){
   const 缺 = [...document.querySelectorAll('textarea[data-会动="1"]')].filter(t => !t.value.trim()).map(t => t.dataset.名);
   const 没说明 = !取('说明').value.trim();
   取('pr').disabled = 底 || !!缺.length || 没说明;
+  /* 不亮就把话说在前面（他 2026-10-14：推送那颗不亮，不知道为什么）。
+     按不动的每一条理由都列出来，一条一行，末尾指着要他动哪一格。 */
+  const 因 = [];
+  for(const 句 of ((状.推不亮) || [])) 因.push(句);
+  if(没说明) 因.push('顶上「第 3 步 · 说清楚这一轮改了什么」那一格（本轮说明）还空着 —— 这一栏的字归你填，空着这颗就不亮');
+  if(缺.length) 因.push('这几笔的提交说明还空着：' + 缺.join('、') + ' —— 空着的那一笔就不落，那颗也就不亮');
+  取('为什么不亮').innerHTML = 因.length ? '<b class="坏">现在不能按：</b>' + 因.map(文).join('；<br>') :
+    (取('pr').disabled ? '' : '<b style="color:var(--好)">可以按</b> · 按下去会先扫一遍公开面，还要你亲手敲一个「推」字才真推');
+  const 推中2 = 推中().length;
+  取('推项话').textContent = 推中2 ? '勾中了 ' + 推中2 + ' 项，各推各的那条功能支、各发一份合并申请' :
+    '下面那一格一颗都没勾：不勾的一项都不推，留在本地';
   /* 一步一颗：这一排钮的"能不能按"各说各的（跑着 = 这一台一次只跑一趟） */
   const 情 = 跑着 || git坏;
   取('同步').disabled = 情; 取('开支').disabled = 情; 取('查').disabled = 情;
@@ -312,7 +335,7 @@ function 画前瞻(列){
   const 盒 = 取('只在');
   const 钮 = 取('集成');
   if(!列 || !列.length){ 盒.innerHTML = ''; 钮.disabled = true; 钮.title = '本地没有还没合进 main 的前瞻支'; return; }
-  盒.innerHTML = '<div class="标">只在本地、还没合进 main 的前瞻支（基础版 = 本地 main；这一屏一个字都不往远程推）· 勾上哪几条，「重建集成分支」就把它们一条一条合到 ' + 文(集成名) + ' 上</div>' +
+  盒.innerHTML = '<div class="标">只在本地、还没合进 main 的功能分支（基础版 = 本地 main；这一屏一个字都不往远程推）· 勾上哪几条，「重建集成分支」就把它们一条一条合到 ' + 文(集成名) + ' 上</div>' +
     列.map(x => '<div class="条"><label><input type="checkbox" data-支="' + 编(x.名) + '" checked>合上去</label> ' +
       '<b>' + 文(x.名) + '</b> · ' + 文(x.类) + '支 · ' +
       (x.已推 ? '<b>已经推上远程，还没合进 main</b>' : '<b class="坏">只在本地</b>（远程还没有它）') +
@@ -326,6 +349,19 @@ function 画前瞻(列){
 }
 function 勾中(){ return [...document.querySelectorAll('#只在 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['支']); }
 function 数勾(){ const n = 勾中().length; 取('集成').disabled = n === 0 || 跑着 || git坏; }
+/* 打出来的那一枚安装程序在哪：屏上直接给路径与最近几枚（新的在前），别让他自己去找 dist\tauri。
+   后端那一份读的是 <这一棵>\dist\tauri\Flow_Desk_setup_*.exe。 */
+function 画产物(对){
+  const 列 = (对 && 对.产物) || [], 盒 = 取('产物'), 话 = 取('产说话');
+  话.textContent = 列.length ? '最新这一枚：' + 列[0].名 + ' · ' + 列[0].MB + ' MB · 打于 ' + 列[0].时候
+    : '还没打过：下面那颗「打本地这一枚」跑完，这一格就会出现那一个 setup.exe';
+  盒.innerHTML = 列.length ? '<div class="标">那一格：' + 文(对.产物格) + '</div>' +
+    列.map(x => '<div class="条">' + 文(x.名) + ' · ' + x.MB + ' MB · ' + 文(x.时候) + '</div>').join('') : '';
+}
+取('开产物').onclick = async () => {
+  const 回 = await fetch('/api/开产物', { method:'POST', headers:{ 'x-push-code':码 } });
+  取('产说话').textContent = 回.ok ? (await 回.json()).话 : '打不开那一格：' + (await 回.text());
+};
 /* 那八项功能（名单在 src\_build\forward-features.mjs 那一份里，这一屏只读不抄第二份）：
    一条一格，标它那条分支起没起、现在这一棵带不带、这一项动的是哪几处。
    勾上的那几项 = 「打本地自测包」要把它们合进这一枚（合到一棵临时的，工作树那一棵不动）。
@@ -334,8 +370,8 @@ function 画八项(列){
   const 盒 = 取('八项');
   if(!列 || !列.length){ 盒.innerHTML = ''; return; }
   const 起了 = 列.filter(x => x.起).length;
-  盒.innerHTML = '<div class="标">功能那八项 · 勾哪几项进这一枚包（勾中的合到一棵临时的树上打，你正站着的这一棵一个字不动；' +
-    '装好的软件里不出现这一栏的任何字）· 八条分支起来了 ' + 起了 + ' 条</div>' +
+  盒.innerHTML = '<div class="标">额外加进来的功能 · 勾中哪几项，打这一枚时才合进来测（它们各自住在一条分支上，主版本里没有；' +
+    '勾这里不等于推分支 —— 推在第 7 步那一格）· 八条分支开了 ' + 起了 + ' 条</div>' +
     列.map(x => '<div class="条"><label><input type="checkbox" data-项="' + 编(x.id) + '"' + (x.起 ? '' : ' disabled') + '>带上</label> ' +
       '<b>' + 文(x.中文) + '</b> · ' + 文(x.分支) + ' · ' +
       (x.起 ? '<b>分支那一笔 ' + 文(x.起) + '</b>' : '<b class="坏">分支还没起来</b>') +
@@ -348,7 +384,7 @@ function 带中(){ return [...document.querySelectorAll('#八项 input[type=chec
 function 画七家(列){
   const 盒 = 取('七家');
   if(!列 || !列.length){ 盒.innerHTML = ''; return; }
-  盒.innerHTML = '<div class="标">插件那七家 · 勾着的进这一枚包（名字照程序里那七个，一家一条长期分支）</div>' +
+  盒.innerHTML = '<div class="标">跟着软件一起装的插件 · 一家一格（默认全带上；这一格只管装进包里，跟推不推分支没关系）</div>' +
     '<div class="家格">' + 列.map(j => '<label class="家"><input type="checkbox" data-家="' + 编(j.id) + '" checked>' +
       文(j.中文) + '</label>').join('') + '</div>';
 }
@@ -359,9 +395,9 @@ function 家的名(列, id){ const j = (列 || []).find(x => x.id === id); retur
 function 画推项(列){
   const 盒 = 取('推项格');
   if(!列 || !列.length){ 盒.innerHTML = ''; return; }
-  盒.innerHTML = '<div class="标">功能那八项 · 勾着的才推上远程（一项一条前瞻支、各自一个 PR；没勾的留在本地）</div>' +
+  盒.innerHTML = '<div class="标">要推上远程留档的功能分支 · 勾哪几条就推哪几条，各发一份合并申请（不勾的留在本地，一条都不推）</div>' +
     '<div class="家格">' + 列.map(x => '<label class="家"><input type="checkbox" data-推="' + 编(x.id) + '"' + (x.起 ? '' : ' disabled') + '>' +
-      文(x.中文) + (x.起 ? '' : '（还没拆出来）') + '</label>').join('') + '</div>';
+      文(x.中文) + (x.起 ? '' : '（这条分支还没开出来）') + '</label>').join('') + '</div>';
   盒.querySelectorAll('input[type=checkbox]').forEach(c => c.addEventListener('change', 等字));
 }
 function 推中(){ return [...document.querySelectorAll('#推项格 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['推']); }

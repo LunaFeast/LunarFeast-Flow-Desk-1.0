@@ -111,6 +111,28 @@ function 现场(){
     支类: 支类表.map(c => ({ 类: c.类, 话: c.话 })),
     类判: 支 ? 支类合规(型, 支) : null,
     在跑: !!当值.名,
+    /* 「为什么这颗不能按」由后端把机器那一头的理由列全（屏上摆成一句人话）：
+       他 2026-10-14 那条「推送main不亮，不知道为什么」—— 从前屏上只把按钮调灰，一个字都不说。 */
+    推不亮: (() => {
+      const 缺 = [];
+      if(!(问脏.好 && 问站.好)) 缺.push('git 叫不动：' + (问脏.好 ? 问站.话 : 问脏.话));
+      if(!文) 缺.push('还没「重新量一遍」：那一格清单不在，屏上量不出这一轮要动哪几家');
+      if(当值.名) 缺.push('这一台正跑着上一趟（' + 当值.名 + '），等它完');
+      return 缺;
+    })(),
+    /* 打包出来的那枚安装程序在哪：屏上直接给那一格的路、文件名、多大、什么时候打的
+       （他 2026-10-14：找不到打包的安装包在哪里）。只列最近五枚，新的在前。 */
+    产物格: path.join(TREE, 'dist', 'tauri'),
+    产物: (() => {
+      const 格 = path.join(TREE, 'dist', 'tauri');
+      try{
+        return fs.readdirSync(格).filter(f => /^Flow_Desk_setup_.*\.exe$/i.test(f)).map(f => {
+          const s = fs.statSync(path.join(格, f));
+          return { 名: f, MB: +(s.size / 1048576).toFixed(1), ms: s.mtimeMs,
+            时候: new Date(s.mtimeMs).toLocaleString('zh-CN', { hour12: false }) };
+        }).sort((a, b) => b.ms - a.ms).slice(0, 5);
+      }catch(e){ return []; }
+    })(),
   };
 }
 
@@ -498,6 +520,19 @@ const 服务器 = http.createServer(async (req, res) => {
     JSON发(res, { 好: true, 清单路: 清单路() });
     return;
   }
+  /* 「打开那一格」：把资源管理器开到产物那一格（最新那枚安装包选中）。
+     屏上那颗按钮就干这一件事 —— 他从没在这台机器上找过 dist\tauri 这串字，别让他记路径。 */
+  if(路 === '/api/开产物'){
+    const 场 = 现场();
+    const 格 = 场.产物格, 最 = 场.产物.length ? 场.产物[0].名 : '';
+    try{
+      /* explorer 挑中那枚时返回码是 1（它的老毛病），不代表没开成 —— 所以只看叫得动叫不动 */
+      spawn('explorer.exe', 最 ? ['/select,' + path.join(格, 最)] : [格], { stdio:'ignore', detached:true }).unref();
+      JSON发(res, { 好:true, 话:'已打开那一格：' + 格 + (最 ? '（选中的是 ' + 最 + '）' : '（这一格里还没有安装程序）') });
+    }catch(e){ 发(res, 500, '打不开资源管理器：' + ((e && e.message) || e)); }
+    return;
+  }
+
   if(路 === '/api/量'){ if(git不中(res)) return; 起(['src/_build/release.mjs', '--看'], '重新量一遍（--看：仓里一个字节不写）', res); return; }
   /* 流程那几步一步一颗（他 2026-10-13：「给我按照流程一步一个按钮」「步骤缺失」）：
      第 1 / 2 / 8 / 9 步从前没有按钮，第 6 步只有「重建集成分支」没有「从那一棵打这一枚」。 */
