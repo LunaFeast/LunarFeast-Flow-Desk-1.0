@@ -335,10 +335,12 @@ export function 合进那条支(支, 源, 选项){
   let 树 = '';
   try{ 树 = String(git(TREE, ['merge-tree', '--write-tree', 支头, 从头])).split(/\r?\n/)[0]; }
   catch(e){
-    const 撞 = String((e && e.stdout) || '').split(/\r?\n/).filter(Boolean).slice(1, 24);
-    throw new Error('「' + 从 + '」合进「' + 支 + '」撞车了（两边动过同一份）。冲突只在「' + 支 + '」这一支里解，不许切到 ' + 从 + ' 去合。\n' +
+    /* merge-tree 砸出来的那几行是「<模式> <对象号> <第几眼>\t<路径>」，一份文件三行 —— 只要那份文件的名字。 */
+    const 撞 = [...new Set(String((e && e.stdout) || '').split(/\r?\n/).slice(1)
+      .filter(l => l.includes('\t')).map(l => l.split('\t').pop().trim()).filter(Boolean))];
+    throw Object.assign(new Error('「' + 从 + '」合进「' + 支 + '」撞车了（两边动过同一份）。冲突只在「' + 支 + '」这一支里解，不许切到 ' + 从 + ' 去合。\n' +
       (撞.length ? '  撞在这些份：\n  ' + 撞.join('\n  ') + '\n' : '') +
-      '  人工那一眼：git -C ' + TREE + ' log --oneline ' + 从头.slice(0, 7) + '...' + 支头.slice(0, 7));
+      '  人工那一眼：git -C ' + TREE + ' log --oneline ' + 从头.slice(0, 7) + '...' + 支头.slice(0, 7)), { 撞 });
   }
   const 新 = git(TREE, ['commit-tree', 树, '-p', 支头, '-p', 从头, '-m',
     String((选项 && 选项.话) || ('合入 ' + 从 + '：把「' + 从 + '」这一头的更新接进「' + 支 + '」，冲突在这一支里处理'))]);
@@ -366,20 +368,28 @@ export function 重建集成分支(支列表, 选项){
   let 旧集 = '';
   try{ 旧集 = git(TREE, ['rev-parse', 集]); }catch(e){}
   git(TREE, ['update-ref', 'refs/heads/' + 集, 干头]);
-  const 出 = [];
-  for(const 名 of 挑){
-    try{
-      const r = 合进那条支(集, 名, { 话: '合入 ' + 名 + '：重建集成分支（从 ' + 干 + ' 起底）时把这条前瞻支并进来' });
-      出.push({ 支: 名, 动了: r.动了, 笔: r.笔 || '' });
-    }catch(e){
-      throw new Error('合到「' + 名 + '」这一条撞车，重建停在这儿。\n' +
-        '  已经合上去的是：' + (出.length ? 出.map(x => x.支).join('、') : '（还没有一条合上去）') +
-        '\n  集成分支那一根停在 ' + git(TREE, ['rev-parse', '--short', 集]) + '，没有自动解、也没有跳过它继续合后面。\n' +
-        '  ' + String((e && e.message) || e));
+  /* 一条撞车不许把后面全部带走（2026-10-14 他「完整版打包没打上」那一件就是这么来的：八项全勾着，
+     第五项与已合上的撞车，那一趟当场停 —— 后面三条本来合得上的也一条没合，打出来只有 4 项）。
+     改法只有这一条路是干净的：撞车的那一条**跳过**、先合合得上的，回头再试它一次；
+     仍然一个字都不替他解 —— 解冲突归他，跳过去的每一条把撞在哪几份原样报出来。 */
+  const 出 = [], 跳 = [];
+  let 待合 = 挑.slice();
+  for(let 轮 = 1; 待合.length && 轮 <= 挑.length; 轮++){
+    const 下轮 = [];
+    for(const 名 of 待合){
+      try{
+        const r = 合进那条支(集, 名, { 话: '合入 ' + 名 + '：重建集成分支（从 ' + 干 + ' 起底）时把这条前瞻支并进来' });
+        出.push({ 支: 名, 动了: r.动了, 笔: r.笔 || '' });
+      }catch(e){
+        下轮.push(名);
+        if(!跳.find(x => x.支 === 名)) 跳.push({ 支: 名, 话: String((e && e.message) || e).split(/\r?\n/)[0], 撞: (e && e.撞) || [] });
+      }
     }
+    if(!下轮.length || 下轮.length === 待合.length){ 待合 = 下轮; break; }   // 这一轮一条也没推进，就别空转
+    待合 = 下轮;
   }
   return { 集成分支: 集, 主干: 干, 底: 干头.slice(0, 7),
-    旧底: 旧集 ? 旧集.slice(0, 7) : '（这一根本来不存在，这一趟新起的）', 合了: 出 };
+    旧底: 旧集 ? 旧集.slice(0, 7) : '（这一根本来不存在，这一趟新起的）', 合了: 出, 跳的: 待合, 撞单: 跳 };
 }
 
 /* 分家那几笔的提交说明：一家一句，全从清单那一格取（他 2026-10-12 第 3 条：文字归他填）。

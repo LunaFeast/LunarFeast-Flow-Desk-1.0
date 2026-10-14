@@ -103,9 +103,10 @@ const 脏 = () => (包.清单 || []).filter(k => (k === 'data' || k.startsWith('
     (带段.全文.match(/首装那颗的文件名：\S*/) || ['没报出文件名'])[0]);
   台.判('反向验真跑：那一段写成往上钻的样子就当场停（它是拼进文件名的，不收怪字符）· 退出码 ' + 坏段.码,
     坏段.码 === 1 && /setup-tag 只收/.test(坏段.话), (坏段.话.split(/\r?\n/).find(l => l.includes('Error')) || '').slice(0, 120));
-  台.判('那一段只收小写 ASCII（中文的档位字样进不了文件名），而且发布这一趟只有从集成分支那一棵打的才带它 —— 基础版与发版的名字照旧',
+  台.判('那一段只收小写 ASCII（中文的档位字样进不了文件名），而且那一段照实量 —— 八项齐才写 full，差几项写「几 of8」，基础版与发版的名字照旧不带那一段（叫 full 的那一枚不许其实是 4 项）',
     /\/\^\[a-z0-9\]\[a-z0-9_-\]\{0,15\}\$\/\.test\(s\)/.test(rd('src/pack/publish.mjs')) &&
-    rd('src/_build/release.mjs').includes("自测档 === '完整' ? ['--setup-tag=full'] : []"));
+    rd('src/_build/release.mjs').includes("自测档 === '完整' ? (齐 ? 'full' : 带了.length + 'of8') : ''") &&
+    rd('src/_build/release.mjs').includes(".concat(名段 ? ['--setup-tag=' + 名段] : [])"));
 }
 const 没编 = (() => { try{
   execFileSync(process.execPath, ['src/pack/publish.mjs', '--dry', '--壳件=' + ROOT + '这一格本来就没有'],
