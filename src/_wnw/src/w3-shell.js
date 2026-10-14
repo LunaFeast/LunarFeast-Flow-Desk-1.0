@@ -1125,7 +1125,9 @@ const Desk = {
         { kind:'board', label:'看板（事件线 / 时间线）' },
         { kind:'stat', label:'写作统计' },
         /* 词巡航只吃「整卷的章都是词格」那种卷：一本书一卷都不够格时这一条不摆出来 */
-        ...巡航拾取   /* 词巡航与书巡航那两条：勾上词格的那一枚由 w19 登记进来，没勾就一条都不摆 */
+        ...(cruiseAnyVol() ? [{ kind:'cruise', ref:() => cruiseAnyVol(), label:'词巡航（整卷词格闪卡）' }] : []),
+        /* 书巡航（外26 追加）跨卷：这本书里只要有一章是词格就摆这一条，ref 递那枚哨兵 */
+        ...(cruiseBookReady() ? [{ kind:'cruise', ref:() => CRUISE_BOOK, label:'书巡航（整本书词格闪卡）' }] : [])
       ]},
       /* 各家自己登记的整组排在这儿（外46 十之前这里是写死的一组） */
       ...PICK_GROUPS,
