@@ -255,7 +255,7 @@ const WNW_CN = { 'w0-skin.js':'为写的皮肤与骨架', 'w1-core.js':'基础',
   'w11-board.js':'看板', 'w12-rich.js':'富文本', 'w13-docx.js':'导出 Word', 'w14-num.js':'章节序号',
   'w15-hist.js':'历史版本', 'w16-export.js':'导出', 'w17-tags.js':'标签',
   'w20-keystroke.js':'逐字记录',
-  'w22-web.js':'空白网页' };
+  'w22-web.js':'空白网页', 'w21-heat.js':'写作热力图' };
 const RP_CN = { 'p1.js':'取码与方案', 'p2.js':'文件加载', 'p3.js':'方案族', 'p4.js':'编码规则',
   'p5.js':'编码变换', 'p6.js':'外观与存储' };
 

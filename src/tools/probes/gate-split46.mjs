@@ -15,6 +15,7 @@ import { rd, 记账, 切 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-split46');
 const 本体 = rd('src/_wnw/src/w8-write.js');
+const 热力 = rd('src/_wnw/src/w21-heat.js');
 const 装配 = rd('src/_wnw/build-kernel.mjs');
 const 页名 = rd('src/pack/uitext.cjs');
 
@@ -64,6 +65,21 @@ function 切render(源){
 }
 
 /* ================== 一、结构：谁住在哪一份 ================== */
+台.题('一、结构 —— 搬出去的那一家自己一份，本体那份里一个符号都不留');
+台.判('1 五维算法、面板、权重框都只在 w21-heat.js 里（HEAT_DIMS / Heat / HeatPanel / heatWDlg 四颗齐）',
+  ['HEAT_DIMS', 'const Heat = {', 'class HeatPanel', 'function heatWDlg'].every(n => 热力.includes(n)));
+台.判('2 本体那份 w8-write.js 里搜不到热力图的任何一颗符号（搬完不留半截，两支才不会撞同一颗文件）',
+  !/HeatPanel|heatWDlg|HEAT_DIMS|heatEl|showHeat\b|\bHeat\./.test(本体),
+  (本体.match(/Heat\w*|heatEl|showHeat/g) || []).slice(0, 4));
+台.判('3 本体那份只留一张名单和一颗登记口（STAT_BLOCKS + StatBlock.reg）',
+  /const STAT_BLOCKS = \[\];/.test(本体) && /const StatBlock = \{ reg\(b\)\{ STAT_BLOCKS\.push\(b\); \} \};/.test(本体));
+台.判('4 登记那份在装配名单里排在本体之后（顶层 const 不提升，早一步就撞 undefined）',
+  装配.indexOf("'w8-write.js'") >= 0 && 装配.indexOf("'w21-heat.js'") > 装配.indexOf("'w8-write.js'"));
+台.判('5 页名那一头认得这一份新文件（文字工具扫到裸文件名会被它自己那条闸拦下）',
+  /'w21-heat\.js':'[^']+'/.test(页名));
+台.判('6 本体那份连「热力图」这三个字都不提（界面上的话和注释都归它自己那份说）', !/热力图/.test(本体));
+
+/* ================== 二、统计那一屏那一半（真跑 render） ================== */
 台.题('二、统计那一屏 —— 名单里登记的块，挂载 / 重画 / 刷新 / 设定项四条口都得走到');
 function 跑本体(砍){
   const { h } = 造树();
