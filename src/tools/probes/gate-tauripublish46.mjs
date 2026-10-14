@@ -24,15 +24,24 @@ import { 家 } from '../../_build/plugin-repos.mjs';
 const 台 = 记账('gate-tauripublish46.mjs');
 
 function 跑发布(额外, 多几个字段){
-  try{
-    const 出 = execFileSync(process.execPath, ['src/pack/publish.mjs', '--dry', '--json', ...额外],
+  const 试 = () => execFileSync(process.execPath, ['src/pack/publish.mjs', '--dry', '--json', ...额外],
       { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-    const 行 = 出.split(/\r?\n/).find(l => l.startsWith('MANIFEST '));
-    const 清单 = 行 ? JSON.parse(行.slice('MANIFEST '.length)) : null;
-    return { 成: true, 清单, 全文: 出 };
-  }catch(e){
-    return { 成: false, 码: e.status, 全文: String(e.stdout || '') + String(e.stderr || '') };
+  let 出 = '';
+  try{ 出 = 试(); }
+  catch(e){
+    /* 产物上那一串号是从"这一根指针的最新一笔"现算的，所以每落一笔，pages\ 里就少当前那一号那张页，
+       这一道会先撞一次「pages\ 里没有当前这一支号的页」。那张页是产物（不进仓），生成它不写他任何一个原件：
+       补跑一次生成那三趟里的页面那一趟再试一次 —— 只补这一件，别的一律照旧红。
+       （从前这里每落一笔就得手动跑一次 node src\_fd\build.mjs，一天撞两次，写在 docs\进度看板.md 10:40 那一节。） */
+    const 话 = String((e && (e.stdout || e.stderr)) || (e && e.message) || e);
+    if(!/pages\\ 里没有当前这一支号的页/.test(话)) return { 成: false, 码: e.status, 全文: 话 };
+    try{ execFileSync(process.execPath, ['src/_fd/build.mjs'], { cwd: ROOT, encoding:'utf8', stdio:['ignore','pipe','pipe'] }); }catch(e2){ /* 生成砸了就把下面那一次的原文报出来 */ }
+    try{ 出 = 试(); }
+    catch(e2){ return { 成: false, 码: e2.status, 全文: String((e2 && (e2.stdout || e2.stderr)) || (e2 && e2.message) || e2) }; }
   }
+  const 行 = 出.split(/\r?\n/).find(l => l.startsWith('MANIFEST '));
+  const 清单 = 行 ? JSON.parse(行.slice('MANIFEST '.length)) : null;
+  return { 成: true, 清单, 全文: 出 };
 }
 const 包 = 跑发布([]);
 const 有 = (前缀) => (包.清单 || []).filter(k => k === 前缀 || k.startsWith(前缀));
