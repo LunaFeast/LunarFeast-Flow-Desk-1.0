@@ -410,6 +410,27 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
   台.判('9 集成分支那一条名字只有一份：支类表 那条「集成」正则就是拿它钉出来的（改天换名不会两处不一样）',
     lst.includes('export const 集成分支名 =') && lst.includes('正则: 钉死(集成分支名)') &&
     认支类(集成分支名).类 === '集成' && 可推远程(集成分支名).行 === false, 集成分支名);
+  {
+    /* 退回保护真跑：把一根临时 ref 摆在「八项已经齐」那一棵上，再按老规矩一条一条重合 ——
+       那三条撞车的只能合上 5 项，这一趟必须把那一根**原样退回**并停下。跑完删掉临时那一根。 */
+    const 八条 = ['feature/new/blank-web', 'feature/new/card-weight', 'feature/new/dock-two-column', 'feature/new/gen-log',
+      'feature/new/heat-map', 'feature/new/lyric-grid', 'feature/new/music-dock', 'feature/new/wnw-custom'];
+    const 试名 = 'tmp/闸验退回';
+    const 那根 = () => { try{ return String(execFileSync('git', ['-C', ROOT, 'rev-parse', 试名], { encoding:'utf8' })).trim(); }catch(e){ return ''; } };
+    let 前 = '', 抛话 = '';
+    try{
+      execFileSync('git', ['-C', ROOT, 'update-ref', 'refs/heads/' + 试名, 'feature/new/all-features']);
+      前 = 那根();
+      重建集成分支(八条, { 集成分支: 试名 });
+      抛话 = '没抛：那一根被从八项退成了几项';
+    }catch(e){ 抛话 = String((e && e.message) || e); }
+    const 后 = 那根();
+    try{ execFileSync('git', ['-C', ROOT, 'update-ref', '-d', 'refs/heads/' + 试名]); }catch(e){}
+    台.判('10 退回保护（真跑）：那一根已经装着八项时，一条一条重合只合得上 5 项 —— 必须原样退回并停下（按一颗钮把齐的退成缺的，就是丢东西）',
+      前 === '' || (/退回成/.test(抛话) && 后 === 前),
+      前 === '' ? '（这一棵还没有 feature/new/all-features 那一根，这一道没得上）'
+        : 前.slice(0, 7) + ' → ' + 后.slice(0, 7) + ' · ' + 抛话.split(/\r?\n/)[0].slice(0, 70));
+  }
 }
 
 /* ---------- 十四、只在本地那一条清单（他 2026-10-12 第 5 件）---------- */
