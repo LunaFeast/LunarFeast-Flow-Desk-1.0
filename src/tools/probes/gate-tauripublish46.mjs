@@ -72,8 +72,29 @@ const 脏 = () => (包.清单 || []).filter(k => (k === 'data' || k.startsWith('
   && !k.startsWith('data/plugins/') && !k.startsWith('data/plugins-factory/'));
 台.判('data\\ 底下除插件两格之外零份（那道硬闸）', 脏().length === 0, 脏().slice(0, 6));
 
-台.题('五、产物落哪一格、那颗 exe 没编出来时怎么停');
+台.题('五、产物落哪一格、那颗 exe 没编出来时怎么停、名字上那一段档位的字只管文件名');
 台.判('产物格是 dist\\tauri', /产物在 .*[\\/]dist[\\/]tauri/.test(包.全文), (包.全文.match(/产物在 .*/) || [''])[0]);
+{
+  /* 他 2026-10-14 那两句是分开的两件事：文件名上要分得清哪一种包；装出去的那一棵里不许写这种档位字样。
+     所以这一节量的是「加了那一段之后，包里的路径清单一个字都没变」+「那一段只出现在产物名字上」。 */
+  const 带段 = 跑发布(['--setup-tag=full']);
+  const 坏段 = (() => { try{
+      execFileSync(process.execPath, ['src/pack/publish.mjs', '--dry', '--setup-tag=../坏名'],
+        { cwd: ROOT, encoding:'utf8' }); return { 码:0, 话:'' }; }
+    catch(e){ return { 码:e.status, 话:String(e.stdout || '') + String(e.stderr || '') }; } })();
+  台.判('真跑带那一段的干跑：产物名字变成 Flow_Desk_setup_full_<号>.exe，而包里的路径清单与不带那一段时逐条一模一样（那一段只进文件名）',
+    带段.成 && /Flow_Desk_setup_full_[0-9a-z.+-]*\.exe/.test(带段.全文) &&
+    JSON.stringify(带段.清单) === JSON.stringify(包.清单),
+    (带段.全文.match(/Flow_Desk_setup\S*/) || ['没报出产物名'])[0] + ' · 清单条数 ' + (带段.清单 || []).length + ' 对 ' + (包.清单 || []).length);
+  台.判('那一段插在 Flow_Desk_setup_ 与号之间，号那一截（1.0.0-alpha+build.短哈希）一个字没被挤掉 —— 覆盖升级认的就是号，名字多了那一段也不能对不上',
+    带段.成 && 带段.全文.includes('首装那颗的文件名：Flow_Desk_setup_full_' + ((带段.全文.match(/"fd":"([^"]+)"/) || [,''])[1]) + '.exe'),
+    (带段.全文.match(/首装那颗的文件名：\S*/) || ['没报出文件名'])[0]);
+  台.判('反向验真跑：那一段写成往上钻的样子就当场停（它是拼进文件名的，不收怪字符）· 退出码 ' + 坏段.码,
+    坏段.码 === 1 && /setup-tag 只收/.test(坏段.话), (坏段.话.split(/\r?\n/).find(l => l.includes('Error')) || '').slice(0, 120));
+  台.判('那一段只收小写 ASCII（中文的档位字样进不了文件名），而且发布这一趟只有从集成分支那一棵打的才带它 —— 基础版与发版的名字照旧',
+    /\/\^\[a-z0-9\]\[a-z0-9_-\]\{0,15\}\$\/\.test\(s\)/.test(rd('src/pack/publish.mjs')) &&
+    rd('src/_build/release.mjs').includes("自测档 === '完整' ? ['--setup-tag=full'] : []"));
+}
 const 没编 = (() => { try{
   execFileSync(process.execPath, ['src/pack/publish.mjs', '--dry', '--壳件=' + ROOT + '这一格本来就没有'],
     { cwd: ROOT, encoding: 'utf8' });

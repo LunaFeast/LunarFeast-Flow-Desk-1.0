@@ -68,6 +68,21 @@ const PACKS_DIR = path.join(DATA, 'plugins');
    动它要跟着动「收旧版本」那一块与屏上读产物的那几处，不在这趟顺手改 */
 const OUT_DIR = path.resolve(val('--out', path.join(TREE, 'dist', 'tauri')));
 const EXE_NAME = 'Flow-Desk.exe';
+/* ---------- 产物文件名上那一段"这是哪一种包"的字（他 2026-10-14 点的：两种包在文件名上要分得开；
+   这种字样只许待在文件名里，装出去的那一棵里一个字都不许出现 —— 原话与理由记在 docs\进度看板.md 10:05 那一节）----------
+   --setup-tag=full 只改这一个东西：落在产物那一格里的那一个 exe 叫什么。
+     Flow_Desk_setup_1.0.0-alpha+build.32561a7.exe            ← 没给这一段（主版本那条链打出来的，名字跟从前一模一样）
+     Flow_Desk_setup_full_1.0.0-alpha+build.bfe759d.exe       ← 给的是 full（从本地集成分支那一棵打出来的那一枚）
+   树里的每一份文件、安装说明那一份、flow-desk-install.json、货架那份清单的正文，一个字都不因为这枚而变 ——
+   装好之后软件里读不到任何这类字样（这一条已经钉在 gate-forward46 第五节：这类字样一进发布那一层就红）。
+   名字只收小写字母数字与 - _，最长 16 字：这一段是拼进文件名里的，不收怪字符（也不许拿它往路径里钻）。 */
+const 名段 = (() => {
+  const s = String(val('--setup-tag', '')).trim();
+  if(!s) return '';
+  if(!/^[a-z0-9][a-z0-9_-]{0,15}$/.test(s))
+    throw new Error('--setup-tag 只收小写字母、数字、- 和 _，开头是字母或数字，最长 16 字（现在给的是「' + s + '」）');
+  return s; })();
+const setup名 = 号 => 'Flow_Desk_setup_' + (名段 ? 名段 + '_' : '') + 号 + '.exe';
 
 /* ---------- 走目录、比版本号大小：这一份发布脚本到处在用。号本身从 _build/version.mjs 取，见下面 ---------- */
 function walk(dir, base){
@@ -201,7 +216,7 @@ const index = {
   kind: 'flow-desk-shelf',
   made: new Date().toISOString(),
   shell: { fd: VER.fd, minShell: minShell, engine: 'tauri' },
-  setup: { file: 'Flow_Desk_setup_' + VER.fd + '.exe', bytes: 0, size: '' },
+  setup: { file: setup名(VER.fd), bytes: 0, size: '' },
   packs: shelf,
   note: '货架清单：dist\\plugins\\<id>.zip 是零卖的插件，导入用；setup 那一个是首装整棵树。data\\ 里的用户内容从不参与发布。'
 };
@@ -298,6 +313,8 @@ if(DRY){
      为什么要有这一档：dist\\ 那一格不许谁去翻（发布产物不是核对面），
      所以"这一包里到底有什么"由发布脚本自己报，而不是打完再去读那个包。 */
   if(has('--json')) console.log('MANIFEST ' + JSON.stringify([...files.keys(), ...made.keys()].sort()));
+  /* 名字先报出来：那一段档位的字只进这里，屏上与终端在没落盘的那一趟就看得见最终文件名（包里每一份的路径不受它影响） */
+  console.log('  首装那颗的文件名：' + setup名(VER.fd));
   console.log('（没落盘）' + (PACKS_ONLY ? '' : ' · 首装那个 = 壳 + 这一棵树的 zip，约 ' + (bytes / 1048576).toFixed(1) + 'MB 展开'));
   for(const p of shelf) console.log('  ' + p.id.padEnd(16) + (p.name + '').padEnd(12) + p.size.padStart(10) + ' · ' + p.host.join('/') + ' · ' + p.author + '/' + p.source);
   process.exit(0);
@@ -393,7 +410,7 @@ if(!fs.existsSync(stub) || fs.statSync(stub).mtimeMs < fs.statSync(stubSrc).mtim
   execFileSync(csc, ['-nologo', '-target:winexe', '-out:' + stub,
     '-r:System.Windows.Forms.dll', '-r:System.Drawing.dll', stubSrc], { cwd: HERE, stdio: 'pipe' });
 }
-const out = path.join(OUT_DIR, 'Flow_Desk_setup_' + TAG + '.exe');
+const out = path.join(OUT_DIR, setup名(TAG));
 const wfd = fs.openSync(out, 'w');
 const stubBuf = fs.readFileSync(stub);
 fs.writeSync(wfd, stubBuf);

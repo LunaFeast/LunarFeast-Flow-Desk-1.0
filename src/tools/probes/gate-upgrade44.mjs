@@ -91,7 +91,9 @@ if(csc && 工区){
   台.判('这一颗 C# 编得成（检查用的壳落在探针工区那一格，仓里那颗 sfx-stub.exe 没碰）', 成, 编);
 }else 台.数('编译那一步', '这台没登记编译器或探针工区（src\\tools\\本地路径.cjs 里那颗「工区」），不在就不量');
 台.判('发布那一头仍会重编：壳比源码旧就再来一遍', /fs\.statSync\(stub\)\.mtimeMs < fs\.statSync\(stubSrc\)\.mtimeMs/.test(pub));
-台.判('首装包的名字带完整号（含 +build.短哈希那一截）', /'Flow_Desk_setup_' \+ VER\.fd \+ '\.exe'/.test(pub) && /const TAG = VER\.fd;/.test(pub));
+台.判('首装包的名字带完整号（含 +build.短哈希那一截）；名字那一段只从 setup名() 出（那里面除了可选的档位段就是号）',
+  /const setup名 = 号 => 'Flow_Desk_setup_' \+ \(名段 \? 名段 \+ '_' : ''\) \+ 号 \+ '\.exe'/.test(pub) &&
+  /setup: \{ file: setup名\(VER\.fd\)/.test(pub) && /path\.join\(OUT_DIR, setup名\(TAG\)\)/.test(pub) && /const TAG = VER\.fd;/.test(pub));
 台.判('安装说明改口成「再双击一颗 exe 就是覆盖升级」，整层挪那一格说的是 src\\', pub.includes('点「覆盖升级」') && pub.includes('src\\\\ 那一层整层挪'));
 台.判('安装说明里那条挑 zip 装更新的老路已经撤干净（主程序换版只剩 exe 这一颗）', !pub.includes('老路还在') && !pub.includes('本地更新'));
 

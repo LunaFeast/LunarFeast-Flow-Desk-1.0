@@ -255,9 +255,14 @@ if(自测){
        自己从不进仓那份 本地路径.cjs 里取，这一头不重复一遍；发布那一趟找那颗 exe 也走同一格。 */
     /* 发布那一趟在临时那一棵里跑，产物要落回你这一棵的 dist\ —— 不给它指这一格，
        那一个 setup.exe 就落在临时那一格里，跟着「收格子」那一步一起没了（2026-10-14 真跑这一串时量到的）。 */
+    /* 从集成分支那一棵打出来的这一枚，产物文件名上多那一段 full（他 2026-10-14：名字上要有区分；
+       档位的字只进文件名，一进包里的任何一份就红 —— 见 gate-forward46 第五节那条尺）。
+       基础版与发版那一枚的名字照旧一个字不变，装好之后软件里读不到这类字样。 */
+    const 发布附 = ['--out=' + path.join(TREE, 'dist', 'tauri')]
+      .concat(自测档 === '完整' ? ['--setup-tag=full'] : [])
+      .concat(不带.length ? ['--skip=' + 不带.join(',')] : []);
     const 三趟 = [...uitext.artifactBuilds().map(趟 => [趟, []]), ['src/_tauri/build.mjs', []],
-      ['src/pack/publish.mjs', ['--out=' + path.join(TREE, 'dist', 'tauri')]
-        .concat(不带.length ? ['--skip=' + 不带.join(',')] : [])]];
+      ['src/pack/publish.mjs', 发布附]];
     for(const [趟, 附] of 三趟){
       const 参 = [趟].concat(附);
       P('\n$ node ' + 参.join(' ') + '   （在 ' + 跑在 + '）');
@@ -583,7 +588,10 @@ function 收一处(格, 认, 说明){
 }
 P('\n收旧版本（只留最新那一份）：');
 收一处(path.join(TREE, 'pages'), /^Flow_Desk_[\d][\w.+-]*\.html$/, '页面 pages\\');
-收一处(path.join(TREE, 'dist'), /^Flow_Desk_setup_[\d][\w.+-]*\.exe$|^Flow_Desk_payload_[\d][\w.+-]*\.zip$/, '发布物 dist\\');
+/* 那两条认名字的尺跟着放宽一格：产物文件名中间可能多那一段"这是哪一种包"的字（Flow_Desk_setup_full_<号>.exe），
+   不放宽的话这一趟会把带那一段的那一枚当成不相干的文件放过（2026-10-14 加那一段时顺手跟上）。
+   往哪一格收这件事现在还是错的（这一趟盯的是 dist\ 顶层，东西落在 dist\tauri\）—— 那条已经记进看板等他定，我不在这趟顺手改它的落点。 */
+收一处(path.join(TREE, 'dist'), /^Flow_Desk_setup_(?:[a-z][a-z0-9_-]*_)?[\d][\w.+-]*\.exe$|^Flow_Desk_payload_(?:[a-z][a-z0-9_-]*_)?[\d][\w.+-]*\.zip$/, '发布物 dist\\');
 /* 发版这一枚也记进那本账：它与自测那两枚同住 dist\tauri 那一格，屏上同一栏列出来 */
 记这一枚({ 档:'发版', 支:站的地方, 笔:(主短 || '') });
 
