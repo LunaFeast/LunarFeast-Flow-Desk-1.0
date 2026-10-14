@@ -83,8 +83,10 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   const 自 = 起 < 0 ? '' : rel.slice(起, rel.indexOf('\n}\n', 起) + 3);
   台.判('0 那一道切得出来（不是空切片：切不到就是这一档被挪走或删了，下面几条会全成空跑）',
     自.length > 400, 自.length + ' 字');
-  台.判('1 这一档只跑那一串（生成产物的次序从 artifactBuilds() 取，其后编那颗壳、再发布），且四样 git 写活一个都不沾：不落笔、不挪指针、不打 tag、不推',
-    /uitext\.artifactBuilds\(\)\.map/.test(自) && /'src\/_tauri\/build\.mjs'/.test(自) && /'src\/pack\/publish\.mjs'/.test(自) &&
+  台.判('1 这一档只跑那一串（生成产物的次序问的是**要打的那一棵自己**那份 artifactBuilds() —— 从前一律用 main 这一棵的次序，八项合回那一棵少跑一颗内核，页面当场 ENOENT，2026-10-14 量到的），其后编那颗壳、再发布；且四样 git 写活一个都不沾：不落笔、不挪指针、不打 tag、不推',
+    自.includes('生成次序在(跑在)') && /uitext\.artifactBuilds\(\)/.test(rel) &&
+    rel.includes("path.join(在, 'src/pack/uitext.cjs')") &&
+    /'src\/_tauri\/build\.mjs'/.test(自) && /'src\/pack\/publish\.mjs'/.test(自) &&
     !/'src\/pack\/build-app\.mjs'/.test(自) &&
     !/commit-tree|update-ref|merge-tree|往那一支写|拼装\(|同步那一支\(|'tag'|'push'/.test(自), '那一串 + 零写活');
   台.判('2 号只当环境变量传进生成那一趟（不写 version.json、不写各家清单）',

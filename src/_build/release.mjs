@@ -50,6 +50,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { 家 as 家表, TREE, git, filesOf, 拼装支, 往那一支写, 同步那一支, 那一支最后一笔, 没回main的改动, 拼装,
   笔名, 主程序笔名, 产物格, 打包记录路 } from './plugin-repos.mjs';
@@ -60,6 +61,16 @@ import { 清单名, 清单路, 读盘清单, 读清单, 拼清单, 写清单, �
 import { 校验支名, 查合并 } from './pr.mjs';
 import { 八项, 认这项, 中文名 as 中文名of, 分支of, 分支在不在, 摊打包那一棵 } from './forward-features.mjs';
 import uitext from '../pack/uitext.cjs';    /* 生成产物那几趟的次序只在它那一颗里说一次，这一头不抄第二份 */
+
+/* 但「哪几趟」是**这一棵**的事，不是 main 的事（2026-10-14 打八项合回那一棵时量到的）：
+   推演组件定制自己那一支把 `src/_wcustom/build-kernel.mjs` 加进了它那一棵的 `artifactBuilds()`，
+   而从前这里一律用 main 这一棵的次序 —— 于是那一趟少跑一颗内核，页面那一趟当场 ENOENT，
+   自测包停在「src/_fd/build.mjs 这一趟没跑成」。所以：从临时那一棵打，就问临时那一棵要次序。 */
+const 要别处 = createRequire(import.meta.url);
+function 生成次序在(在){
+  if(path.resolve(在) === path.resolve(TREE)) return uitext.artifactBuilds();
+  return 要别处(path.join(在, 'src/pack/uitext.cjs')).artifactBuilds();
+}
 
 const argv = process.argv.slice(2);
 const has = f => argv.some(a => a === f || a.startsWith(f + '='));
@@ -269,7 +280,9 @@ if(自测){
     const 发布附 = ['--out=' + path.join(TREE, 'dist', 'tauri')]
       .concat(名段 ? ['--setup-tag=' + 名段] : [])
       .concat(不带.length ? ['--skip=' + 不带.join(',')] : []);
-    const 三趟 = [...uitext.artifactBuilds().map(趟 => [趟, []]), ['src/_tauri/build.mjs', []],
+    const 序 = 生成次序在(跑在);
+    P('  这一棵自己的生成次序：' + 序.join(' → '));
+    const 三趟 = [...序.map(趟 => [趟, []]), ['src/_tauri/build.mjs', []],
       ['src/pack/publish.mjs', 发布附]];
     for(const [趟, 附] of 三趟){
       const 参 = [趟].concat(附);
@@ -280,7 +293,8 @@ if(自测){
       }catch(e){
         /* 先记下来、走完这一串再停：停 = 当场 process.exit，写在收格子那一步之前就会把这一棵与那根指针留在盘上 */
         出事 = '「' + 趟 + '」这一趟没跑成。自测包到这儿为止 —— 仓里没提交、没打 tag、没推。\n' +
-          String((e && (e.stdout || e.stderr)) || (e && e.message) || e).replace(/\r?\n/g, '\n  ').slice(0, 1200);
+          (String((e && e.stdout) || '') + '\n' + String((e && e.stderr) || '') + String((e && e.message) || '')).trim()
+            .replace(/\r?\n/g, '\n  ').slice(0, 1600);
         break;
       }
     }
