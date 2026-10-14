@@ -25,7 +25,7 @@ const KLog = {
   NAME:'keystroke.txt',
   st:new Map(),          // 章id -> { last, pi, at, n, seals, prev, seg, bytes }
   q:new Map(),           // 章id -> 排到哪儿了（改动喊声之间不等回音，靠这个排队）
-  app(){ return !!(window.FD_APP && location.protocol === 'fdapp:'); },
+  app(){ return !!(window.FD_APP && (location.protocol === 'fdapp:' || window.__FD_BOOT__)); },   /* 协议名在壳里是 http:，认壳注入的那个标记才算数 */
   /* 历史那一层的目录归 Hist 管（w15-hist.js），这一个文件就住在它下面 —— 口径只留一处 */
   dirOf(chId){ return Hist.dirOf(chId); },
   relOf(chId){ return this.dirOf(chId) + '/' + this.NAME; },

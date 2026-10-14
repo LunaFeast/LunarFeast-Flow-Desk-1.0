@@ -224,7 +224,9 @@ const RICH_IT = [['b', 'B', '加粗'], ['i', 'I', '斜体'], ['u', '下', '下�
 const IMG_KINDS = { '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.gif':'image/gif',
   '.webp':'image/webp', '.bmp':'image/bmp', '.svg':'image/svg+xml' };
 const Img = {
-  app(){ return !!(window.FD_APP && location.protocol === 'fdapp:'); },
+  /* 壳里这一判不能只看协议名：Windows 上 WebView2 给页面的门牌是 http://fdapp.localhost，
+     location.protocol 是 http: —— 只认 'fdapp:' 的话，装出来的那一棵里这些功能全被当成"不在程序里"（2026-10-14 他报「无法触发实际功能」） */
+  app(){ return !!(window.FD_APP && (location.protocol === 'fdapp:' || window.__FD_BOOT__)); },
   dir(){ return String((Work.book && Work.book.title) || '书').replace(/[\\/:*?"<>|]/g, '_'); },
   ext(name){ const m = /\.([a-z0-9]+)$/i.exec(String(name || '')); return m ? '.' + m[1].toLowerCase() : ''; },
   rel(name){ return 'assets/' + String(name || '').replace(/[\\/:*?"<>|]/g, '_'); },

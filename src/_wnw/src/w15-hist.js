@@ -30,7 +30,7 @@ const Hist = {
   /* 这道守卫点的是这一份真会喊的名字，不是随便挑一个：写、读、开目录、算路径四样齐了才走明文那一条路。
      从前只判 writePageFile —— 壳落后一步时它有 writePageFile 却没 readPageFile，守卫说"能走"，
      走到读那一笔才炸，界面上一层都不开（2026-10-07 那次「历史版本完全点不开」的一半就是这个）。 */
-  app(){ return !!(window.FD_APP && location.protocol === 'fdapp:' &&
+  app(){ return !!(window.FD_APP && (location.protocol === 'fdapp:' || window.__FD_BOOT__) &&
     FD_APP.writePageFile && FD_APP.readPageFile && FD_APP.openDir && FD_APP.pagePath); },
   /* 书名那截和插图共用 Img.dir() 的清洗口径，历史永远躺在同一个书目录下面；
      书目录在数据层（WNW_DATA_PRE，见 w7-data.js 的宿主接口） */
