@@ -64,7 +64,7 @@ const 读体 =  req => new Promise(收 => {
 function 跑git(args){
   try{ return { 好: true, 文: execFileSync('git', ['-C', TREE, ...args], { encoding:'utf8' }).trim() }; }
   catch(e){ return { 好: false, 文: '', 话: e && e.code === 'ENOENT'
-    ? '这一台叫不到 git（起它的那个窗口的 PATH 里没有 git）—— 用带 git 的那个终端起这一台，或把 git 装进系统路径'
+    ? '这台电脑上叫不到 git（开小助手的那个窗口的 PATH 里没有 git）—— 换用带 git 的那个终端开小助手，或把 git 装进系统路径'
     : String((e && (e.message || e)) || e).split(/\r?\n/)[0] }; }
 }
 const 叫得动git = () => { const 探 = 跑git(['--version']); return 探.好 ? '' : 探.话; };
@@ -130,8 +130,8 @@ function 现场(){
     推不亮: (() => {
       const 缺 = [];
       if(!(问脏.好 && 问站.好)) 缺.push('git 叫不动：' + (问脏.好 ? 问站.话 : 问脏.话));
-      if(!文) 缺.push('还没「重新量一遍」：那一格清单不在，屏上量不出这一轮要动哪几家');
-      if(当值.名) 缺.push('这一台正跑着上一趟（' + 当值.名 + '），等它完');
+      if(!文) 缺.push('还没点「重新量一遍」：那份清单文件不在，屏上量不出这一轮要动哪几家');
+      if(当值.名) 缺.push('小助手正跑着上一趟（' + 当值.名 + '），等它跑完');
       return 缺;
     })(),
     /* 打包出来的那枚安装程序在哪：屏上直接给那一格的路、文件名、多大、什么时候打的
@@ -193,7 +193,7 @@ function 图标单(){
   const 单 = [];
   let 项 = [];
   try{ 项 = fs.readdirSync(图标层, { withFileTypes: true }); }
-  catch(e){ return { 错: '读不到 icons 那一格：' + ((e && e.code) || (e && e.message) || e), 单: [], 张: 0 }; }
+  catch(e){ return { 错: '读不到 icons 这个文件夹：' + ((e && e.code) || (e && e.message) || e), 单: [], 张: 0 }; }
   const 收 = (名, 层, 全) => {
     const 后 = path.extname(名).toLowerCase();
     if(!图标后缀.includes(后)) return;
@@ -294,7 +294,7 @@ function 图标落点(名){
   if(/^索引\.txt$/i.test(串.replace(/^.*[\\/]/, ''))) return { 错:'icons\\索引.txt 是那份说明书，不是图标，不许动它' };
   const 根 = path.resolve(图标层);
   const 全 = path.resolve(根, 串);
-  if(!(全 === 根 || 全.startsWith(根 + path.sep))) return { 错:'只许在 icons 那一格里改（不许往外钻）' };
+  if(!(全 === 根 || 全.startsWith(根 + path.sep))) return { 错:'只许在 icons 这个文件夹里改（不许往外钻）' };
   const 父 = path.resolve(path.dirname(全));
   if(父 !== 根 && path.resolve(path.dirname(父)) !== 根) return { 错:'子文件夹只认一层（icons\\<那一层>\\<图>），再往里钻不算图标' };
   if(!图标后缀.includes(path.extname(全).toLowerCase())) return { 错:'只收这六种后缀：' + 图标后缀.join(' ') };
@@ -329,7 +329,7 @@ function 插件封面(包, 档){
 function 图标写插件(包, 档, 基64){
   const 落 = 插件封面(包, 档);
   if(落.错) return 落;
-  if(!fs.existsSync(落.全)) return { 错:'这一包里本来没有那张封面：' + 落.全 + '\n  要添一张新的得连它的插件清单与那份索引一起改，这一台不替你改那两处' };
+  if(!fs.existsSync(落.全)) return { 错:'这一包里本来没有那张封面：' + 落.全 + '\n  要添一张新的得连它的插件清单与那份索引一起改，小助手不替你改那两处' };
   let 字;
   try{ 字 = Buffer.from(String(基64 || ''), 'base64'); }catch(e){ return { 错:'传上来的图读不懂（不是 base64）' }; }
   if(!字.length) return { 错:'传上来的图是空的' };
@@ -414,7 +414,7 @@ const 拆路 = u => { try{ return decodeURIComponent(u); }catch(e){ return u; } 
    这一屏不再自己判一遍。集成分支那种永不进远程的、认不出类的，都收不下来。 */
 const 支名收 = 名 => 支名可用(名).行;
 const 支名拒话 = 名 => { const 串 = String(名 == null ? '' : 名).trim();
-  return !串 ? '「提交分支」那一格是空的：先点「重新量一遍」拿个默认名，或自己填一条（哪一类都行，那四条形状在清单那一格顶上写着）'
+  return !串 ? '「提交分支」这一栏是空的：先点「重新量一遍」拿个默认名，或自己填一条（哪一类都行，四类名字的写法在清单文件顶上写着）'
     : '「提交分支」那一行认不出能用：「' + 串 + '」—— ' + 支名可用(串).话; };
 
 const 服务器 = http.createServer(async (req, res) => {
@@ -488,7 +488,7 @@ const 服务器 = http.createServer(async (req, res) => {
       全 = path.resolve(根, 名);
       后 = path.extname(全).toLowerCase();
       if(!名 || !(全 === 根 || 全.startsWith(根 + path.sep)) || !图标后缀.includes(后)){
-        发(res, 400, '只认 icons 那一格里的图（六个后缀之内，不许往外钻）'); return;
+        发(res, 400, '只认 icons 这个文件夹里的图（六种后缀之内，不许往外钻）'); return;
       }
     }
     let 字;
@@ -541,7 +541,7 @@ const 服务器 = http.createServer(async (req, res) => {
       if(型 != null){ const 判 = 支类合规(型, 名); if(!判.行){ 发(res, 400, 判.话); return; } }
     }
     const 文 = 读盘清单();
-    if(!文){ 发(res, 409, '还没有那一格清单：先点「重新量一遍」'); return; }
+    if(!文){ 发(res, 409, '还没有那份清单文件：先点「重新量一遍」'); return; }
     写清单(改清单(文, { 基线: 身.基线, 分支类型: 型 == null ? undefined : 型, 描述: 身.描述 || {}, 提交分支: 身.提交分支, 本轮说明: 身.本轮说明 }));
     JSON发(res, { 好: true, 清单路: 清单路() });
     return;
@@ -555,11 +555,11 @@ const 服务器 = http.createServer(async (req, res) => {
     let 单 = []; try{ 单 = fs.readdirSync(产物格); }catch(e){}
     const 名 = 挑 ? (单.includes(挑) ? 挑 : '') : (单.filter(f => /^Flow_Desk_setup_.*\.exe$/i.test(f))
       .sort((a, b) => fs.statSync(path.join(产物格, b)).mtimeMs - fs.statSync(path.join(产物格, a)).mtimeMs)[0] || '');
-    if(挑 && !名){ 发(res, 400, '「' + 挑 + '」不在 ' + 产物格 + ' 这一格里 —— 只开得开这一格里现量出来的那几个文件名。'); return; }
+    if(挑 && !名){ 发(res, 400, '「' + 挑 + '」不在 ' + 产物格 + ' 这个文件夹里 —— 只能打开这个文件夹里现在实际有的那几个文件名。'); return; }
     try{
       /* explorer 挑中那枚时返回码是 1（它的老毛病），不代表没开成 —— 所以只看叫得动叫不动 */
       spawn('explorer.exe', 名 ? ['/select,' + path.join(产物格, 名)] : [产物格], { stdio:'ignore', detached:true }).unref();
-      JSON发(res, { 好:true, 话:'已打开那一格：' + 产物格 + (名 ? '（选中的是 ' + 名 + '）' : '（这一格里还没有安装程序）') });
+      JSON发(res, { 好:true, 话:'已打开这个文件夹：' + 产物格 + (名 ? '（选中的是 ' + 名 + '）' : '（这个文件夹里还没有安装程序）') });
     }catch(e){ 发(res, 500, '打不开资源管理器：' + ((e && e.message) || e)); }
     return;
   }
@@ -653,7 +653,7 @@ const 服务器 = http.createServer(async (req, res) => {
     if(git不中(res)) return;
     const 身 = await 读体(req);
     const 文 = 读盘清单();
-    if(!文){ 发(res, 409, '还没有那一格清单：先点「重新量一遍」'); return; }
+    if(!文){ 发(res, 409, '还没有那份清单文件：先点「重新量一遍」'); return; }
     const 支 = String(读清单显示(文).提交分支 || '').trim();
     if(!支名收(支)){ 发(res, 409, 支名拒话(支)); return; }
     /* 「不点就不落笔」那一道后端闸：提交说明与本轮说明哪一格还空着就不起子进程（屏幕上那颗钮不亮是同一把尺量的）。
@@ -669,7 +669,7 @@ const 服务器 = http.createServer(async (req, res) => {
   if(路 === '/api/发'){
     if(git不中(res)) return;
     const 文 = 读盘清单();
-    if(!文){ 发(res, 409, '还没有那一格清单：先点「重新量一遍」'); return; }
+    if(!文){ 发(res, 409, '还没有那份清单文件：先点「重新量一遍」'); return; }
     const 支 = String(读清单显示(文).提交分支 || '').trim();
     if(!支名收(支)){ 发(res, 409, 支名拒话(支) + '（先点「重新量一遍」，再在顶上那一格填这一轮那条支的名字）'); return; }
     let 状 = null; try{ 状 = 查合并(支, { 不拉:true }); }catch(e){}
@@ -680,8 +680,8 @@ const 服务器 = http.createServer(async (req, res) => {
       return;
     }
     if(状 && !状.本地 && 状.远端笔){
-      发(res, 409, '那条支已经在 ' + 状.远端 + '/main 里了，可本地 main 还没跟上 —— 人工跑一句 git -C ' + TREE +
-        ' merge --ff-only ' + 状.远端 + '/main（这一台不自动合、不 rebase、不 reset），再来打包。\n查合并那一眼：' + 状.一眼);
+      发(res, 409, '那条分支已经在 ' + 状.远端 + '/main 里了，可本地 main 还没跟上 —— 人工跑一句 git -C ' + TREE +
+        ' merge --ff-only ' + 状.远端 + '/main（小助手不自动合、不 rebase、不 reset），再来打包。\n查合并那一眼：' + 状.一眼);
       return;
     }
     起(['src/_build/release.mjs', '--照清单发'], '打包发版（取版本号 → 把各家拼成一棵 → 生成页面 → 铺出厂那一份 → 出安装包 → 本地打版本号标记；最后只列一遍现场，不推远程）', res);
@@ -690,8 +690,8 @@ const 服务器 = http.createServer(async (req, res) => {
   发(res, 404, '没这一格');
 });
 if(被当命令跑) 服务器.listen(PORT, '127.0.0.1', () => {
-  console.log('推送这一屏 = http://127.0.0.1:' + PORT + '/   （清单那一格：' + 清单路() + '）');
-  console.log('这一台只往 127.0.0.1 听；关掉这个窗口就停。它自己不推任何东西 —— 推那一步要你在屏幕上亲手敲「' + 确认词 + '」。');
+  console.log('推送这一屏 = http://127.0.0.1:' + PORT + '/   （那份清单文件：' + 清单路() + '）');
+  console.log('小助手只听本机 127.0.0.1；关掉这个窗口就停。它自己不推任何东西 —— 推那一步要你在屏幕上亲手敲「' + 确认词 + '」。');
 });
 for(const 信 of ['EADDRINUSE', 'ERR_SERVER_ALREADY_LISTEN']) void 信;
 if(被当命令跑) 服务器.on('error', e => {

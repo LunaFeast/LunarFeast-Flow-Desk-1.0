@@ -159,8 +159,8 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
     '起子进程之前各问一次，问不出就 503 什么都不做',
     (ui.match(/git不中\(res\)/g) || []).length === 14 && ui.includes('const 叫得动git') && ui.includes('发(res, 503,'),
     (ui.match(/git不中\(res\)/g) || []).length);
-  台.判('4 屏上那行话跟着改口：问不出写「盘上问不出（git 叫不动）」，只有真量到 0 处才写「盘上干净」',
-    pg.includes('对.脏 < 0 ?') && pg.includes('盘上问不出') && pg.includes("'盘上干净'") &&
+  台.判('4 屏上那行话跟着改口：问不出写「盘上问不出（git 叫不动）」，只有真量到 0 处才写「本地改动都提交完了」',
+    pg.includes('对.脏 < 0 ?') && pg.includes('盘上问不出') && pg.includes("'本地改动都提交完了'") &&
     pg.includes('git坏 = 对.git好 === false') && pg.includes('id="git警"'));
   台.判('5 四颗钮一起不亮（量 / 提交 PR / 打包发版 / 重建集成分支），不让人对着假数点下去',
     pg.includes('取(\'量\').disabled = 对.在跑 || git坏') && pg.includes('底 = !对.清单在 || 对.在跑 || git坏') &&
@@ -187,14 +187,14 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
     ui.includes("path.join(插件层, 包, 'images', 档)") && ui.includes("const 插件层 = process.env.FD_PLUGINS") &&
     ui.includes('const 通用没图 =') && ui.includes('插件丢图: 插件.filter(x => !x.在不在)'));
   台.判('5 取图那两道路径闸：icons 那一格以外不认、子目录不许往外钻；插件那张只认合式的包名与 icon.<六种后缀>',
-    ui.includes('只认 icons 那一格里的图') && ui.includes('全.startsWith(根 + path.sep)') &&
+    ui.includes('只认 icons 这个文件夹里的图') && ui.includes('全.startsWith(根 + path.sep)') &&
     ui.includes("^[a-z0-9][a-z0-9-]*$") && ui.includes('jpe?g') &&
     ui.includes('插件包那张图标只认'));
   台.判('6 「重新对齐一遍」那颗跑的就是那颗现成的索引脚本，这一台自己从不写那份索引',
     ui.includes("起(['src/_build/ico-index.mjs']") && !/writeFileSync\([^)]*索引/.test(ui));
-  台.判('7 屏上三页签在（版本与推送 / 图标素材 / 界面文字），图标那一栏列出干什么、引用、大小、预览，说明书没登记、没这张图、取不到文件都分开报',
+  台.判('7 屏上三页签在（版本与推送 / 图标素材 / 界面文字），图标那一栏列出干什么、引用、大小、预览，图标索引没登记、没这张图、取不到文件都分开报',
     pg.includes('id="t版"') && pg.includes('id="t图"') && pg.includes('id="t字"') &&
-    pg.includes('那份说明书里还没有这一张') && pg.includes("' · 取不到这个文件'") && pg.includes('没登记') && pg.includes('alt="'));
+    pg.includes('图标索引里还没有这一张') && pg.includes("' · 取不到这个文件'") && pg.includes('没登记') && pg.includes('alt="'));
   台.判('8 界面文字那一栏也接上了：一屏只画挑中的那一页、能搜、五颗手（刷新清单 / 保存句子 / 预览改动 / 写进源码 / 重新生成产物）都在；'
     + '落点是源码，所以不再让人挑「写进哪一张页面」',
     pg.includes('id="字段"') && pg.includes('id="字搜"') &&
@@ -358,8 +358,8 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
     typeof 合.一眼 === 'string' && /merge-base --is-ancestor/.test(合.一眼));
   /* ---- 灰掉的钮自己要说为什么灰（他原话：「提交PR为什么毫无反应」—— 点在一颗灰钮上本来什么都不发生） ---- */
   const 等 = 切(pg, '等字');
-  台.判('等字() 除了点那两格空着的说明，还给「① 与 ② 这会儿不亮」写了话：量在跑 / 没清单 / 这条支没合进 main 三种各说各的',
-    等.includes('这一台一次只跑一趟') && 等.includes('还没有那一格清单') && 等.includes('还没合进 main') &&
+  台.判('等字() 除了点那两栏空着的说明，还给「这两颗这会儿不亮」写了话：量在跑 / 没清单 / 这条分支没合进 main 三种各说各的',
+    等.includes('小助手一次只跑一趟') && 等.includes('还没有那张表') && 等.includes('还没合进 main') &&
     等.includes('merge --ff-only'), (等.match(/话\.push\([^\n]*/g) || []).length + ' 句');
   台.判('那条「人工 merge」的话里带的是哪一棵树与哪个远端（现场() 真回了 树 与 远端名，不是屏上自己编）',
     typeof 那.现场().树 === 'string' && 那.现场().树.length > 3 && typeof 合.远端名 === 'string' && 合.远端名.length > 0,
