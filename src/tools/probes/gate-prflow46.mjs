@@ -276,9 +276,9 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 提交分支:'feature/46-tauri-dat
   /req\.headers\['x-push-code'\] !== 码/.test(ui) && ui.includes('try{ return decodeURIComponent(u); }catch(e){ return u; }') &&
   (ui.match(/if\(!收字\(res, 身\)\) return;/g) || []).length === 2 && ui.includes('子.stdin.end();') &&
   (ui.match(/stdin\.write\(/g) || []).length === 0);
-台.判('那一屏不再写「几根指针都推上去」：那份单由 pr.mjs 摊（那一颗里写明 main、拼装那一棵、tag、集成分支都不推），屏上只说"这一趟还没跑，一个字节都没送"',
+台.判('那一屏不再写「几根指针都推上去」：那份单由 pr.mjs 摊（那一颗里写明 main、assemble 那条拼装的分支、tag、集成分支都不推），屏上只说"这一趟还没跑，一个字节都没送"',
   !pg.includes('那几根指针') && pg.includes('这一趟还没跑，一个字节都没送') &&
-  pr.includes('main：不推（只能你人工合并）· 拼装那一棵：不推 · tag：不推') && pr.includes('：不推（永不进远程）'));
+  pr.includes('main：不推（只能你人工合并）· assemble 那条拼装的分支：不推 · tag：不推') && pr.includes('：不推（永不进远程）'));
 
 /* ---------- 九 ---------- */
 台.题('九、公开面那道闸（推之前必须过）');
