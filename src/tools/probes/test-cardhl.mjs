@@ -24,6 +24,7 @@ ${切(W10, 'oneLine')}
 ${切(W10, 'chips')}
 ${切(W10, 'occNum')}
 ${切(W10, 'occHits')}
+${切(W10, 'occW').replace(/^/, '')}
 ${切(W8, 'hlCss')}          /* 卡自己钉的外观（外37 那条「要一个设定自动高亮的外观的入口」）现算在这一颗上 */
 ${切(W10, 'CardHl')}
 ${切(W10, 'Occur')}
@@ -115,8 +116,8 @@ R.题('一、Occur 三档响应的账');
     前 !== 沙.Occur.sig && rows2.get('k1').v === 3, 前 + ' → ' + 沙.Occur.sig + ' / ' + JSON.stringify(rows2.get('k1')));
 }
 
-/* ---------- 二、中响应点过「亮」的那几章（三档一律 ×1，2026-10-13 拆基础版） ---------- */
-R.题('二、中响应与出场计数');
+/* ---------- 二、中响应点过「亮」的那几章 + 权重 ---------- */
+R.题('二、中响应与权重');
 {
   const 沙 = 台();
   沙.Work.setCh('ch1', 章文('白衣在这里，白衣也在这里。'));
@@ -124,11 +125,15 @@ R.题('二、中响应与出场计数');
   await 建卡(沙, 'k3', '洞天福地', 'mid');
   await 建卡(沙, 'k1', '白衣', 'mid');
   const c = await 沙.Cards.get('k1'); c.ok = { ch1:true }; await 沙.Cards.put(c); await 静();
+  await 沙.State.set('occur.mid', 0.5);
   const rows = await 沙.Occur.load();
-  R.判('中响应只认点过「亮」的那一章：第一章 2 次 ×1 = ' + rows.get('k1').v, rows.get('k1').v === 2, JSON.stringify(rows.get('k1')));
+  R.判('中响应只认点过「亮」的那一章：第一章 2 次 × 权重 0.5 = ' + rows.get('k1').v, rows.get('k1').v === 1, JSON.stringify(rows.get('k1')));
   const 卡 = await 沙.Cards.get('k1'); 卡.ok = { ch1:true, ch2:true }; await 沙.Cards.put(卡); await 静();
   const rows2 = await 沙.Occur.load();
-  R.判('第二章也点上「亮」：3 次 ×1 = ' + rows2.get('k1').v, rows2.get('k1').v === 3, JSON.stringify(rows2.get('k1')));
+  R.判('第二章也点上「亮」：3 次 × 0.5 = ' + rows2.get('k1').v, rows2.get('k1').v === 1.5, JSON.stringify(rows2.get('k1')));
+  await 沙.State.set('occur.mid', 1);
+  await 沙.Occur.reweigh();
+  R.判('权重滑到 1：不重扫正文，账直接换算成 3 次（' + 沙.Occur.rows.get('k1').v + '）', 沙.Occur.rows.get('k1').v === 3, JSON.stringify(沙.Occur.rows.get('k1')));
   /* pending：中响应出现了但没问过的章 */
   const 沙2 = 台(); 沙2.Work.setCh('ch1', 章文('白衣白衣白衣')); await 建卡(沙2, 'k1', '白衣', 'mid');
   await 沙2.CardHl.sync();
