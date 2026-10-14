@@ -35,7 +35,7 @@ const pub = rd('src/pack/publish.mjs');
 台.题('二、发布脚本那九条');
 台.判('① 主仓有没提交的改动就停下报清单（不替他提交主仓）', /status', '--porcelain'/.test(rel) && rel.includes('要么提交掉，要么这一轮别发'));
 台.判('① 程序开着也不发（页面和程序壳那一层被它读着）', /IMAGENAME eq Flow-Desk\.exe/.test(rel));
-台.判('② 六家一种形状：拿各自那一支与拼装那一棵对树，独立仓那一条路（逐字节比自己那棵）整条退了',
+台.判('② 七家一种形状：拿各自那一支与拼装那一棵对树，独立仓那一条路（逐字节比自己那棵）整条退了',
   !/function 会动吗\(/.test(rel) && !/job\.仓/.test(rel) && /git\(TREE, \['diff', '--name-only', job\.支, 拼装支/.test(rel));
 台.判('② 没动的那一家整家跳过：不送、不落笔、不打 tag', /if\(送\) P\(/.test(rel) && /if\(r\.动了\) r\.新tag/.test(rel));
 台.判('② 送回各自那一支与写号都只叫 plugin-repos 那几颗底层接口（不在这里抄第二份）',
@@ -69,7 +69,7 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
 台.判('这一条不是白钉的：import 它一次，只报几家几棵，不报仓名（带独立仓那一家 2026-10-13 起是 0 棵）', (() => {
   const out = execFileSync(process.execPath, ['-e', 'import(' + JSON.stringify(那颗URL) + ').then(m => console.log("登记 " + m.家.length + " 家 · 要铺 " + m.REPOS.length + " 棵"))'],
     { cwd:ROOT, encoding:'utf8' });
-  return out.trim() === '登记 6 家 · 要铺 0 棵' && !/Flow-Desk-plugin-/.test(out);
+  return out.trim() === '登记 7 家 · 要铺 0 棵' && !/Flow-Desk-plugin-/.test(out);
 })());
 
 台.题('四、插件清单里那一格老版本不再当成打包取的号');
@@ -124,7 +124,7 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
     rd('src/_build/push-ui.mjs').includes("'--打自测包'"));
   /* 简装这一枚不带哪几家 —— 名字归他点，家表只当尺（2026-10-13 他那一句「简单版没有任何拆解出去的功能」） */
   const 丁 = 砸(['--打自测包', '--不带=zzz']);
-  台.判('9 反向验：--不带 里点了家表没有的名字就当场停，并把六家 id·中文名全报出来 · 退出码 ' + 丁.码,
+  台.判('9 反向验：--不带 里点了家表没有的名字就当场停，并把七家 id·中文名全报出来 · 退出码 ' + 丁.码,
     丁.码 === 1 && /对不上家表/.test(丁.文) && /why-not-write·为写/.test(丁.文) &&
     !/\$ node /.test(丁.文), 丁.文.split(/\r?\n/).find(l => l.includes('停下来')) || '');
   const 戊 = 砸(['--看', '--不带=notes']);
@@ -170,8 +170,8 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
     (脏 > 0 ? /--看 照量：盘上 \d+ 处没提交/.test(真.文) : !/照量：盘上 \d+ 处没提交/.test(真.文)),
     真.文.split(/\r?\n/).find(l => l.includes('照量')) || (脏 > 0 ? '脏着却没提醒' : '干净时没多话'));
   const 清 = fs.readFileSync(ROOT + 'data/推送清单.txt', 'utf8');
-  台.判('6 量完的清单上六家一个形状（为写那格的副题也是「这一家的代码在 plugin/why-not-write 那一支」）',
-    (清.match(/^【.*】这一家的代码在 plugin\/[\w-]+ 那一支$/gm) || []).length === 6 &&
+  台.判('6 量完的清单上七家一个形状（为写那格的副题也是「这一家的代码在 plugin/why-not-write 那一支」）',
+    (清.match(/^【.*】这一家的代码在 plugin\/[\w-]+ 那一支$/gm) || []).length === 7 &&
     !/自己那一棵/.test(清), (清.match(/^【/gm) || []).length + ' 笔');
 }
 

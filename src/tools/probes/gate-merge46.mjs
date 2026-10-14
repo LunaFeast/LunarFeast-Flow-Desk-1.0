@@ -60,7 +60,7 @@ const 露 = 行(问(['status', '--porcelain', '--untracked-files=all', '--', 'da
 台.判('插件那一格没有第三种东西露在外面（现在 ' + 露.length + ' 处）', 露.length === 0, 露.join(' | '));
 
 台.题('四、名单只有一份');
-台.判('表里七家全登着', 家.length === 6);
+台.判('表里七家全登着', 家.length === 7);
 台.判('带仓的一家都没有了（为写 2026-10-13 不再搞独立仓）', REPOS.length === 0, REPOS.map(j => j.id).join('、'));
 const 货架 = fs.readdirSync(ROOT + 'data/plugins', { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name).sort();
 台.判('表上那七家与插件那一格盘上的七家一一对齐', JSON.stringify(货架) === JSON.stringify(家.map(j => j.id).sort()));

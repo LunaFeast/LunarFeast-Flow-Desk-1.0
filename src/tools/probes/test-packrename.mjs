@@ -59,7 +59,7 @@ const 名单 = fs.existsSync(格 + '/off.json') ? JSON.parse(fs.readFileSync(格
   /* 家数不钉死：外39 起推演组件定制也成了一家（wnw-custom），钉死一个数就是每加一家要改一台探针。
      名单反着记之后要判的是「off 里不许有盘上不存在的家」（卸掉的家必须真在那一格里有名字），
      以及这一棵树至少出厂那几家在。 */
-  && 名单.every(x => 目录.includes(String(x))) && 目录.length >= 6,
+  && 名单.every(x => 目录.includes(String(x))) && 目录.length >= 7,
   目录.length + ' 格 / 卸掉 ' + 名单.length + ' 项 · 差在：'
   + (名单.filter(x => !目录.includes(String(x))).join('、') || '没有'));
 台.判('插件清单里的中文名一个字没动（界面上叫的还是「你的便签」）',

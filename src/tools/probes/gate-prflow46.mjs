@@ -152,8 +152,8 @@ const pr码 = 代码(pr), rel码 = 代码(rel);
 {
   const 表 = 各家说明('feature/tweak/46-换吃');
   const 各家支 = 分支家.map(j => j.支);
-  台.判('各家说明 真跑：一张表七格（六家那一支 + 这一轮那条支那一桶），名字与落点都对得上（读的是盘上那一格清单，一个字节不写）',
-    Object.keys(表).length === 7 && 各家支.every(支 => 支 in 表) && 'feature/tweak/46-换吃' in 表 &&
+  台.判('各家说明 真跑：一张表八格（七家那一支 + 这一轮那条支那一桶），名字与落点都对得上（读的是盘上那一格清单，一个字节不写）',
+    Object.keys(表).length === 8 && 各家支.every(支 => 支 in 表) && 'feature/tweak/46-换吃' in 表 &&
     各家支.includes('plugin/why-not-write') &&
     Object.values(表).every(v => typeof v === 'string'), JSON.stringify(Object.keys(表)));
   台.判('那一桶的说明就是清单顶上「主程序 · Flow-Desk」那一笔（两颗名字同一颗定义：笔名 与 主程序笔名 都只住在 plugin-repos 那一份）',
