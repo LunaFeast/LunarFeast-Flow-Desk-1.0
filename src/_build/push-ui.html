@@ -45,10 +45,17 @@
   .志{ background:#1f1d1b; color:#e6e2dc; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
       line-height:1.5; padding:10px 12px; height:300px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
   .志:empty{ display:none; }
-  .确{ display:none; margin-top:12px; padding:12px 14px; border:1px solid var(--急); background:#fff5f3; }
-  .确.开{ display:block; }
-  .确 h2{ margin:0 0 4px; font-size:15px; }
-  .确 p{ margin:0 0 8px; font-size:13px; color:#5a4a48; }
+  /* 往远程送东西之前那一份单（摊单）：摊在屏正当中，他在这下面敲那一个字。
+     从前那一格是"跑起来了才在日志中段冒出来"（他 2026-10-14：「没有亲手敲字的地方，这个确认方法也太奇怪了」）。 */
+  .挡{ position:fixed; inset:0; background:rgba(24,22,20,.55); display:none;
+       align-items:flex-start; justify-content:center; z-index:20; padding:30px 16px; overflow:auto; }
+  .挡.开{ display:flex; }
+  .单{ background:#fff; border:1px solid var(--线); border-top:4px solid var(--急); padding:14px 18px 16px;
+      max-width:880px; width:100%; }
+  .单 h2{ margin:0 0 6px; font-size:16px; }
+  .单 p{ margin:0 0 10px; font-size:13px; color:var(--淡); line-height:1.6; }
+  .单 ol{ margin:0; padding:0 0 0 22px; font-size:13.5px; line-height:1.8; }
+  .单 .行{ margin-top:11px; display:flex; gap:9px; align-items:center; flex-wrap:wrap; font-size:13.5px; }
   .提示{ font-size:13px; color:var(--淡); margin-top:6px; }
   .淡{ color:var(--淡); font-size:12.5px; }
   .页签{ display:flex; gap:10px; margin:0 0 8px; }
@@ -81,7 +88,7 @@
   .只在 .标{ font-size:13px; color:var(--淡); }
   .只在 .条{ background:var(--块); border:1px solid var(--线); border-left:3px solid var(--急); padding:9px 12px 10px; margin-top:8px; font-size:13.5px; }
   .只在 .条 b{ font-weight:600; }
-  /* 插件那七家：一家一小格，勾着 = 进这一枚包（格上只有中文名，内部名字不露） */
+  /* 跟着软件一起装的那几家插件：一家一小格，勾着 = 进这一枚包（格上只有中文名，内部名字不露） */
   .家格{ display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:8px; }
   .家{ display:inline-flex; align-items:center; gap:6px; background:var(--块); border:1px solid var(--线); border-radius:3px; padding:6px 10px; font-size:13.5px; color:var(--字); }
 </style>
@@ -105,6 +112,11 @@
   <div class="步">
     <div class="步头"><b>第 1 步 · 同步本地 main</b><span class="步话">本地 main 只是远程那一根的镜像：这一颗 fetch 之后照原样快进，不在它上面写东西。</span><span style="flex:1"></span><button id="同步">同步 main</button></div>
     <div class="步话" id="同步话"></div>
+    <!-- 远程那一头一根支都没有的时候（这棵仓还没往远程推过任何东西），上面那颗「同步 main」按不动 ——
+         得先有 origin/main 那一条，后面那几张合并申请才有 base 可钉。这一颗就是那第一次。 -->
+    <div class="步头" style="border-top:0"><b>远程那一头</b><span class="步话" id="远程话">正在问远程有哪几条支……</span>
+      <span style="flex:1"></span><button id="远程查">重新问一次远程</button><button id="建远程">第一次：把本地 main 推上远程</button></div>
+    <div class="步话" id="建远程话"></div>
   </div>
   <div class="步">
     <div class="步头"><b>第 2 步 · 开这一轮那条支</b><span class="步话">从本地 main 起一根；四类名字照规矩来（重构 / 新增 / 优化 / 集成）。</span><span style="flex:1"></span><button id="开支">开这一条支</button></div>
@@ -123,9 +135,9 @@
     <div class="格" id="格"></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 4 步 · 挑这一枚包里带什么</b><span class="步话">这一步只管<b>装出来的那一枚里有什么</b>，跟推不推分支没关系（推分支在第 7 步）。装好的软件里不出现这一栏的任何字。</span></div>
-    <div class="组头"><b>本来就有的插件</b><span class="组话">这七家跟着软件一起装在仓里，一格一家；不勾的那家这一枚包里不带。</span></div>
-    <div class="只在" id="七家"></div>
+    <div class="步头"><b>第 4 步 · 挑这一枚包里带什么</b><span class="步话">这一步只管<b>装出来的那一枚里有什么</b>，<b>勾这些不决定推哪几条分支</b>（推分支在第 7 步）。装好的软件里不出现这一栏的任何字。</span></div>
+    <div class="组头"><b>本来就有的插件</b><span class="组话" id="插件家话">正在数仓里那几家插件……</span></div>
+    <div class="只在" id="插件家"></div>
     <div class="组头"><b>额外加进来的功能</b><span class="组话">这八项各自住在一条自己的分支上，<b>不在主版本里</b>；勾中哪几项，打这一枚时才把它们合进来测。</span></div>
     <div class="只在" id="八项"></div>
   </div>
@@ -140,8 +152,8 @@
   </div>
   <div class="步">
     <div class="步头"><b>第 7 步 · 推上去，发合并申请（PR）</b><span class="步话">两件事分开按，各推各的分支，互不牵连。</span></div>
-    <div class="组头"><b>7A · 这一轮的改动（推上去，向主版本 main 发合并申请）</b><span class="组话">走的是这一轮那条支，一颗按钮一路跑到底：同步 → 开分支 → 把改动写进仓 → 查有没有把本机地址带出去 → 要你亲手敲一个「推」字 → 推 → 建 PR。合并由你在 GitHub 网页上人工点。</span></div>
-    <div class="步头" style="border-top:0"><span class="步话" id="为什么不亮"></span><span style="flex:1"></span><button id="pr" class="主">推送这一轮的改动</button></div>
+    <div class="组头"><b>7A · 这一轮的改动（推上去，向主版本 main 发合并申请）</b><span class="组话" id="七A话">这一颗走的是这一轮那条功能支，一路八步：同步 → 开分支 → 把改动写进仓 → 查有没有把本机地址带出去 → 推 → 建 PR。合并由你在 GitHub 网页上人工点。</span></div>
+    <div class="步头" style="border-top:0"><span class="步话" id="为什么不亮"></span><span style="flex:1"></span><button id="先摊">先摊开：这一趟要推什么</button><button id="pr" class="主">推送这一轮的改动</button></div>
     <div class="组头"><b>7B · 勾中的那几项功能（各自一条分支，各发一份合并申请）</b><span class="组话">上面第 4 步勾的是"装进包里测"，这里勾的是"推上远程留档"。没勾的一项都不推，留在本地。</span></div>
     <div class="只在" id="推项格"></div>
     <div class="步头" style="border-top:0"><span class="步话" id="推项话"></span><span style="flex:1"></span><button id="推项">推勾中的那几项</button></div>
@@ -154,7 +166,7 @@
     <div class="步头"><b>第 9 步 · 本地收尾</b><span class="步话">再同步一次 main，然后把这一轮发完的那条支从本地删掉（没合进 main 的那一颗都不删）。</span><span style="flex:1"></span><button id="快进">各家指针接到 main</button><button id="删支">删本地已发布的那条支</button></div>
   </div>
   <div class="步">
-    <div class="步头"><b>第 10 步 · 打包发版（版本号认主版本 main 上最新那一笔）</b><span class="步话">这一颗要三样都齐：盘上干净、站在 main 或全功能那一棵、这一轮那条支已经合进 main。七家的号、tag、发布物一起落。</span><span style="flex:1"></span><button id="发">打包发版</button></div>
+    <div class="步头"><b>第 10 步 · 打包发版（版本号认主版本 main 上最新那一笔）</b><span class="步话">这一颗要三样都齐：盘上干净、站在 main 或全功能那一棵、这一轮那条支已经合进 main。插件家的号、tag、发布物一起落。</span><span style="flex:1"></span><button id="发">打包发版</button></div>
   </div>
 </div>
 
@@ -197,16 +209,21 @@
 </div>
 
 <div class="底">
-  <div class="确" id="确">
-    <h2>要推的就是上面日志里列的那一条支 —— 看清楚再敲</h2>
-    <p>敲一个「推」字回车才真推那条支、才建 PR；这一格空着回车、敲别的字，一律一个字节都不推。
-       main 不推、拼装那一棵不推、tag 不推（这一轮一律走独立分支 + PR，合并只能你人工点）。</p>
+<div class="挡" id="确">
+  <div class="单">
+    <h2 id="确题"></h2>
+    <p>下面这一份单是 <b>src\_build\pr.mjs</b> 现算出来的（这一趟还没跑，一个字节都没送）。<br>
+       要看的就是这一份：往远程送的是哪几条分支、哪几根指针一辈子不上远程、合并申请朝哪儿发。</p>
+    <ol id="确列"></ol>
+    <div class="行"><span id="确标"></span></div>
     <div class="行">
-      <input type="text" id="词" autocomplete="off" autocapitalize="off" spellcheck="false" style="min-width:120px">
-      <button id="推" class="主">推那条支并建 PR</button>
-      <button id="不推">不推，停在这儿</button>
+      <input type="text" id="词" autocomplete="off" autocapitalize="off" spellcheck="false" style="min-width:160px">
+      <button id="推" class="主">就照这一份单送出去</button>
+      <button id="不推">不送，关掉这一份</button>
+      <span class="状态" id="确错"></span>
     </div>
   </div>
+</div>
   <div class="志" id="志"></div>
 </div>
 
@@ -246,10 +263,11 @@ async function 问(){
   集成名 = 对.集成 || '';
   跑着 = !!对.在跑;
   画前瞻(对.前瞻);
-  画七家(对.七家);
+  画插件家(对.插件家);
   画八项(对.八项);
   画推项(对.八项);
   画产物(对);
+  画远程(对);
   底 = !对.清单在 || 对.在跑 || git坏;
   取('pr').disabled = 底;
   取('发').disabled = !对.清单在 || git坏 || !(合 && 合.本地);
@@ -268,20 +286,35 @@ function 等字(){
      按不动的每一条理由都列出来，一条一行，末尾指着要他动哪一格。 */
   const 因 = [];
   for(const 句 of ((状.推不亮) || [])) 因.push(句);
+  const 远 = 状.远程main || {};
+  if(远.有 === false) 因.push('远程那一头还没有 main 这一条支（' + 远.话 + '）—— 先按第 1 步那颗「第一次：把本地 main 推上远程」');
+  if(远.有 === null) 因.push('问不到远程那一边：' + 远.话);
   if(没说明) 因.push('顶上「第 3 步 · 说清楚这一轮改了什么」那一格（本轮说明）还空着 —— 这一栏的字归你填，空着这颗就不亮');
   if(缺.length) 因.push('这几笔的提交说明还空着：' + 缺.join('、') + ' —— 空着的那一笔就不落，那颗也就不亮');
   取('为什么不亮').innerHTML = 因.length ? '<b class="坏">现在不能按：</b>' + 因.map(文).join('；<br>') :
-    (取('pr').disabled ? '' : '<b style="color:var(--好)">可以按</b> · 按下去会先扫一遍公开面，还要你亲手敲一个「推」字才真推');
+    (取('pr').disabled ? '' : '<b style="color:var(--好)">可以按</b> · 按下去先把这一趟要走的八步摊在你面前，你在那一份单下面敲那一个字，才真往远程送');
+  /* 远程还没有 main 的时候，这一颗的标题自己说清楚它现在按下去是什么结果（他 2026-10-14 第 3 条：不知道为什么按不动） */
+  取('七A话').innerHTML = 远.有 === false
+    ? '<b class="坏">远程那一头还没有 main 这一条支</b>：那八步的第一步就没得同步，合并申请也没有 base 可钉。先点第 1 步那颗「第一次：把本地 main 推上远程」。'
+    : '这一颗走的是这一轮那条功能支，一路八步：同步 → 开分支 → 把改动写进仓 → 查有没有把本机地址带出去 → 推 → 建 PR。合并由你在 GitHub 网页上人工点。';
   const 推中2 = 推中().length;
   取('推项话').textContent = 推中2 ? '勾中了 ' + 推中2 + ' 项，各推各的那条功能支、各发一份合并申请' :
     '下面那一格一颗都没勾：不勾的一项都不推，留在本地';
   /* 一步一颗：这一排钮的"能不能按"各说各的（跑着 = 这一台一次只跑一趟） */
   const 情 = 跑着 || git坏;
-  取('同步').disabled = 情; 取('开支').disabled = 情; 取('查').disabled = 情;
+  /* 远程还没有 main 那一条时：「同步 main」没东西可同步（不亮），第一次那一颗顶上（画远程() 把它摆出来） */
+  取('同步').disabled = 情 || (状.远程main || {}).有 === false;
+  取('同步').title = (状.远程main || {}).有 === false
+    ? '远程还没有 main 这一条支，没得同步 —— 先按旁边那颗「第一次：把本地 main 推上远程」' : '';
+  取('建远程').disabled = 情 || (状.远程main || {}).有 !== false;
+  取('远程查').disabled = 情;
+  取('先摊').disabled = 情 || !状.清单在;
+  取('先摊').title = 状.清单在 ? '只摊开看：这一趟要走的八步与那两张申请长什么样，一个字节都不送' : '先点「重新量一遍」出那一格清单';
+  取('开支').disabled = 情; 取('查').disabled = 情;
   取('落笔').disabled = 情 || !状.清单在;
   取('推项').disabled = 情 || !推中().length;
   取('推项').title = 推中().length ? '只推勾中的那几项的前瞻支，各自建一个 PR' : '右边那八格一颗都没勾';
-  取('落笔').title = 状.清单在 ? '把这一轮动的份按路径落到各支（本地，不推）；哪一笔的说明空着就不落那一桶'
+  取('落笔').title = 状.清单在 ? '把这一轮动的份按路径落到各支（本地，不推）；哪一笔的提交说明空着，那一笔就不落'
     : '先点「重新量一遍」出那一格清单';
   取('快进').disabled = 情; 取('删支').disabled = 情;
   取('完整').disabled = 情 || !(状.集成在);
@@ -350,13 +383,45 @@ function 画前瞻(列){
 function 勾中(){ return [...document.querySelectorAll('#只在 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['支']); }
 function 数勾(){ const n = 勾中().length; 取('集成').disabled = n === 0 || 跑着 || git坏; }
 /* 打出来的那一枚安装程序在哪：屏上直接给路径与最近几枚（新的在前），别让他自己去找 dist\tauri。
-   后端那一份读的是 <这一棵>\dist\tauri\Flow_Desk_setup_*.exe。 */
+   每一枚还带它是什么形状（基础版 / 全功能 / 发版）、从哪一根上打的、带了哪几项功能 —— 那一份账由
+   src\_build\release.mjs 每打成一枚记进 dist\tauri\这一摞包.json，这一屏读它（他 2026-10-14：
+   「找不到全功能的完整的安装包」—— 那几枚的名字只差版本号后面一段短哈希，光看文件名分不出来）。 */
 function 画产物(对){
   const 列 = (对 && 对.产物) || [], 盒 = 取('产物'), 话 = 取('产说话');
-  话.textContent = 列.length ? '最新这一枚：' + 列[0].名 + ' · ' + 列[0].MB + ' MB · 打于 ' + 列[0].时候
-    : '还没打过：下面那颗「打本地这一枚」跑完，这一格就会出现那一个 setup.exe';
-  盒.innerHTML = 列.length ? '<div class="标">那一格：' + 文(对.产物格) + '</div>' +
-    列.map(x => '<div class="条">' + 文(x.名) + ' · ' + x.MB + ' MB · ' + 文(x.时候) + '</div>').join('') : '';
+  const 全 = 列.filter(x => x.档 === '全功能');
+  话.innerHTML = 全.length ? '全功能那一枚就在这一格：<b>' + 文(全[0].名) + '</b> · ' + 全[0].MB + ' MB · 打于 ' + 文(全[0].时候) +
+      '（功能 ' + (全[0].功能 || []).length + ' 项）'
+    : 列.length ? '<b class="坏">这一格里还没有标成「全功能」的那一枚</b> —— 上面第 6 步先「重建集成分支」（勾中要合的那几条功能支），再点「从集成分支打这一枚」'
+    : '还没打过：第 5 步那颗「打本地这一枚」跑完，这一格就会出现那一个 setup.exe';
+  盒.innerHTML = 列.length ? '<div class="标">那一格：' + 文(对.产物格) + '（新的在前；每一枚底下那颗按下去，资源管理器开在那一格并选中它）</div>' +
+    列.map(x => '<div class="条"><b>' + 文(x.档 || '这一枚没记形状') + '</b> · ' + 文(x.名) + ' · ' + x.MB + ' MB · ' + 文(x.时候) +
+      (x.支 ? ' · 从 <b>' + 文(x.支) + '</b> 那一棵打的' : '') +
+      ((x.功能 || []).length ? ' · 额外带进来的功能：' + 文(x.功能.join('、')) : '') +
+      ((x.不带 || []).length ? ' · 插件不带：' + 文(x.不带.join('、')) : '') +
+      '<div><button data-找="' + 编(x.名) + '">在这台电脑上找到它</button></div></div>').join('') : '';
+  盒.querySelectorAll('button[data-找]').forEach(b => b.onclick = () => 找包(b.dataset['找']));
+}
+async function 找包(名){
+  const 回 = await fetch('/api/开产物', { method:'POST', headers:{'content-type':'application/json','x-push-code':码 },
+                                          body: JSON.stringify({ 名 }) });
+  取('产说话').innerHTML = 回.ok ? '<b class="好">已开在那一格并选中：' + 文(名) + '</b>' : '<b class="坏">' + 文(await 回.text()) + '</b>';
+}
+/* 远程那一边现在什么样（他 2026-10-14：main 推不上去，不知道为什么）：
+   远程一条支都没有 → 「同步 main」按不动（没得同步）、7A/7B 那两颗建不出申请（没有 base 可钉），
+   这时候第 1 步那一行右边多出一颗「第一次：把本地 main 推上远程」，它一辈子只用这一回。 */
+function 画远程(场){
+  const 对 = 场 || 状, 远 = 对.远程main || {};
+  取('远程话').innerHTML = 远.有 === true ? '<b style="color:var(--好)">远程有 main 这一条支</b> · ' + 文(远.话)
+    : 远.有 === null ? '<b class="坏">问不到远程那一边</b> · ' + 文(远.话)
+    : '<b class="坏">' + 文(远.话) + '</b> · 所以「同步 main」这一步现在没东西可同步，第 7 步那两张合并申请也没有 base 可钉';
+  const 钮 = 取('建远程');
+  钮.hidden = 远.有 === true;
+  钮.title = 远.有 === false ? '只建 origin/main 这一条：把本地 main 已经落好的那些笔原样推上去。那八条功能支、集成分支、tag 一条都不推。按下去先摊开这一份单，你敲那一个字才送。'
+    : 远.有 === null ? '问不到远程那一边，所以这颗不亮 —— 先按右边「重新问一次远程」' : '';
+  取('建远程话').textContent = 远.有 === false
+    ? '这一颗只用这一回：往远程送的是本地 main 上已经落笔的那 ' + 对.main笔数 + ' 笔（最新一笔 ' + (对.最新一笔 || '') + '）；'
+      + '盘上那 ' + 对.脏 + ' 处还没提交的东西不在这一次里。推完这一颗，那一根就有了，第二次跑 pr.mjs 那一头当场拒。'
+    : '';
 }
 取('开产物').onclick = async () => {
   const 回 = await fetch('/api/开产物', { method:'POST', headers:{ 'x-push-code':码 } });
@@ -379,17 +444,19 @@ function 画八项(列){
       '<details><summary>这一项动的是哪几处</summary><ul class="份">' + x.动的地方.map(f => '<li>' + 文(f) + '</li>').join('') + '</ul></details></div>').join('');
 }
 function 带中(){ return [...document.querySelectorAll('#八项 input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset['项']); }
-/* 插件那七家：一家一格，格上写的是它的中文名（从前那一格要手打内部名字，他指着问「这个是什么！！！」）。
-   默认七格全勾 = 七家全带；取消哪一格，那一家的活的一份与原版那一份都不进这一枚，货架上也不摆。 */
-function 画七家(列){
-  const 盒 = 取('七家');
+/* 跟着软件一起装的那几家插件：一家一格，格上写的是它的中文名（从前那一格要手打内部名字，他指着问「这个是什么！！！」）。
+   默认全勾 = 全带；取消哪一格，那一家的活的一份与原版那一份都不进这一枚，货架上也不摆。
+   那几家是几家由后端那张家表数出来（2026-10-14：卡片默认大小那一台撤了，屏上原先写死的「七家」就成了假话）。 */
+function 画插件家(列){
+  const 盒 = 取('插件家');
+  取('插件家话').innerHTML = '跟着软件一起装的那几家插件，现量 <b>' + ((列 || []).length) + '</b> 家，一家一格' +
+    '（默认全带上；这一格只管装进包里，跟推不推分支没关系）';
   if(!列 || !列.length){ 盒.innerHTML = ''; return; }
-  盒.innerHTML = '<div class="标">跟着软件一起装的插件 · 一家一格（默认全带上；这一格只管装进包里，跟推不推分支没关系）</div>' +
-    '<div class="家格">' + 列.map(j => '<label class="家"><input type="checkbox" data-家="' + 编(j.id) + '" checked>' +
-      文(j.中文) + '</label>').join('') + '</div>';
+  盒.innerHTML = '<div class="家格">' + 列.map(j => '<label class="家"><input type="checkbox" data-家="' + 编(j.id) + '" checked>' +
+    文(j.中文) + '</label>').join('') + '</div>';
 }
 /* 没勾上的那几家（递出去的还是内部名字，屏上一个都不露） */
-function 不带的家(){ return [...document.querySelectorAll('#七家 input[type=checkbox]')].filter(c => !c.checked).map(c => c.dataset['家']); }
+function 不带的家(){ return [...document.querySelectorAll('#插件家 input[type=checkbox]')].filter(c => !c.checked).map(c => c.dataset['家']); }
 function 家的名(列, id){ const j = (列 || []).find(x => x.id === id); return j ? j.中文 : id; }
 /* 第 7 步右边那八格：这一轮推哪几项上远程。分支还没起来的那一项勾都点不动（推一条不存在的支没有意义）。 */
 function 画推项(列){
@@ -426,7 +493,6 @@ async function 存(安静){
 
 async function 跑(路, 标题, 身){
   取('志').textContent = '';
-  取('确').classList.remove('开');
   跑着 = true; 数勾(); 取('pr').disabled = true; 取('量').disabled = true; 取('自测').disabled = true; 取('落笔').disabled = true; 等字();
   取('提示').textContent = 标题 + ' 正在跑……（这一趟要几分钟，别关这个窗口；日志在下面一段段出来）';
   const 头 = { 'x-push-code':码 };
@@ -435,15 +501,11 @@ async function 跑(路, 标题, 身){
   if(!回.ok){ 取('志').textContent = await 回.text(); 取('提示').textContent = ''; 跑着 = false; 问(); return; }
   const 读 = 回.body.getReader(), 解 = new TextDecoder('utf8');
   const 志 = 取('志');
-  let 全 = '';                                   /* 那一句「确认词：推」可能正好被切断在两段里，所以拿全量比 */
   for(;;){
     const { value, done } = await 读.read();
     if(done) break;
-    const 段 = 解.decode(value, { stream:true });
-    全 += 段;
-    志.textContent += 段;
+    志.textContent += 解.decode(value, { stream:true });
     志.scrollTop = 志.scrollHeight;
-    if(全.includes('确认词：')){ 取('确').classList.add('开'); 取('词').value = ''; 取('词').focus(); }
   }
   const 尾 = 志.textContent.trim().split('\n').pop() || '';
   取('提示').textContent = 标题 + ' 跑完了 · ' + 尾;
@@ -455,41 +517,42 @@ async function 跑(路, 标题, 身){
 /* 一步一颗：第 1、2、6、8、9 步（同步 main / 开这一轮的支 / 从集成分支打这一枚 / 查合并 / 收尾那两颗） */
 取('同步').onclick = () => 跑('同步', '同步本地 main');
 /* 第 3 步后半：落笔到各支（本地那一半，不推）。这一颗按的是下面那些格子里你写的字：
-   哪一笔的「更新描述」还空着，那一桶就不落，命令会当场停下来点你的名。 */
+   哪一笔的「更新描述」还空着，那一笔就不落，命令会当场停下来说是等他填哪一笔。 */
 取('落笔').onclick = async () => {
   const 缺 = [...document.querySelectorAll('textarea[data-会动="1"]')].filter(t => !t.value.trim()).map(t => t.dataset.名);
-  if(!取('说明').value.trim() && !confirm('顶上「本轮说明」那一格还空着（主程序那一笔的说明就从这儿来）。\n\n还是要点落笔吗？空着的话那一桶会当场停下来，等这一格填了再落。')) return;
-  if(缺.length && !confirm('还有 ' + 缺.length + ' 笔的「更新描述」空着：' + 缺.join('、') + '\n\n空着的那些桶这一趟不落（命令会点名等谁）。还是要点吗？')) return;
+  if(!取('说明').value.trim() && !confirm('顶上「本轮说明」那一格还空着（主程序那一笔的提交说明就从这一格来）。\n\n还是要点落笔吗？空着的话主程序那一笔这一趟不落，命令会当场停下来等你填。')) return;
+  if(缺.length && !confirm('还有 ' + 缺.length + ' 笔的「更新描述」空着：' + 缺.join('、') + '\n\n空着的那几笔这一趟不落（命令会点名等你填哪几笔）。还是要点吗？')) return;
   if(await 存(true)) 跑('落笔', '落笔到各支');
 };
 取('开支').onclick = async () => { if(await 存(true)) 跑('开支', '开这一轮那条支'); };
 取('查').onclick = () => 跑('查', '查合并那一眼');
-/* 第 7 步右边那颗：只推你勾中的那几项的前瞻支，各自建一个 PR；没勾的一条都不推 */
+/* 第 7 步右边那颗：只推你勾中的那几项的功能支，各自建一个 PR；没勾的一条都不推。
+   点下去先让 pr.mjs 把"要推的是哪几条支、各自那一笔在哪"摊成一份单（/api/摊单），他在那份单下面敲那一个字才真跑。 */
 取('推项').onclick = () => {
   const 项 = 推中();
-  if(!项.length){ 取('提示').textContent = '右边那八格一颗都没勾 —— 要推基础那一支，用左边那颗「推送基础那一支」。'; return; }
-  const 名 = 项.map(id => 家的名(状.八项, id)).join('、');
-  if(confirm('把这几项的前瞻支推上远程，各建一个 PR（base = main）？\n\n' + 名 +
-    '\n\n没勾的那 ' + (8 - 项.length) + ' 项一条都不推，留在本地。main、拼装那一棵、集成分支那一根照旧都不推。'))
-    跑('推项', '推勾中的那几项', { 项: 项.join(',') });
+  if(!项.length){ 取('提示').textContent = '右边那八格一颗都没勾 —— 要推基础那一支，用上面那颗「推送这一轮的改动」。'; return; }
+  摊着来('推前瞻支', '推勾中的那几项上远程 —— 一条支一份合并申请', 项.join(','),
+    词 => 跑('推项', '推勾中的那几项', { 项: 项.join(','), 词 }));
 };
-取('快进').onclick = () => { if(confirm('把七家各自那一支接到 main 后面？\n\n只挪指针：已有的一笔都不改写；哪一家那一支上有 main 里没有的东西（真分叉）会停下来报是哪一家。')) 跑('快进', '各家指针接到 main'); };
+取('快进').onclick = () => { if(confirm('把插件那几家各自那一支接到 main 后面？\n\n只挪指针：已有的一笔都不改写；哪一家那一支上有 main 里没有的东西（真分叉）会停下来报是哪一家。')) 跑('快进', '各家指针接到 main'); };
 取('删支').onclick = () => { const 名 = 取('支').value.trim(); if(confirm('删本地那一条已经发完的支？\n\n要删的是：' + (名 || '（顶上「提交分支」那一格还空着）') + '\n\n这一颗先核对它有没有进 main（压成一笔合进去的也算，比的是两边内容）：没进的绝不删。远程那一条是你在网页上合并时勾的那一下删，这台不推。')) 跑('删支', '删本地已发布的那条支'); };
+/* 那几家插件全勾着的时候说什么：家数从后端那张家表现量（屏上写死一个「七」字，2026-10-14 撤卡片默认大小那一台之后就成了假话） */
+function 全带话(){ return '\n\n插件那 ' + ((状.插件家 || []).length) + ' 家全勾着 —— 这一枚全带。'; }
 取('完整').onclick = () => {
   const 不带的 = 不带的家();
-  const 话 = 不带的.length ? '\n\n插件这一枚不带：' + 不带的.map(id => 家的名(状.七家, id)).join('、') : '\n\n插件那七格全勾着 —— 七家全带。';
-  if(confirm('从本地集成分支那一棵打这一枚？\n\n那一根上有你勾中的那几条前瞻支（第 6 步「重建集成分支」合上去的），插件那七家一起合进来。\n\n不提交、不打 tag、不推远程；跑那一趟要几分钟。' + 话))
+  const 话 = 不带的.length ? '\n\n插件这一枚不带：' + 不带的.map(id => 家的名(状.插件家, id)).join('、') : 全带话();
+  if(confirm('从本地集成分支那一棵打这一枚？\n\n那一根上有你勾中的那几条功能支（第 6 步「重建集成分支」合上去的），插件那几家一起合进来。\n\n不提交、不打 tag、不推远程；跑那一趟要几分钟。' + 话))
     跑('完整', '从集成分支打这一枚', { 不带: 不带的.join(',') });
 };
 /* 第 5 步：本地打这一枚自己手动测 —— 在第 7 步推送与第 8 步合并之前，
    这一档不提交、不落清单、不打 tag、不推任何东西（那两步要的「盘上干净」「已合进 main」这儿不适用）。
-   带什么由第 4 步那两栏勾：插件那七家（一家一格，名字就是程序里那七个）与功能那八项（一项一格）。 */
+   带什么由第 4 步那两栏勾：插件那几家（一家一格，格上就是程序里那几家插件的名字）与功能那八项（一项一格）。 */
 取('自测').onclick = () => {
   const 不带的 = 不带的家();
   const 带的 = 带中();
   const 话1 = 不带的.length
-    ? '\n\n插件不带的那几家：' + 不带的.map(id => 家的名(状.七家, id)).join('、') + '（它们活的一份与原版那一份都不进包，货架上也不摆）'
-    : '\n\n插件那七格全勾着 —— 七家全带。';
+    ? '\n\n插件不带的那几家：' + 不带的.map(id => 家的名(状.插件家, id)).join('、') + '（它们活的一份与原版那一份都不进包，货架上也不摆）'
+    : 全带话();
   const 话2 = 带的.length
     ? '\n\n功能额外带上那几项：' + 带的.map(id => 家的名(状.八项, id)).join('、') + '\n（勾中的那几条分支合到一棵临时的树上打，你正站着的这一棵一个字不动。）'
     : '\n\n功能那八格全没勾 —— 打的就是你现在站的这一棵上有的那些。';
@@ -508,21 +571,69 @@ async function 跑(路, 标题, 身){
     '合到一半撞车就停下来报是哪一条，不自动解。全程不推远程。')) return;
   跑('集成', '重建集成分支', { 支: 列 });
 };
-取('pr').onclick = async () => { if(await 存(true)) 跑('pr', '提交 PR'); };
+/* ---------- 往远程送东西那三道：先把单摊在眼前，敲对了那一个字才起子进程 ----------
+   摊单那一份是 src\_build\pr.mjs 现算的（/api/摊单，纯读：一根指针都不挪、一个字节都不推），
+   屏上只是把它摊开；他在这下面敲那个字，服务端（收字）比对过了才起真跑那一道，起的时候带 --已确认，
+   pr.mjs 那头就不再在日志中段问第二遍。
+   2026-10-14 之前的形状是"真跑起来了才在日志中段冒一格输入框"，那份单只出现在敲完字之后的日志里 ——
+   他指着截图问「没有亲手敲字的地方，这个确认方法也太奇怪了」。 */
+let 待送 = null;
+function 开确(题, 单, 手){
+  待送 = 手;
+  取('确题').textContent = 题;
+  取('确列').innerHTML = (单 || []).map(x => '<li>' + 文(x) + '</li>').join('');
+  取('确标').innerHTML = '要往远程送东西，把下面那个字打进框里再回车 —— 那一个字是 <b>' + 文(状.确认词 || '') +
+    '</b>。空着回车、敲别的字，这一趟一个字节都不送。';
+  取('确错').textContent = '';
+  取('词').value = '';
+  取('确').classList.add('开');
+  取('词').focus();
+}
+function 关确(){ 取('确').classList.remove('开'); 待送 = null; }
+async function 交字(){
+  const 答 = 取('词').value.trim();
+  if(答 !== (状.确认词 || '')){
+    取('确错').innerHTML = '<b class="坏">框里是「' + 文(答) + '」，不是那一个字 —— 一个字节都没送。</b>';
+    return;
+  }
+  const 手 = 待送; 关确(); if(手) 手(答);
+}
+/* 摊单 → 开框：道 = 提交PR / 推前瞻支 / 建远程main；勾中的那几项 id 递的是「项」（屏上与命令里都只管那几项功能支） */
+async function 摊着来(道, 题, 递, 手){
+  const 参 = new URLSearchParams({ 道 });
+  if(递) 参.set('项', 递);
+  const 回 = await fetch('/api/摊单?' + 参.toString());
+  const 话 = await 回.text();
+  if(!回.ok){ 取('提示').innerHTML = '<b class="坏">' + 文(话) + '</b>'; return false; }
+  const 对 = JSON.parse(话);
+  开确(题, 对.单, 手);
+  return true;
+}
+取('推').onclick = 交字;
+取('不推').onclick = () => { 取('提示').textContent = '关掉这一份单了，一个字节都没往远程送。'; 关确(); };
+取('词').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); 交字(); } });
+/* 「先摊开」那颗：什么都不做，只把这一趟要走的八步摊给他看（看完关掉，不敲字就不跑） */
+取('先摊').onclick = async () => {
+  if(await 存(true)) 摊着来('提交PR', '这一趟要走的那八步（只摊开看，一个字都没送）', null, () => 关确());
+};
+取('pr').onclick = async () => {
+  if(!await 存(true)) return;
+  摊着来('提交PR', '推送这一轮的改动 —— 要走的就是这八步', null, 词 => 跑('pr', '推送这一轮的改动', { 词 }));
+};
+/* 第一次那一下：远程还没有 main 这一条支时才亮（画远程() 调它） */
+取('建远程').onclick = () => {
+  摊着来('建远程main', '第一次把本地 main 推上远程 —— 只建 origin/main 那一条', null,
+    词 => 跑('建远程main', '第一次把本地 main 推上远程', { 词 }));
+};
+取('远程查').onclick = async () => {
+  取('远程话').textContent = '正在重新问远程那一边……';
+  const 回 = await fetch('/api/远程main刷新', { method:'POST', headers:{'x-push-code':码 } });
+  const 对 = await 回.json();
+  if(!回.ok){ 取('远程话').innerHTML = '<b class="坏">' + 文(对.话 || '问不出') + '</b>'; return; }
+  状.远程main = 对.远程main; 画远程(状);
+  问();
+};
 取('发').onclick = async () => { if(await 存(true)) 跑('发', '打包发版'); };
-取('推').onclick = async () => {
-  const 回 = await fetch('/api/确认', { method:'POST', headers:{'content-type':'application/json','x-push-code':码 },
-                                        body: JSON.stringify({ 词: 取('词').value }) });
-  取('提示').textContent = await 回.text();
-  if(回.ok) 取('确').classList.remove('开');
-};
-取('不推').onclick = async () => {
-  const 回 = await fetch('/api/确认', { method:'POST', headers:{'content-type':'application/json','x-push-code':码 },
-                                        body: JSON.stringify({ 词: '' }) });
-  取('提示').textContent = await 回.text();
-  取('确').classList.remove('开');
-};
-取('词').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); 取('推').click(); } });
 
 /* ---------- 三页签：版本与推送 / 图标素材 / 界面文字 ---------- */
 let 图单 = [];

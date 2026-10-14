@@ -52,7 +52,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { 家 as 家表, TREE, git, filesOf, 拼装支, 往那一支写, 同步那一支, 那一支最后一笔, 没回main的改动, 拼装,
-  笔名, 主程序笔名 } from './plugin-repos.mjs';
+  笔名, 主程序笔名, 产物格, 打包记录路 } from './plugin-repos.mjs';
 import { 号, 底号, 页名 } from './version.mjs';
 import { 存档落点, 工区 } from '../tools/本地路径.mjs';
 import { 清单名, 清单路, 读盘清单, 读清单, 拼清单, 写清单, 合法基线, 支名默认, 确认词, 认支类, 集成分支名 } from './push-list.mjs';
@@ -80,6 +80,33 @@ const P = (n) => console.log(n);
    「is a missing but already registered worktree」，得先 prune 才走得动（2026-10-14 就是这么撞的）。 */
 let 收摊 = null;
 const 停 = (why) => { try{ if(收摊) 收摊(); }catch(e){} console.error('\n停下来：' + why + '\n'); process.exit(1); };
+
+/* ---------- 那一本「这一摞包各是什么形状」的账（2026-10-14 加）----------
+   dist\tauri\ 那一格里每打成一枚 setup.exe 就记一笔：文件名、这一枚是基础版还是全功能、从哪一根上打的、
+   插件带哪几家、功能带哪几项、什么时候打的。
+   为什么要这一本：那几枚的名字只差版本号后面那一段短哈希，光看文件名分不出哪一枚是要装的那一枚 ——
+   他 2026-10-14 那句「找不到全功能的完整的安装包」卡的就是这个。那一屏（src\_build\push-ui.mjs 的 现场().产物）
+   读这一本给每一枚挂上标，再给每一枚一颗「在这台电脑上找到它」，按下去开资源管理器选中那一个文件。
+   那一格整个被 .gitignore 挡着（根上默认全拒），不进仓、不上公开面；位置与文件名只在 plugin-repos.mjs 那一份里写。 */
+function 记这一枚(形){
+  let 架 = null;
+  try{ 架 = JSON.parse(fs.readFileSync(path.join(产物格, 'index.json'), 'utf8')); }catch(e){}
+  const 件 = 架 && 架.setup && 架.setup.file;
+  if(!件){ P('  （读不到 ' + 产物格 + ' 里 index.json 那一个 setup 文件名 —— 这一枚没记进账，屏上只能按文件名与时间排它）'); return; }
+  let 列 = [];
+  try{ 列 = JSON.parse(fs.readFileSync(打包记录路, 'utf8')).列 || []; }catch(e){}
+  /* 同一枚文件重打一次就把账上那一条换掉，不堆重复行（跑一遍闸就可能重打同一枚，从前一次跑就多一行） */
+  列 = 列.filter(x => x && x.文件 !== 件);
+  列.unshift(Object.assign({ 文件:件, 号:(架.shell || {}).fd || '', 大小:架.setup.size || '',
+    插件:((架.packs) || []).map(p => p.name), 时候:new Date().toLocaleString('zh-CN', { hour12:false }) }, 形));
+  try{
+    fs.mkdirSync(产物格, { recursive:true });
+    fs.writeFileSync(打包记录路, JSON.stringify({ kind:'flow-desk-builds',
+      说明:'这一格里每一枚 setup.exe 是什么形状：release.mjs 每打成一枚记一笔，那一屏读它给每一枚挂标（这一格不进仓）',
+      列:列.slice(0, 40) }, null, 2));
+    P('  记进那本账了：' + 件 + ' · ' + 形.档 + '（' + 打包记录路 + '）');
+  }catch(e){ P('  （这一枚记不进那本账：' + ((e && e.message) || e) + '）'); }
+}
 
 if(!看 && !发 && !自测 && !DRY)
   停('这一颗现在认三道命令：--看（量出清单、写完就停）、--打自测包（流程第 3 步：本地出一个自测包给你手动测，不落笔、不打 tag、不推）、' +
@@ -202,8 +229,17 @@ if(自测){
     const 一格 = path.join(工区 || '', 'pack-' + (自测档 === '完整' ? 'full' : 'lite') + '-' + 短
       + (项.length ? '-' + 项.join('+') : '-base'));
     if(!工区) 停('要打这一枚，得先有「工区」那一格（src\\tools\\本地路径.cjs 里登记的）—— 那一棵要摊到仓外，不能落在仓里。');
+    /* 额外合的那几条支 = 插件那几家各自那一支。从前这里不问有没有就把 家表 里那六个名字全递过去，
+       于是这一档当场砸在「那条支 plugin/notes 还没起来」上（2026-10-14 真跑全功能那一枚时量到的）：
+       新仓里六家的代码就在 main 这一棵里（搬过来那一趟没再留 plugin/* 那几根长期支），
+       而集成分支那一根本就是从 main 起的 —— 递上去的每一根都不存在，一棵也合不成。
+       现在按"这一根真的在"筛一遍：在就合（哪天他重新开出那几根，这里自己跟上），不在就在屏上说清是几根没合。 */
+    const 合的家 = 家表.map(j => j.支).filter(名 => 分支在不在(TREE, 名));
+    P('  插件那几家各自那一支：这一棵上找得到 ' + 合的家.length + ' 根' +
+      (合的家.length ? '（' + 合的家.join('、') + '）—— 一起合进来'
+        : ' —— 六家的代码就在 main 这一棵里（基点那一根从 main 起的），这一趟不另外合'));
     try{
-      那棵 = 摊打包那一棵(TREE, 基点支, 项, 一格, undefined, 基点支 === 'HEAD' ? [] : 家表.map(j => j.支));
+      那棵 = 摊打包那一棵(TREE, 基点支, 项, 一格, undefined, 基点支 === 'HEAD' ? [] : 合的家);
       收摊 = () => { if(那棵){ 那棵.撤(); P('\n  那一格收掉了（中途停下也收，不留那一棵与那根临时指针在盘上）。'); } };
       P('  这一枚从一棵临时的树上打：' + 那棵.目录);
       for(const x of 那棵.合了) P('    + 合上 ' + x.中文 + '（' + x.分支 + ' 那一笔 ' + x.支头 + ' → 临时那一笔 ' + x.笔 + '）');
@@ -241,7 +277,24 @@ if(自测){
   }
   if(出事) 停(出事);
   P('\n自测包出好了（号 ' + 基线 + '+build.' + 短 + '，这一串只烧进产物，没写进 data\\version.json、没写各家清单）。');
-  P('  发布物在 dist\\ 那一格；装完你手动测，测过了再走流程第 4 步：node src/_build/pr.mjs --提交PR。');
+  /* 这一枚是什么形状，当场记进那本账（屏上「这一枚包在哪」那一栏读的就是它） */
+  /* 这一枚到底带了那八项功能里的哪几项：以"它那条支的最新一笔在不在这一枚的基点里"为准 ——
+     不是屏上勾了什么就记什么。从前这里只记 --带= 递来的那几项，于是从集成分支打的那一枚明明合着好几项，
+     账上却写「功能 0 项」（2026-10-14 量到的）：名字与实际对不上，屏上那一栏就成了假账。 */
+  const 带了 = 八项.filter(x => { try{ git(TREE, ['merge-base', '--is-ancestor', x.分支, 基点笔]); return true; }catch(e){ return false; } })
+    .map(x => x.中文);
+  P('  这一枚里带着的功能项（照那一根根支与基点实量，不是照勾）：' + (带了.length ? 带了.join('、') : '一项都没有（这就是基础版）'));
+  /* 形状那一格不许虚报：从集成分支打的那一枚，只有那八项真都在里面才配叫「全功能」；
+     差几项就直说差几项（2026-10-14 集成分支那一根里只有 4 项，另 4 项与它相撞还没并进去）。 */
+  const 形 = 自测档 === '完整'
+    ? (带了.length === 八项.length ? '全功能' : '集成分支这一枚（八项里带了 ' + 带了.length + ' 项，还差 ' + (八项.length - 带了.length) + ' 项）')
+    : '基础版';
+  记这一枚({ 档:形,
+    支:基点支 === 'HEAD' ? 站 : 基点支, 笔:短,
+    功能:带了, 额外合:项.map(id => 中文名of(id)),
+    不带插件:不带.map(id => (家表.find(j => j.id === id) || {}).中文 || id) });
+  P('  发布物就在 ' + 产物格 + ' 那一格（那一屏「这一枚包在哪」那一栏列的也是这一格，按下去能直接选中这一枚）；');
+  P('  装完你手动测，测过了再走流程第 4 步：node src/_build/pr.mjs --提交PR。');
   process.exit(0);
 }
 
@@ -531,6 +584,8 @@ function 收一处(格, 认, 说明){
 P('\n收旧版本（只留最新那一份）：');
 收一处(path.join(TREE, 'pages'), /^Flow_Desk_[\d][\w.+-]*\.html$/, '页面 pages\\');
 收一处(path.join(TREE, 'dist'), /^Flow_Desk_setup_[\d][\w.+-]*\.exe$|^Flow_Desk_payload_[\d][\w.+-]*\.zip$/, '发布物 dist\\');
+/* 发版这一枚也记进那本账：它与自测那两枚同住 dist\tauri 那一格，屏上同一栏列出来 */
+记这一枚({ 档:'发版', 支:站的地方, 笔:(主短 || '') });
 
 /* ---------- ⑤ 本地打 tag：号钉在哪一笔上，一一对应（tag 是本地对象，跟推不推没关系）---------- */
 function 打tag(dir, name, 谁, 钉在){

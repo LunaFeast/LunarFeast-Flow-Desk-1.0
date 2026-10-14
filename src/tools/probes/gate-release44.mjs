@@ -13,6 +13,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { rd, 记账, ROOT } from './lib-slice.mjs';
+import { 探针沙盒 } from '../本地路径.mjs';    /* 克隆那一棵落在仓外这一格（C 盘不留东西），跑完连格一起收 */
 
 const 台 = 记账('gate-release44');
 const rel = rd('src/_build/release.mjs');
@@ -93,13 +94,25 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   台.判('4 那道「必须已合进 main」的闸不适用于这一档（第 3 步本来就发生在推送与合并之前）',
     !自.includes('查合并') && !自.includes('先合并 PR'));
   /* 反向验：三样坏输入喂进真命令，必须当场报红且什么都不跑（这两道都在跑任何一趟之前就停） */
-  const 砸 = (参数) => { try{ const out = execFileSync(process.execPath, ['src/_build/release.mjs'].concat(参数),
-      { cwd:ROOT, encoding:'utf8', stdio:['ignore','pipe','pipe'] }); return { 码:0, 文:out }; }
+  const 砸 = (参数, 在) => { try{ const out = execFileSync(process.execPath, ['src/_build/release.mjs'].concat(参数),
+      { cwd:在 || ROOT, encoding:'utf8', stdio:['ignore','pipe','pipe'] }); return { 码:0, 文:out }; }
     catch(e){ return { 码:e.status, 文:String((e && (e.stderr || e.stdout)) || (e && e.message) || e) }; } };
-  const 甲 = 砸(['--打自测包=完整']);
-  台.判('5 反向验：=完整 那一档现在放开了，但本地集成分支那根还没起 —— 停在那一句上、一个字节都不打 · 退出码 ' + 甲.码,
-    甲.码 === 1 && /集成分支/.test(甲.文) && /重建集成分支/.test(甲.文) && !/\$ node /.test(甲.文),
-    甲.文.split(/\r?\n/).find(l => l.includes('停下来')) || '');
+  /* 这一道以前直接在他那一棵上跑 --打自测包=完整，指望它停下来：那时本地还没有集成分支那根。
+     2026-10-14 那一根有了，同一道命令就会真打一枚（几分钟），所以改成在一棵"只带走 main 的克隆"里跑 ——
+     那一棵里集成分支那根一定没有，停的那一句才是真的，而且绝不在他这一棵上落任何东西。 */
+  const 单沙 = fs.mkdtempSync(path.join(探针沙盒, 'gate-release44-单-'));
+  const 只main = path.join(单沙, 'clone');
+  let 克隆话 = '';
+  const 有克隆 = (() => {
+    try{ execFileSync('git', ['clone', '-q', '--single-branch', '-b', 'main', ROOT, 只main],
+      { encoding:'utf8', stdio:['ignore','pipe','pipe'] }); return true; }
+    catch(e){ 克隆话 = String((e && (e.stderr || e.stdout)) || (e && e.message) || e).replace(/\r?\n/g, ' · ').slice(0, 200); return false; }
+  })();
+  const 甲 = 砸(['--打自测包=完整'], 只main);
+  台.判('5 反向验（在那一棵只有 main 的克隆里跑）：=完整 那一档放开了，但本地集成分支那根还没起 —— 停在那一句上、一个字节都不打 · 退出码 ' + 甲.码,
+    有克隆 && 甲.码 === 1 && /集成分支/.test(甲.文) && /重建集成分支/.test(甲.文) && !/\$ node /.test(甲.文),
+    (甲.文.split(/\r?\n/).find(l => l.includes('停下来')) || '') + (克隆话 ? ' ⹂ 克隆没起来：' + 克隆话 : ''));
+  try{ fs.rmSync(单沙, { recursive: true, force: true }); }catch(e){}
   const 乙 = 砸(['--打自测包', '--看']);
   台.判('6 反向验：与 --看 / --照清单发 混在一次里就该挡 · 退出码 ' + 乙.码,
     乙.码 === 1 && /单独那一道/.test(乙.文), 乙.文.split(/\r?\n/).find(l => l.includes('停下来')) || '');
@@ -123,8 +136,8 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   台.判('12 不带的落到发布那一趟的 --skip=（publish 里那一颗已经把两格与货架一起挑掉，这里不另写一份挑货的）',
     /'--skip=' \+ 不带\.join\(','/.test(自) && 自.includes("'src/pack/publish.mjs'") &&
     自.includes('家表.some(j => j.id === id)') && !自.includes("'--skip=notes'"));
-  台.判('13 屏上那两栏勾完直接递给这一道（插件那六家一家一格、功能那八项一项一格，屏上不露内部名字、不要他手打）',
-    rd('src/_build/push-ui.html').includes('id="七家"') && rd('src/_build/push-ui.html').includes('function 不带的家') &&
+  台.判('13 屏上那两栏勾完直接递给这一道（插件那几家一家一格、功能那八项一项一格，屏上不露内部名字、不要他手打）',
+    rd('src/_build/push-ui.html').includes('id="插件家"') && rd('src/_build/push-ui.html').includes('function 不带的家') &&
     rd('src/_build/push-ui.html').includes('带: 带的.join') && !rd('src/_build/push-ui.html').includes('简装不带') &&
     rd('src/_build/push-ui.mjs').includes('身.不带') && rd('src/_build/push-ui.mjs').includes('身.带'));
 }

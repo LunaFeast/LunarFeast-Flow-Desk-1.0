@@ -69,6 +69,15 @@ const COMMON = ['LICENSE', 'THIRD-PARTY.txt'];                /* 两份声明跟
    支名就一家一个，跟插件 id 同字 —— 别处不再抄第二份对应表。 */
 export const 拼装支 = 'assemble';
 
+/* 打包那三样的落点，和那一本「这一枚是什么形状」的账（2026-10-14 加）：
+   release.mjs 每打成一枚就往这一本里记一笔（哪一枚 exe、简装还是完整、带了哪几家插件与哪几项功能），
+   push-ui.mjs 读它，屏上才分得出「全功能那一枚是哪一份文件」—— 五枚 exe 的名字只差那一段短哈希，
+   他 2026-10-14 那句「找不到全功能的完整的安装包」就是被这个卡的。
+   这一格整个被 .gitignore 第一节（根上默认全拒）挡着，不进仓、不上公开面；名字只在这两份里写这一处。 */
+export const 产物格 = path.join(TREE, 'dist', 'tauri');
+export const 打包记录名 = '这一摞包.json';
+export const 打包记录路 = path.join(产物格, 打包记录名);
+
 export const 家 = [
   { id:'notes',                  中文:'你的便签',       支:'plugin/notes',                  仓:'', from:[pack('notes')] },
   { id:'schedule',               中文:'日程',           支:'plugin/schedule',               仓:'', from:[pack('schedule')] },

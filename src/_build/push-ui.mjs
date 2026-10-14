@@ -8,15 +8,17 @@
    这一台不自己实现任何发布动作 —— 它只做三样：
      ① 把 src\_build\release.mjs --看 跑一遍，读它落下来的那一格 data\推送清单.txt，摊成一屏卡片；
      ② 他在框里改的五样（版本基线、分支类型、提交分支、本轮说明、每一笔的更新描述）写回同一格文件，其余各行一个字节不碰；
-     ③ 两颗按钮按他 2026-10-11 定的新规矩排好先后（一律独立分支 + PR，合并只能人工点）：
-        · 「提交 PR」起 src\_build\pr.mjs --提交PR 这一个子进程：同步远程 main → 基于本地 main 开那条支 →
-          这一轮的改动落上去 → 公开面那道闸 → 要他亲手敲一个「推」字 → 推那条支 → 建 PR → 建完就停；
-        · 「打包发版」起 release.mjs --照清单发：那条支没被合进 main 之前这一颗不亮，硬点就报
-          「先合并 PR，再打包」；它最后不再推 main、也不再推 tag（tag 只在本地打，合并与确认之后另说）。
-        日志一段段流回这一屏；跑到要确认那一步，屏幕上才出现那一格输入框 —— 敲「推」字回车，
-        这一台把它原样喂进子进程的键盘输入那一头，走的还是终端那条老路
-        （pr.mjs 里 问一句() 读的就是标准输入，一行代码没为界面改过）。
-   所以界面上看到的和终端里看到的必然同源：一份文件、一条链、一个字。
+     ③ 往远程送东西的那几颗按钮，一颗一个口子，全在 src\_build\pr.mjs 里：
+        · 「推送这一轮的改动」起 pr.mjs --提交PR：摊单 → 同步远程 main → 开那条支 → 落笔 → 公开面那道闸 → 推那条支 → 建 PR；
+        · 「推勾中的那几项」起 pr.mjs --推前瞻支 --推=<项id,…>：只推点名的那几条功能支，一条一份申请；
+        · 「第一次：把本地 main 推上远程」起 pr.mjs --建远程main：远程还没有 main 那一根时把它建出来（有了就当场拒）；
+        · 「打包发版」起 release.mjs --照清单发：那条支没被合进 main 之前这一颗不亮，硬点就报「先合并 PR，再打包」。
+   那三颗要往远程送东西的，点下去先把 pr.mjs 摊出来的那份单摊在他面前（/api/摊单，纯读、一个字节不推），
+   他在框里敲进那一个字（收字 拿 push-list.mjs 里那一颗 确认词 比），敲对了才起子进程、并且带 --已确认；
+   敲错了、框里空着、一个字都不对：400 回给他，子进程根本不起。
+   2026-10-14 换的口径：从前是"跑起来了才在日志中段冒一格输入框"，那份单只在他敲字之后的日志里出现 ——
+   他指着那一张截图说「没有亲手敲字的地方，这个确认方法也太奇怪了」。
+   所以界面上看到的和终端里看到的必然同源：一份清单文件、一条链、一个字。
 
    为什么要有那一枚随机码：这一台只认 127.0.0.1，但同一台机器上别的网页也能发请求到 127.0.0.1；
    页面上的码是起台子时现生成的，写请求不带它就拒 —— 挡的是「别的页面顺手点了一下推送」。
@@ -29,11 +31,13 @@ import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
-import { TREE, 本地前瞻支, 家 as 家表 } from './plugin-repos.mjs';
+import { TREE, 本地前瞻支, 家 as 家表, 产物格, 打包记录路 } from './plugin-repos.mjs';
 import { 底号 } from './version.mjs';
 import { 清单名, 清单路, 读盘清单, 读清单显示, 改清单, 写清单, 合法基线, 确认词,
   支类表, 支类合规, 等字的格, 支名可用, 集成分支名 } from './push-list.mjs';
-import { 查合并 } from './pr.mjs';          /* 只借它那一眼（git merge-base --is-ancestor，纯读，不 fetch） */
+import { 查合并, 远程支表, 建远程单, 前瞻单, 提交单 } from './pr.mjs';
+/* 借的是 pr.mjs 那几颗只读的：查合并那一眼（不 fetch）、远程有哪几条支、还有那三份"这一趟要推什么"的单。
+   这一台自己照样不碰 git 的写活 —— 摊单与真跑两头都是 pr.mjs 那一颗在算（2026-10-14 换成先摊单再敲字）。 */
 import { 八项 as 八项名单, 分支在不在, 现在带不带 } from './forward-features.mjs';
 
 const PORT = +(process.env.PORT || 8792);
@@ -67,6 +71,34 @@ const 叫得动git = () => { const 探 = 跑git(['--version']); return 探.好 ?
    硬起只会像刚才那样退出码 1，还留一屏旧数当现数。 */
 const git不中 = res => { const 话 = 叫得动git(); if(!话) return false;
   发(res, 503, '停下来：' + 话 + '\n  这一台什么都不做 —— 量、提交 PR、打包发版、重建集成分支这四道都要叫得动 git。'); return true; };
+/* ---------- 远程那一头有没有 main：第一次推之前，这一屏得知道为什么按不动 ----------
+   他 2026-10-14 那一张截图：第 1 步报的是「问不到 origin/main（fetch 没跑成）：fatal: couldn't find remote ref main」，
+   看着像网砸了，其实是这棵仓从没往远程推过任何东西（远程一条支都没有）。
+   本地已经知道 origin/main 那一笔就不用问网络；不知道才 ls-remote 问一次，20 秒内不重复问（这一屏每几秒就来一眼）。
+   「问不出」（要口令、地址错了、网不通）与「问出来是空的」（远程一条支都没有）是两回事，屏上分开说。 */
+let 远缓存 = { 时候:0, 值:null };
+function 远程main(强问){
+  try{ execFileSync('git', ['-C', TREE, 'rev-parse', '--verify', 'origin/main'], { encoding:'utf8', stdio:['ignore','pipe','pipe'] });
+    return { 有:true, 话:'远程那一头有 main 这一条支' }; }catch(e){ /* 本地还不知道那一根，往下问一次 */ }
+  if(!强问 && 远缓存.值 && Date.now() - 远缓存.时候 < 2e4) return 远缓存.值;
+  const 值 = (() => {
+    const 表 = 远程支表();
+    if(表.问不出) return { 有:null, 话:'问不到 ' + 表.远端 + ' 那一头：' + 表.话 };
+    if(表.main) return { 有:true, 话:'远程那一头有 main 这一条支（钉在 ' + 表.main.笔.slice(0, 7) + '）' };
+    return { 有:false, 空仓:!!表.空仓, 支:表.列.map(x => x.支), 远端:表.远端,
+      话: 表.空仓 ? '远程那一头一条支都还没有 —— 这棵仓从没往远程推过任何东西'
+                  : '远程有 ' + 表.列.length + ' 条支（' + 表.列.map(x => x.支).join('、') + '），但没有 main' };
+  })();
+  远缓存 = { 时候:Date.now(), 值 };
+  return 值;
+}
+/* 那一本「这一摞包各是什么形状」的账（release.mjs 每打成一枚记一笔）：屏上拿它分清哪一枚是全功能那一枚。
+   读不到不算错 —— 那一格整个被 .gitignore 挡着，从没打过就没有；屏上照实说「还没打过」。 */
+function 包的账(){
+  try{ const 对 = JSON.parse(fs.readFileSync(打包记录路, 'utf8'));
+    return new Map((对.列 || []).map(x => [x.文件, x])); }
+  catch(e){ return new Map(); }
+}
 function 现场(){
   const 问脏 = 跑git(['status', '--porcelain']);
   const 问站 = 跑git(['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -98,8 +130,10 @@ function 现场(){
     清单在: !!文, 清单路: 清单路(), 清单名,
     确认词,
     表,
-    /* 插件那七家（名字从家表取，屏上一条一格摆出来给他勾，不许他手打内部名字） */
-    七家: 家表.map(j => ({ id: j.id, 中文: j.中文 })),
+    /* 跟着软件一起装的那几家插件（名字从家表取，屏上一条一格摆出来给他勾，不许他手打内部名字）。
+       这一格与屏上那一栏从前叫「七家」，可家表里是几家就几家（2026-10-14 撤了卡片默认大小那一台之后是六家）——
+       把数字写进名字里就是假话，所以改成 插件家，屏上那一行的家数现量。 */
+    插件家: 家表.map(j => ({ id: j.id, 中文: j.中文 })),
     支, 型, 支名合: 合, 前瞻: 问脏.好 ? 本地前瞻支() : [], 集成: 集成分支名,
     /* 第 6 步那颗「从集成分支打这一枚」亮不亮，看那一根本地集成分支起没起 */
     集成在: (() => { try{ execFileSync('git', ['rev-parse', '--verify', 'refs/heads/' + 集成分支名], { cwd: 字树, encoding:'utf8', stdio:['ignore','pipe','pipe'] }); return true; }catch(e){ return false; } })(),
@@ -120,17 +154,29 @@ function 现场(){
       if(当值.名) 缺.push('这一台正跑着上一趟（' + 当值.名 + '），等它完');
       return 缺;
     })(),
+    /* 远程那一头有没有 main（第一次那一推的前提）+ 本地 main 那一根的现场，摊单那一屏要用 */
+    远程main: 远程main(),
+    main笔数: (() => { const 问 = 跑git(['rev-list', '--count', 'main']); return 问.好 ? Number(问.文) : -1; })(),
+    最新一笔: (() => { const 问 = 跑git(['log', '-1', '--format=%h %s', 'main']);
+      if(!问.好) return '';
+      const 串 = 问.文.trim();
+      /* 提交说明空着的那些笔只剩一串哈希跟着一个点号，看着像显示坏了 —— 只有哈希时补一句"这一笔没写提交说明" */
+      return /^[0-9a-f]{7,}$/.test(串) ? 串 + '（这一笔没写提交说明）' : 串; })(),
     /* 打包出来的那枚安装程序在哪：屏上直接给那一格的路、文件名、多大、什么时候打的
-       （他 2026-10-14：找不到打包的安装包在哪里）。只列最近五枚，新的在前。 */
-    产物格: path.join(TREE, 'dist', 'tauri'),
+       （他 2026-10-14：找不到打包的安装包在哪里）。只列最近八枚，新的在前。
+       每一枚再从那本「这一摞包」的账里取出它是基础版还是全功能那一枚、带了哪几项功能 ——
+       五枚 exe 的名字只差那一段短哈希，光看文件名他分不出哪一枚是要装的那一枚（同一句「找不到全功能的完整的安装包」）。 */
+    产物格,
     产物: (() => {
-      const 格 = path.join(TREE, 'dist', 'tauri');
+      const 账 = 包的账();
       try{
-        return fs.readdirSync(格).filter(f => /^Flow_Desk_setup_.*\.exe$/i.test(f)).map(f => {
-          const s = fs.statSync(path.join(格, f));
+        return fs.readdirSync(产物格).filter(f => /^Flow_Desk_setup_.*\.exe$/i.test(f)).map(f => {
+          const s = fs.statSync(path.join(产物格, f)), 记 = 账.get(f);
           return { 名: f, MB: +(s.size / 1048576).toFixed(1), ms: s.mtimeMs,
-            时候: new Date(s.mtimeMs).toLocaleString('zh-CN', { hour12: false }) };
-        }).sort((a, b) => b.ms - a.ms).slice(0, 5);
+            时候: new Date(s.mtimeMs).toLocaleString('zh-CN', { hour12: false }),
+            档: 记 ? 记.档 : '', 支: 记 ? 记.支 : '', 功能: 记 && 记.功能 ? 记.功能 : [],
+            不带: 记 && 记.不带插件 ? 记.不带插件 : [] };
+        }).sort((a, b) => b.ms - a.ms).slice(0, 8);
       }catch(e){ return []; }
     })(),
   };
@@ -334,8 +380,19 @@ function 图标删(名){
 }
 
 /* ---------- 只有一个子进程：量和发不能同时跑，发跑到一半更不能再来一次 ---------- */
-const 当值 = { 名:'', 手:null, 等确认:false, 收:'' };
-/* 起子进程跑一趟命令行工具：输出直接接到那一格日志里；要等确认词的那一趟，确认写回 stdin。 */
+/* 往远程送东西那三道（提交 PR / 推勾中的那几项 / 第一次推 main）都在起子进程之前就把他敲进框里的那一个字核过了
+   （收字），核过了才起、并且带 --已确认 —— 这一台不再往子进程的键盘输入里写任何一个字节。
+   从前那一道是把日志里那一句「确认词：」找出来、在屏上冒一格输入框、再把他敲的字喂进 stdin；2026-10-14 换成现在这样。 */
+const 当值 = { 名:'', 手:null };
+function 收字(res, 身){
+  const 答 = String(身 && 身.词 != null ? 身.词 : '').trim();
+  if(答 !== 确认词){
+    发(res, 400, '框里送回来的是「' + 答 + '」，不是那一个字 —— 这一趟一个字节都没往远程送（那一个字是 ' + 确认词 + '）。');
+    return false;
+  }
+  return true;
+}
+/* 起子进程跑一趟命令行工具：输出直接接到那一格日志里。 */
 function 起(参数, 标题, res, 在){ return 起连([参数], 标题, res, 在); }
 /* 连着跑好几趟（重新生成产物那三趟）：同一把「上一趟还没跑完」的闸、同一条日志；
    中间任何一趟退出码不是 0，后面那几趟不接上跑 —— 内核没出来就别去拼那张页。
@@ -344,29 +401,26 @@ function 起(参数, 标题, res, 在){ return 起连([参数], 标题, res, 在
 function 起连(列表, 标题, res, 在){
   const 树 = 在 || TREE;
   if(当值.手){ 发(res, 409, '上一趟还没跑完：' + 当值.名 + '（要停它就把那个终端窗口关掉，或者等它自己跑完）'); return; }
-  当值.名 = 标题; 当值.等确认 = false; 当值.收 = '';
+  当值.名 = 标题;
   res.writeHead(200, { 'content-type':'text/plain; charset=utf-8', 'cache-control':'no-store' });
-  const 递 = 段 => {
-    当值.收 += 段;
-    if(当值.收.includes('确认词：' + 确认词)) 当值.等确认 = true;
-    try{ res.write(段); }catch(e){}
-  };
+  const 递 = 段 => { try{ res.write(段); }catch(e){} };
   const 完 = 码数 => {
     递('\n〔' + 标题 + ' 跑完，退出码 ' + 码数 + '〕\n');
     try{ res.end(); }catch(e){}
-    当值.手 = null; 当值.名 = ''; 当值.等确认 = false;
+    当值.手 = null; 当值.名 = '';
   };
   let 第 = 0;
   const 跑 = () => {
     if(列表.length > 1) 递('\n━━ 第 ' + (第 + 1) + ' / ' + 列表.length + ' 趟：node ' + 列表[第].join(' ') + '\n');
     const 子 = spawn(process.execPath, 列表[第], { cwd: 树, stdio:['pipe', 'pipe', 'pipe'] });
+    /* 键盘输入那一头一开头就关掉：往远程送东西的那三道都在起子进程之前核过他敲的字（带 --已确认），
+       这一台不该再往里面写东西。万一哪天哪一道漏了 --已确认 自己走到要确认那一步，它读到的是"读不到输入" ——
+       按 pr.mjs 那条老规矩一个字节都不推，失败的方向是关着的，不是挂着等一个永远不会来的字。 */
+    子.stdin.end();
     当值.手 = 子;
     子.stdout.on('data', d => 递(d.toString('utf8')));
     子.stderr.on('data', d => 递(d.toString('utf8')));
-    /* 浏览器那一头关了：不动子进程 —— 它正往仓里落笔，半路掐了才是真麻烦，日志断了回终端窗口接着看。
-       只有一种情况要管：它已经跑到「等你确认」那一步停住了，页面没了就再没人喂它，会一直挂着 ——
-       补一个空行过去，走的正是终端那条「回车不算」的老路：一个字节都不推，它自己退。 */
-    res.on('close', () => { if(当值.手 === 子 && 当值.等确认){ try{ 子.stdin.write('\n'); }catch(e){} } });
+    /* 浏览器那一头关了：不动子进程 —— 它正往仓里落笔，半路掐了才是真麻烦，日志断了回终端窗口接着看。 */
     子.on('close', 码数 => {
       if(码数 !== 0){
         递('\n〔第 ' + (第 + 1) + ' 趟退出码 ' + 码数 + ' —— 剩下 ' + (列表.length - 第 - 1) + ' 趟不接上跑〕\n');
@@ -521,15 +575,38 @@ const 服务器 = http.createServer(async (req, res) => {
     return;
   }
   /* 「打开那一格」：把资源管理器开到产物那一格（最新那枚安装包选中）。
-     屏上那颗按钮就干这一件事 —— 他从没在这台机器上找过 dist\tauri 这串字，别让他记路径。 */
+     屏上每一枚自己有一颗「在这台电脑上找到它」—— 他要的是那一枚全功能的，不是"最新那一枚"（2026-10-14）。
+     只认这一格里现量出来的那几个文件名：屏上递回来的名字先与 readdir 的结果对一遍，对不上就拒（不拿它拼路径）。 */
   if(路 === '/api/开产物'){
-    const 场 = 现场();
-    const 格 = 场.产物格, 最 = 场.产物.length ? 场.产物[0].名 : '';
+    const 身 = await 读体(req);
+    const 挑 = String((身 && 身.名) || '').trim();
+    let 单 = []; try{ 单 = fs.readdirSync(产物格); }catch(e){}
+    const 名 = 挑 ? (单.includes(挑) ? 挑 : '') : (单.filter(f => /^Flow_Desk_setup_.*\.exe$/i.test(f))
+      .sort((a, b) => fs.statSync(path.join(产物格, b)).mtimeMs - fs.statSync(path.join(产物格, a)).mtimeMs)[0] || '');
+    if(挑 && !名){ 发(res, 400, '「' + 挑 + '」不在 ' + 产物格 + ' 这一格里 —— 只开得开这一格里现量出来的那几个文件名。'); return; }
     try{
       /* explorer 挑中那枚时返回码是 1（它的老毛病），不代表没开成 —— 所以只看叫得动叫不动 */
-      spawn('explorer.exe', 最 ? ['/select,' + path.join(格, 最)] : [格], { stdio:'ignore', detached:true }).unref();
-      JSON发(res, { 好:true, 话:'已打开那一格：' + 格 + (最 ? '（选中的是 ' + 最 + '）' : '（这一格里还没有安装程序）') });
+      spawn('explorer.exe', 名 ? ['/select,' + path.join(产物格, 名)] : [产物格], { stdio:'ignore', detached:true }).unref();
+      JSON发(res, { 好:true, 话:'已打开那一格：' + 产物格 + (名 ? '（选中的是 ' + 名 + '）' : '（这一格里还没有安装程序）') });
     }catch(e){ 发(res, 500, '打不开资源管理器：' + ((e && e.message) || e)); }
+    return;
+  }
+  /* 远程那一头的现场重新量一次（本地没有 origin/main 那一笔时，上一眼是 20 秒内的缓存） */
+  if(路 === '/api/远程main刷新'){ JSON发(res, { 好:true, 远程main:远程main(true) }); return; }
+  /* 摊单：这一趟要推什么，先摊给他看，一个字都不推、一根指针都不挪（pr.mjs 那三颗算的，屏上不另写一份）。
+     纯读，所以收 GET；真推那三道一律 POST，而且非要他亲手敲进框里的那一个字不可。 */
+  if(路 === '/api/摊单'){
+    if(git不中(res)) return;
+    const 参 = new URLSearchParams(String((req.url || '').split('?')[1] || ''));
+    const 道 = 参.get('道') || '';
+    const 递 = String(参.get('项') || '').split(',').map(s => s.trim()).filter(Boolean);
+    try{
+      const 单 = 道 === '建远程main' ? 建远程单().单
+        : 道 === '推前瞻支' ? 前瞻单(递).单
+        : 道 === '提交PR' ? 提交单().单 : null;
+      if(!单){ 发(res, 400, '摊单只认那三道：提交PR / 推前瞻支 / 建远程main（现在送回来的是「' + 道 + '」）'); return; }
+      JSON发(res, { 好:true, 道, 单 });
+    }catch(e){ 发(res, 409, '这一趟摊不出单来，所以什么都不推：' + String((e && e.message) || e)); }
     return;
   }
 
@@ -541,14 +618,16 @@ const 服务器 = http.createServer(async (req, res) => {
     if(git不中(res)) return;
     起(['src/_build/pr.mjs', '--开这一轮的支'], '开这一轮那条支（从本地 main 起一根，已存在就不重开）', res); return;
   }
-  /* 第 7 步的另一半：推哪几项上远程（勾中的那几项，各自那条前瞻支才推、才建 PR；没勾的一条都不推） */
+  /* 第 7 步的另一半：推哪几项上远程（勾中的那几项，各自那条功能支才推、才建 PR；没勾的一条都不推）。
+     这一道要他先在屏上那份单下面敲进框里那一个字 —— 框里的字不对，子进程根本不起了。 */
   if(路 === '/api/推项'){
     if(git不中(res)) return;
     const 身 = await 读体(req);
     const 项 = String((身 && 身.项) || '').split(',').map(s => s.trim()).filter(Boolean);
-    if(!项.length){ 发(res, 409, '一颗都没勾：这一颗只推你点名的那几项的前瞻支。要推基础那一支，用「推送 + 建 PR」。'); return; }
-    起(['src/_build/pr.mjs', '--推前瞻支', '--推=' + 项.join(',')],
-      '推勾中的那几项上远程（一项一条前瞻支、各自建一个 PR；没勾的一条都不推）', res); return;
+    if(!项.length){ 发(res, 409, '一颗都没勾：这一颗只推你点名的那几项的功能支。要推基础那一支，用「推送这一轮的改动」。'); return; }
+    if(!收字(res, 身)) return;
+    起(['src/_build/pr.mjs', '--推前瞻支', '--推=' + 项.join(','), '--已确认'],
+      '推勾中的那几项上远程（一项一条功能支、各自建一个 PR；没勾的一条都不推）', res); return;
   }
   /* 第 3 步的后半：把盘上这一轮的改动按路径落到各支（本地那一半，不扫不推不建 PR）——
      从前这一颗没有，屏上只有「① 提交 PR」那一整条道，于是"落笔"这一步只能走到推送才发生：
@@ -598,9 +677,12 @@ const 服务器 = http.createServer(async (req, res) => {
       '重建集成分支（从本地 main 起一根，把勾中的那几条前瞻支一条一条合上去；不推远程）', res);
     return;
   }
-  /* 两颗按钮的先后（2026-10-11 新规矩）：先「提交 PR」，他人工合并之后才轮到「打包发版」 */
+  /* 两颗按钮的先后（2026-10-11 新规矩）：先「提交 PR」，他人工合并之后才轮到「打包发版」。
+     2026-10-14 改的口径：这一道要他在屏上那份单下面敲进框里那一个字（收字），起了子进程还带 --已确认，
+     pr.mjs 那头就不在日志中段再问一遍 —— 从前是"跑了几分钟才在日志里冒出一格输入框"，他说那个方法太奇怪。 */
   if(路 === '/api/pr'){
     if(git不中(res)) return;
+    const 身 = await 读体(req);
     const 文 = 读盘清单();
     if(!文){ 发(res, 409, '还没有那一格清单：先点「重新量一遍」'); return; }
     const 支 = String(读清单显示(文).提交分支 || '').trim();
@@ -609,7 +691,24 @@ const 服务器 = http.createServer(async (req, res) => {
        我不替他补一句默认文字 —— 参照文字在清单那一笔底下的 # 行里，得他自己改成一句话。 */
     const 缺 = 等字的格(读清单显示(文));
     if(缺.length){ 发(res, 409, '这几格还空着，要他手动填了才落笔：' + 缺.join('、') + '\n  参照文字就在清单里那一笔底下的 # 行，改成你自己那句再点。'); return; }
-    起(['src/_build/pr.mjs', '--提交PR'], '提交 PR（同步→开支→落笔→扫公开面→等你敲「推」→推支→建 PR，建完就停）', res);
+    const 远 = 远程main();
+    if(远.有 === false){ 发(res, 409, 远.话 + '：功能支的合并申请要把 base 钉在 main 上，所以得先点第 1 步那颗「第一次：把本地 main 推上远程」（那一颗要你亲手敲那一个字）。'); return; }
+    if(!收字(res, 身)) return;
+    起(['src/_build/pr.mjs', '--提交PR', '--已确认'], '提交 PR（摊单→同步→开支→落笔→扫公开面→推支→建 PR，建完就停）', res);
+    return;
+  }
+  /* 第一次那一下：远程还没有 main 那一根时，把本地 main 推上去建出它（他 2026-10-14：「main 推不上去」）。
+     这一道只在这一回有用，pr.mjs 那一头对着远程现量：已经有 main 就当场拒，绝不覆盖、绝不追加。
+     往远程送东西就得他亲手敲那一个字 —— 与 7A、7B 同一道口子。 */
+  if(路 === '/api/建远程main'){
+    if(git不中(res)) return;
+    const 身 = await 读体(req);
+    const 远 = 远程main();
+    if(远.有 === null){ 发(res, 409, '问不到远程那一头：' + 远.话 + ' —— 这一颗一个字节都不推。'); return; }
+    if(远.有 === true){ 发(res, 409, 远.话 + ' —— 那一根已经有了，这一颗只管第一次那一下，不覆盖、不追加、不推 main。'); return; }
+    if(!收字(res, 身)) return;
+    起(['src/_build/pr.mjs', '--建远程main', '--已确认'],
+      '第一次把本地 main 推上远程（只建 origin/main 那一根；那八条功能支、集成分支、tag 一条都不推）', res);
     return;
   }
   if(路 === '/api/发'){
@@ -631,21 +730,6 @@ const 服务器 = http.createServer(async (req, res) => {
       return;
     }
     起(['src/_build/release.mjs', '--照清单发'], '打包发版（取号→拼装→生成→出厂镜像→打包→本地 tag；最后那一眼只列，不推）', res);
-    return;
-  }
-  if(路 === '/api/确认'){
-    const 身 = await 读体(req);
-    if(!当值.手){ 发(res, 409, '这会儿没有在跑的那一趟'); return; }
-    if(!当值.等确认){ 发(res, 409, '还没到要确认那一步 —— 那一格输入框出现时才收字。'); return; }
-    const 答 = String(身 && 身.词 != null ? 身.词 : '').trim();
-    if(答 !== 确认词){
-      当值.手.stdin.write('\n');                                   /* 空一行：走的是终端那条「回车不算」的老路，一个字节都不推 */
-      发(res, 400, '「' + 答 + '」不是确认词 —— 已经按「不推」交回去了。');
-      return;
-    }
-    当值.手.stdin.write(确认词 + '\n');
-    当值.等确认 = false;
-    发(res, 200, '收到，正在推。');
     return;
   }
   发(res, 404, '没这一格');

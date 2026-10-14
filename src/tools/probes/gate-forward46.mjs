@@ -170,7 +170,7 @@ const 手文 = rd('src/_build/pr.mjs');
   屏文.indexOf('不决定推哪几条分支') < 屏文.indexOf('第 5 步'));
 台.判('12 推送这一头也可选（他 2026-10-13：「那推送里有没有？可不可以选择？不可选择就不对」）：' +
   'pr.mjs 多一道 --推前瞻支，屏上第 7 步右边那八格勾哪几项才推哪几条前瞻支、各建一个 PR',
-  手文.includes("has('--推前瞻支')") && 手文.includes('推勾中的那几项') === false &&
+  手文.includes("has('--推前瞻支')") && 手文.includes('一颗都没勾') &&
   屏文.includes('id="推项"') && 屏文.includes('function 画推项') && 台文.includes("'/api/推项'") &&
   台文.includes("'--推前瞻支'"));
 {
@@ -186,7 +186,7 @@ const 手文 = rd('src/_build/pr.mjs');
   try{ fs.rmSync(单沙, { recursive: true, force: true }); }catch(e){}
 }
 台.判('11 第 4 步那两栏全是勾，没有一处要他手打内部名字（插件那七家一家一格、名字从家表取；内部 id 只在递给命令那一刻出现）',
-  屏文.includes('function 画七家') && 台文.includes('七家: 家表.map') && 屏文.includes('data-家=') &&
+  屏文.includes('function 画插件家') && 台文.includes('插件家: 家表.map') && 屏文.includes('data-家=') &&
   !屏文.includes('id="简装不带"') && !/placeholder="[^"]*id，逗号分隔/.test(屏文) &&
   !/(music-remote|your-sentences|singbit-input-practice|why-not-write)/.test(屏文),
   (屏文.match(/placeholder="[^"]*"/g) || []).filter(s => /id/.test(s)).join(' | ') || '没有要手打的格子');
