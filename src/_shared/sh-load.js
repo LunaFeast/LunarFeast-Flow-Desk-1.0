@@ -533,13 +533,17 @@ const PackCtx = {
         get:async (k, fb) => { if(!stOk(k)) deny('要读的表单键「' + k + '」'); return State.get(k, fb); },
         set:(k, v) => { if(!stOk(k)) deny('要写的表单键「' + k + '」'); return State.set(k, v); }
       },
-      /* 词库跟着包走：插件清单点了哪份，就只能拿哪份 */
+      /* 词库跟着包走：插件清单点了哪份，就只能拿哪份。
+         这两句都带"这个名字在不在"的守卫（插件分离第 4 批 4.6 第一刀）：词库层那一棵搬去推演定制之后，
+         那一棵没加载就是没有词库这件事 —— 这一家读到空，不当场抛错，也不摆一句"缺失"（#30 同口径）。
+         从前这里无守卫地读 `mkBank` / `Banks`，那正是 2026-10-13 那份词库层没能搬走的原因。 */
       bank:which => {
+        if(typeof mkBank !== 'function') return null;
         const b = m.bank;
         if(!(b && b.which === which)) deny('词库「' + which + '」');
         return mkBank(which);
       },
-      banks:Banks,
+      banks:typeof Banks !== 'undefined' ? Banks : null,
       /* 自带样式：贴到宿主 head 上的一块，节点认得是谁家的，卸了包刷新就没了 */
       style:css => {
         let s = document.querySelector('style[data-pack="' + CSS.escape(id) + '"]');

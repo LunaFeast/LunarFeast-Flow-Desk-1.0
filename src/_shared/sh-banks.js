@@ -125,6 +125,10 @@ const Banks = {
     Bus.emit('bank-del', nm);
     return nm;
   },
+  /* 忘掉这一张词库缓存的那一份原文，下一次读重新去拿。
+     用户在界面上换成另一份文件之后要这一句（从前那一处是伸手进来清 `_base` 那一格私存 —— 那是穿过皮直接摸内脏）。
+     只碰这一格缓存：用户改过的那些分类（_ov）和开着的实例（_live）一个字不动。 */
+  forget(which){ this._base[which] = null; },
   async text0(which){
     const H2 = H();
     const rel = this.path(which);

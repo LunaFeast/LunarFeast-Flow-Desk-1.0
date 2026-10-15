@@ -95,7 +95,7 @@ async function pickBank(which){
   const txt = await (await h.getFile()).text();
   if(!/^【.+】$/m.test(txt)) throw new Error('这份文件里没有【分类】打头的行，不像词库');
   await ToolKv.put('banktxt.' + which, txt);
-  Banks._base[which] = null;
+  Banks.forget(which);
   await mkBank(which).reload();
   toast('词库已换成所选文件');
 }

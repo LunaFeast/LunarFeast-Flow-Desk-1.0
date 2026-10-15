@@ -231,6 +231,7 @@ const Storage = {
   }
 };
 
-/* mkBank / Banks 在 sh-banks.js 那一份里（外39 起它住 _wcustom/src/，和生成器、向导、改代码那三份同一棵）：WNW 和 FD 共用一份词库层，
-   本文件只提供 h() / toast() / State / Bus 这些外壳件。 */
+/* mkBank / Banks 在 sh-banks.js 那一份里（现住在 `src/_shared/`：2026-10-13 它从 `_wcustom/src/` 搬回来过一次，
+   理由是宿主那几处无守卫地读它；插件分离第 4 批 4.6 正在把这两处补成有守卫，搬去推演定制那一棵跟着第 4.6 / 第 5 批走）。
+   WNW 和 FD 共用一份词库层，本文件只提供 h() / toast() / State / Bus 这些外壳件。 */
 
