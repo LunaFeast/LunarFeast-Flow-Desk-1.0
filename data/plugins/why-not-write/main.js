@@ -1,15 +1,15 @@
-/* 为写启动卡 · 组件包 ES module
-   这张卡不再跳去另一张页面：为写的代码就在这一张页里（Flow-Desk 那份装配单把它整段收进了一层闭包），
-   卡只管把封面那一格递给它当容器。开起来 = ctx.wnw.start(容器)，关上 = ctx.wnw.stop()。
+/* 为写启动卡 · 插件包 ES module
+   这张卡不跳去另一张页面：为写那一棵的内核就在这一家自己那一格里（wnw-kernel.js，插件清单里
+   kernels 那一格点的名），开机由加载器注进来，卡只管把封面那一格递给它当容器。
+   开起来 = ctx.wnw.start(容器)，关上 = ctx.wnw.stop()。
    从前这里认一个「写作页面的地址」，用 iframe 把另一份文档嵌进来 —— 两条路各一套配色、各一套字体，
    缩放和外观层还得隔着窗口递，所以现在那条整段撤了：地址这一项、设置那一栏都跟着没了。 */
 export default {
   noTitle:true, minW:5, minH:2, def:{ w:7, h:2 },
   mount(body, ctx){
-    /* 内核没拼进这一版页面就直接说清楚，不给一个点了没动静的入口 */
-    if(!ctx.wnw || !ctx.wnw.available)
-      return ctx.mountLauncher(body, { action:'但这一版页面里没有写作内核，开不了', open(){} }, ctx);
-    /* 内核那份容器在这一家 mount 里留一份引用：卡片被卸掉、被「改代码」重载的时候，
+    /* 内核不在这一家就不该被加载起来（加载器注内核失败会当场把这一家立成错误卡），
+       所以这里不再摆一张"开不了"的卡 —— 空壳形态下界面上没有"缺失"这一说。 */
+    /* 内核那份容器在这一家 mount 里留一份引用：卡片被卸掉、被"改代码"重载的时候，
        封面还开着也要有人把内核拆干净（监听和落盘那条通道归它）。 */
     let host = null;
     const stop = () => { if(host && ctx.wnw.running){ ctx.wnw.stop(); host = null; } };

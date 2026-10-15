@@ -11,6 +11,9 @@
   "entry": [
     "main.js"
   ],
+  "kernels": [
+    "wnw-custom-kernel.js"
+  ],
   "order": 25,
   "icon": "⚙",
   "type": "widget",

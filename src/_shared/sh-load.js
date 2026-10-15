@@ -32,6 +32,7 @@ const PackLoader = {
   base:'plugins/',        /* 宿主报上来的前缀：Flow-Desk.exe 是 ../data/plugins/ 那种，开发服务器是 plugins/ 或 ../plugins/ */
   stamp:'',
   errs:new Map(),            /* 这一轮没加载起来的那几家：id → 错话 */
+  kernelsDone:new Set(),     /* 这一页里已经注过的内核：id/件名 —— 同一页不跑第二遍 */
   /* 每一家开机做好的那份插件上下文留着，宿主按需再递回去：
      卡片/停靠面板上的「设置」按钮要调 def.settings(ctx)，那份 ctx 就是这一份（带门的），不用现做一份新的。 */
   ctxs:new Map(),
@@ -83,6 +84,9 @@ const PackLoader = {
       dataKeys:m.dataKeys || [], kvKeys:m.kvKeys || [], sharedKeys:m.sharedKeys || [], stateKeys:m.stateKeys || [],
       desc:m.desc || '', bank:m.bank || null, assets:m.assets || {},
       type:m.type || 'widget', settings:!!m.settings, appChannels:m.appChannels || [],
+      /* 这一家自己带的内核（为写、推演组件定制、声笔输入法练习三家有）：按顺序在 import 那份定义表
+         之前一份份注进来。它们不是 ES module，是自己把把手挂到窗口上的那种一段（见各家 build-kernel）。 */
+      kernels:Array.isArray(m.kernels) ? m.kernels.map(String) : [],
       where:id + '/'
     });
   },
@@ -156,8 +160,34 @@ const PackLoader = {
     try{ Bus.emit('pack:reload', id); }catch(e){}
     return err ? { ok:false, msg:err } : { ok:true };
   },
+  /* ---------- 一家自己带的内核：注一份经典脚本，等它 onload ----------
+     内核不是 ES module，是自己把把手挂到窗口上的那一段（各家 build-kernel 的产物），
+     所以只能按 <script src> 请进来，不能 import()。这是全仓唯一"运行时拿代码"的第二条路，
+     跟 import() 同级：没有 eval、没有 new Function。
+     读不进来就抛，让外面那一层 fail(id) 立一张错误卡 —— 报的是"这一家的内核没读进来"，
+     不是"这一家没装"：没装的压根不在名单里，走不到这一步。 */
+  script(id, 件名){
+    return new Promise((resolve, reject) => {
+      const url = new URL(this.base + id + '/' + 件名 + '?v=' + this.stamp, document.baseURI).href;
+      const s = document.createElement('script');
+      s.src = url; s.async = false;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('这一家的内核没读进来：' + 件名));
+      document.head.appendChild(s);
+    });
+  },
   async one(id){
     const m = PACK_META[id];
+    /* 先注这一家自己带的内核，再请它那份定义表：定义表 mount 的时候要用 ctx.wnw 那类把手，
+       而把手是内核挂上来的 —— 顺序反了就变成"卡先到位、内核还在路上"。
+       同一份内核在一页里只注一次（kernelsDone 记着）：换内核要刷新这一页，
+       不在同一页里把同一段跑两遍 —— 跑两遍会把监听和统计挂成双份。 */
+    for(const k of (m.kernels || [])){
+      const 键 = id + '/' + k;
+      if(this.kernelsDone.has(键)) continue;
+      await this.script(id, k);
+      this.kernelsDone.add(键);
+    }
     const ent = (m.entry && m.entry[0]) || 'main.js';
     /* 说明符先转成绝对 URL 再 import：ES module 里不以 '/' './' '../' 打头的那串算裸名，
        开发那台 http 服务器报上来的前缀正好是 'plugins/' 这种光溜溜的写法，直接递进去会「无法解析模块说明符」。 */

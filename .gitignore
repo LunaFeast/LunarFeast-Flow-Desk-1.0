@@ -104,6 +104,12 @@ desktop.ini
 /data/plugins/*
 !/data/plugins/*/
 /data/plugins/**/*.zip
+#   三棵内核的产物铺进各家自己那一格（插件分离 第 1 批：内核不再拼进页面，改由加载器按各家
+#   插件清单里 kernels 那一格注进来）。跟第五、六节那两条同一待遇 —— 留源码又留产物就是两份同一个
+#   东西，所以主仓只留出它的那一段代码，产物自己长出来（生成页面那一趟顺手铺进这一格）。
+/data/plugins/why-not-write/wnw-kernel.js
+/data/plugins/wnw-custom/wnw-custom-kernel.js
+/data/plugins/singbit-input-practice/rp-kernel.js
 
 #   为写那一家 2026-10-13 回到插件这一格，和其余六家同一待遇（他定的）：那三件（启动卡 main.js、
 #   插件清单 manifest.json、封面 images\icon.svg）跟着进出厂那一层，所以这里不再盖它。

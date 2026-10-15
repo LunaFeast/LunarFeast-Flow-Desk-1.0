@@ -57,8 +57,7 @@ const FILES = walk('src', '').concat(walk('data/plugins', 'data/plugins'))
   /* 为写内核那颗产物是 src\_wnw\src\ 那二十份拼出来的一份复制（同步 GitHub 第 4 条之后由
      node src\_wnw\build-kernel.mjs 出，.gitignore 已经关了它）—— 扫它等于把同一批源码数两遍，
      每一节都会报双份。源码那二十份照旧逐个扫。 */
-  .filter(f => ['src/_wnw/wnw-kernel.js', 'src/_wcustom/wnw-custom-kernel.js']
-    .indexOf(f.rel.replace(/\\/g, '/')) < 0);
+  .filter(f => !/(^|\/)(wnw-kernel|wnw-custom-kernel|rp-kernel)\.js$/.test(f.rel.replace(/\\/g, '/')));
 const SRC = FILES.map(f => ({ ...f, text: fs.readFileSync(path.join(ROOT, f.rel), 'utf8') }));
 const rel = f => f.rel.replace(/\\/g, '/');
 const at = (f, line) => rel(f) + ':' + line;

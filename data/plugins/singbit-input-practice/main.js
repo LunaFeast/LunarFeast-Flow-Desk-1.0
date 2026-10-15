@@ -1,15 +1,14 @@
-/* 声笔输入法练习启动卡 · 组件包 ES module
+/* 声笔输入法练习启动卡 · 插件包 ES module
    和外壳只隔一份 ctx：卡怎么摆找 ctx.mountLauncher，内核怎么开找 ctx.rp。
-   这张卡不再跳去另一张页面：练习那一页的代码就在这一张页里（Flow-Desk 那份装配单把它整段收进了一层闭包，
-   见 _build/rp-kernel.mjs），卡只管把封面那一格递给它当容器。开起来 = ctx.rp.start(容器)，关上 = ctx.rp.stop()。
+   这张卡不跳去另一张页面：练习那一棵的内核就在这一家自己那一格里（rp-kernel.js，插件清单里
+   kernels 那一格点的名），生成页面那一趟铺进来、开机由加载器注进来，卡只管把封面那一格递给
+   它当容器。开起来 = ctx.rp.start(容器)，关上 = ctx.rp.stop()。
    从前这里认一个「练习页面的地址」，用 iframe 把另一份文档嵌进来 —— 两条路各一套配色、各一套字体，
    外观层还得隔着窗口递，所以现在那条整段撤了：地址这一项、齿轮里那一栏都跟着没了。 */
 export default {
   noTitle:true, minW:5, minH:2, def:{ w:7, h:2 },
   mount(body, ctx){
-    /* 内核没拼进这一版页面就直接说清楚，不给一个点了没动静的入口 */
-    if(!ctx.rp || !ctx.rp.available)
-      return ctx.mountLauncher(body, { action:'但这一版页面里没有练习内核，开不了', open(){} }, ctx);
+    /* 内核注不进来，这一家在加载那一趟就被立成错误卡了；这里不再摆一张"开不了"的卡 */
     /* 内核那份容器在这一家 mount 里留一份引用：卡片被卸掉、被「改代码」重载的时候，
        封面还开着也要有人把内核拆干净（挂在窗口上的监听、每秒那一趟统计才停得掉）。 */
     let host = null;

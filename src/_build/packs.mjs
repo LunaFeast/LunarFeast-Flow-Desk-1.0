@@ -187,6 +187,11 @@ export function resolve(dir, host, opt){
       if(f === undefined){ skipped.push({ id:p.id, why:'包里少了 ' + e }); continue; }
       segments.push({ name:'组件/' + p.id + '/' + e, src:f.toString('utf8'), pack:p.id });
     }
+    /* 这一家插件清单里点了的内核（kernels 那一格）照同一把尺核一遍：包里少了就报名字。
+       内核不在，这一家开机就立成错误卡 —— 与其到那时候才发现，不如发布这一趟就停下。 */
+    for(const k of (m.kernels || [])){
+      if(p.files.get(String(k)) === undefined) skipped.push({ id:p.id, why:'包里少了内核 ' + k });
+    }
     /* 包里除插件清单和代码之外的那些文件，就是这一家的出厂数据（词库、监听脚本、桥插件都算）。
        发布这一趟直接读内存，不落临时文件；哪家要压进 zip、哪家要解到 data\plugins\ 上，各挑各的。
        文本的顺手带一份 text，二进制的（桥插件那种 dll）只带 buf，别按 utf8 拆坏了。 */

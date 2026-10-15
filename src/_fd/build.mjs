@@ -38,7 +38,7 @@ if(!assertClean(path.join(TREE.data, 'plugins'), '生成 Flow-Desk 页面')) pro
    fd5-load.js 排在 fd8 之后：它要交上去的 DATA_PRE / ToolKv 都在那儿定义；
    从前这里还排着一颗 fd7-help.js，为的是帮助文档能在启动流程跑起来之前挂到顶栏 —— 文档整份撤了（外44 六），它跟着摘掉 */
 const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-packs.js','../_shared/sh-load.js','../_shared/sh-color.js','../_shared/sh-ico.js','../_shared/sh-font.js','fd2-store.js','fd3-shell.js','fd3-lib.js','fd11-cards.js','fd12-rime-colors.js','fd13-colour-v1.js','fd9-title.js','fd4-builtin.js','fd8-tools.js','fd5-load.js',
-  '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js','../_wcustom/wnw-custom-kernel.js',
+  '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js',
   '../_shared/sh-ttml.js',
   '../_shared/sh-mus.js',
   '../_shared/sh-icode.js',
@@ -47,15 +47,21 @@ const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-p
 /* boot 排最后：加载器、注册表、外壳底子都站好了才开机 */
 const BOOT = 'fd6-boot.js';
 
-/* ---------- 为写内核：这一棵读一颗产物，不再认它的源码 ----------
-   同步 GitHub 第 4 条（2026-10-09 定「为写分离」）：从前这里抓着 src\_wnw\src\ 那二十份源码，
-   按名单拼一层闭包贴进来 —— 公开仓库要打得出一张页就必须留着为写的全部源码。
-   现在那一趟归私有那一棵自己跑（node src\_wnw\build-kernel.mjs → src\_wnw\wnw-kernel.js），
-   这边只读那颗产物，连名单都不再认。产物本身也进了 .gitignore：仓库里既没有源码也没有整包。
-   闭包那层道理、名字为什么会撞、顺序为什么不能重排，全写在 build-kernel.mjs 开头。
-   这一棵只认这一颗产物的路径，不再认 src\_wnw\src\ 里的任何文件名。 */
-const KERNEL = path.join(path.dirname(ROOT), '_wnw', 'wnw-kernel.js');
-const 不带内核 = process.argv.indexOf('--无内核') >= 0;
+/* ---------- 三棵内核：不进页面，落到各家自己那一格（插件分离 第 1 批）----------
+   从前这一趟把为写、推演组件定制、声笔输入法练习三家的产物整段贴进页面，产物里因此永远带着
+   它们的代码 —— 那是「包不夹带插件」这条要拆的第一处。现在改成：各家的内核产物铺到
+   data\plugins\<id>\ 底下，开机由加载器（_shared/sh-load.js）按各家插件清单里 kernels 那一格
+   一份份注进来；页面那一张里再没有一字节插件代码。
+   源码那一头照旧：为写那二十几份归 src\_wnw\build-kernel.mjs、定制那三份归 src\_wcustom\build-kernel.mjs
+   自己出产物，这一棵只认那三颗产物的路径，不认它们源码里的任何文件名。
+   产物落在 data\plugins\ 底下这三份也进 .gitignore：仓库里既没有源码也没有整包。 */
+const 内核去处 = [
+  [path.join(path.dirname(ROOT), '_wnw', 'wnw-kernel.js'), 'why-not-write', 'wnw-kernel.js'],
+  [path.join(path.dirname(ROOT), '_wcustom', 'wnw-custom-kernel.js'), 'wnw-custom', 'wnw-custom-kernel.js'],
+];
+/* 声笔练习那一棵没有落盘的产物：源码（p1..p6 加底样式）由 _build/rp-kernel.mjs 现场收拢成一段，
+   从前是贴进页面，现在写成这一家自己那一格里的一份文件。 */
+const 声笔去处 = ['singbit-input-practice', 'rp-kernel.js'];
 
 /* 全页唯一的一串号和那一张改名表：写在最前面，后面每一段（含为写、声笔练习那两层闭包）
    往外读到的都是这一份。用 var 不用 const —— 拼进同一个作用域的段里万一有同名声明，
@@ -86,20 +92,31 @@ function add(name, src){
    （见 _shared/sh-icode.js）。 */
 add('icode-src', icodeEmbed());
 for(const p of parts) add(p, fs.readFileSync(p.startsWith('../') ? path.join(ROOT, p) : path.join(ROOT, 'src', p), 'utf8'));
-/* 为写那段排在 boot 之前：它的代码一求值就把 WNW_KERNEL 挂成全局，宿主开机那一趟才递得出这份上下文 */
-if(fs.existsSync(KERNEL)) add('wnw-kernel', fs.readFileSync(KERNEL, 'utf8'));
-else if(不带内核) console.log('这一版不带写作内核：那张启动卡会自己说「但这一版页面里没有写作内核，开不了」');
-else{
-  console.error('写作内核那颗产物不在：' + KERNEL
-    + '\n  它由这一棵自己出：node src\\_wnw\\build-kernel.mjs'
-    + '\n  确实要打一版没有为写的页面（比如只发外壳给别人看）：加 --无内核');
-  process.exit(1);
+/* 三棵内核铺进各家自己那一格（不进页面）。缺哪一颗就停下报名字与出它的命令 ——
+   这是开发那一头的错，不是界面上的话：界面上从此不再有「这一版没有某某内核」那一句。 */
+function 铺内核(从, 哪家, 件名, 怎么出){
+  const KDIR = path.join(TREE.data, 'plugins', 哪家);
+  const KOUT = path.join(KDIR, 件名);
+  let 文 = null;
+  if(从){
+    if(!fs.existsSync(从)){
+      console.error('内核产物不在：' + 从 + '\n  它由这一句出：' + 怎么出);
+      process.exit(1);
+    }
+    文 = fs.readFileSync(从);
+  } else 文 = Buffer.from(怎么出, 'utf8');
+  fs.mkdirSync(KDIR, { recursive:true });
+  fs.writeFileSync(KOUT, 文);
+  return KOUT;
 }
-/* 声笔输入法练习（#343 G4）：从前那一张独立页面（rp-base.html + p1..p6 灌成一份 html，再用 iframe 嵌进来）
-   同样剥成这一张页里的一层闭包。底样式、封面骨架、六份代码全部在构建期由 _build/rp-kernel.mjs 收拢，
-   选择器改挂 .rp-root、递给它的 document 是容器那一份影子；往外只交一份 window.RP_KERNEL。
-   和为写那段同一个位置：排在 boot 之前，宿主开机那一趟才递得出这份上下文。 */
-add('rp-kernel', rpKernelSource({ version:版 }));
+const 铺好的 = [];
+for(const [从, 哪家, 件名] of 内核去处){
+  const 怎么出 = 哪家 === 'why-not-write' ? 'node src\\_wnw\\build-kernel.mjs' : 'node src\\_wcustom\\build-kernel.mjs';
+  铺好的.push(铺内核(从, 哪家, 件名, 怎么出));
+}
+/* 声笔练习那一家没有落盘的产物：源码（p1..p6 加那张底样式）由 _build/rp-kernel.mjs 现场收拢成一段。
+   从前这段贴进页面，现在写成这一家自己那一格里的一份文件 —— 同一个形状，只是换个住处。 */
+铺好的.push(铺内核(null, 声笔去处[0], 声笔去处[1], rpKernelSource({ version:版 })));
 add(BOOT, fs.readFileSync(path.join(ROOT, 'src', BOOT), 'utf8'));
 
 const tpl = fs.readFileSync(path.join(ROOT, 'template.html'), 'utf8');

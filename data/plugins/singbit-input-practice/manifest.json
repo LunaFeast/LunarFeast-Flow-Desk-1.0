@@ -11,6 +11,9 @@
   "entry": [
     "main.js"
   ],
+  "kernels": [
+    "rp-kernel.js"
+  ],
   "order": 10,
   "icon": "⌨",
   "type": "widget",

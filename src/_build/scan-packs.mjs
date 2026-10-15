@@ -130,22 +130,37 @@ function scanFile(id, file, src){
   return hits;
 }
 
-/* 扫 data\plugins\ 这一层：返回 [{ id, file, line, name, why, text }] */
+/* 扫 data\plugins\ 这一层：返回 [{ id, file, line, name, why, text }]
+   各家插件清单里 kernels 那一格点名的文件**不在这一把尺的射程里** —— 那是产物，
+   由那一棵自己的 build-kernel 从它的源码拼出来（为写那二十几份在 src\_wnw\src\、定制那三份在
+   src\_wcustom\src\、声笔那六份在 src\_build\p1.js…p6.js）。拿尺量产物等于把同一份源码量两遍，
+   而且产物里那些名字是闭包拼出来的形状，改它得改源码。
+   这些源码今天还没收到 ctx 那套通道上（第 4 批的活），所以这一趟是「先不量」，不是「量过了」：
+   跳过几份、都是谁家的，一并报出来，别让它悄悄变成一条假绿。 */
 export function scanPacks(componentsDir){
   const hits = [];
+  跳过.length = 0;
   if(!fs.existsSync(componentsDir)) return hits;
   for(const d of fs.readdirSync(componentsDir)){
     const dir = path.join(componentsDir, d);
     let st = null;
     try{ st = fs.statSync(dir); }catch(e){ continue; }
     if(!st.isDirectory()) continue;
+    let 内核 = [];
+    try{
+      const m = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
+      内核 = Array.isArray(m.kernels) ? m.kernels.map(String) : [];
+    }catch(e){}
     for(const ent of fs.readdirSync(dir)){
       if(!/\.js$/.test(ent)) continue;
+      if(内核.indexOf(ent) >= 0){ 跳过.push(d + '/' + ent); continue; }
       try{ hits.push(...scanFile(d, ent, fs.readFileSync(path.join(dir, ent), 'utf8'))); }catch(e){}
     }
   }
   return hits;
 }
+/* 最近一趟扫掉了哪几份产物（给 assertClean 与命令行报数用） */
+export const 跳过 = [];
 
 export function report(hits){
   for(const h of hits) console.error('组件「' + h.id + '」越界 · ' + h.file + ':' + h.line +
@@ -158,6 +173,8 @@ export function assertClean(componentsDir, tag){
   if(hits.length){ report(hits); console.error('插件越界扫描 · ' + hits.length +
     ' 处，' + (tag || '生成页面') + '停下：把这些改成 ctx 上的通道再跑。'); return false; }
   console.log('插件越界扫描 · 通过（' + (tag || '') + '）：' + componentsDir);
+  /* 跳过了哪几份要当场说出来 —— 不说就是假绿 */
+  if(跳过.length) console.log('  这一把尺没量那 ' + 跳过.length + ' 份（各家插件清单 kernels 点名的内核产物，源码归那一棵自己）：' + 跳过.join('、'));
   return true;
 }
 

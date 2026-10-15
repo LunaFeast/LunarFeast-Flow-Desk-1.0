@@ -50,7 +50,7 @@ Z.题('四、五棵源码树该扫的一份不漏，那道口关得有理');
     else if(/\.(js|cjs)$/.test(e.name) && !/\.code\.js$/.test(e.name)) 收.push(path.relative(TREE, path.join(d, e.name)).replace(/\\/g,'/'));
   } };
   for(const d of ['src/pack','src/_fd','src/_wnw','src/_shared','data/plugins']) walk(path.join(TREE, d));
-  const 该扫 = 收.filter(x => !/uitext\.cjs|_wnw\/wnw-kernel\.js/.test(x));
+  const 该扫 = 收.filter(x => !/uitext\.cjs|(^|\/)(wnw-kernel|wnw-custom-kernel|rp-kernel)\.js$/.test(x));
   const 漏 = 该扫.filter(x => !文件.includes(x));
   Z.判('4 五棵树里每一份 .js / .cjs 都进了扫描名单（除了界面文字那台生成器自己和为写内核那颗产物）：漏一份就是那一页的字进不了清单',
     漏.length === 0, 漏);

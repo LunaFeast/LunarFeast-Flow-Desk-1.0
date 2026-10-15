@@ -112,7 +112,7 @@ head('二、四棵源码树里没被生成脚本点名的 .js（拼不进产物�
   const 有 = (...p) => exists(path.join(ROOT, ...p));
   /* 一颗出包脚本里点的名 = 那一棵的源码名单。两颗产物自己的名字、还有 '.js' 那种后缀字面量都不算源码。 */
   const 名单 = s => new Set([...s.matchAll(/['"]([^'"]*?\.js)['"]/g)].map(x => path.basename(x[1]))
-    .filter(n => n !== 'wnw-kernel.js' && n !== 'wnw-custom-kernel.js' && n.length > 3));
+    .filter(n => n !== 'wnw-kernel.js' && n !== 'wnw-custom-kernel.js' && n !== 'rp-kernel.js' && n.length > 3));
   const named = 名单(读('src', '_fd', 'build.mjs'));
   /* 为写那一棵的名单不归 build.mjs 了（同步 GitHub 第 4 条「为写分离」），推演组件定制那一棵同理
      （外39「推演组件定制本身也要分离出来」）：公开这棵只读一颗产物，名单在它们各自的出包脚本里 ——

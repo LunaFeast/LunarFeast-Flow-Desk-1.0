@@ -4,9 +4,12 @@
    设置、明文存储、封面、对话框，还有只有 FD 有的那几个小工具（重画桌面、重画时钟）。
    这一段排在 fd8-tools.js 后面：Data_PRE / ToolKv 都在那儿定义；也排在 _shared/sh-load.js 后面（PackCtx 在那儿）。
    ============================================================ */
-const WNW_MISSING = '写作内核还没拼进这一版页面';
-const RP_MISSING = '声笔输入法练习内核还没拼进这一版页面';
-const WCUSTOM_MISSING = '推演组件定制的内核还没拼进这一版页面';
+/* 三句都是"这一家的内核没读进来"那一类真错（插件清单点了 kernels、文件却读不到），
+   不是"这一家没装"：没装的那一家压根不在名单里，走不到这一步，界面上也就没有它 ——
+   空壳形态下不许有任何"缺失"提示（#30）。 */
+const WNW_MISSING = '为写的内核没读进来';
+const RP_MISSING = '声笔输入法练习的内核没读进来';
+const WCUSTOM_MISSING = '推演组件定制的内核没读进来';
 PackCtx.parts({
   kv:ToolKv,
   settings:Settings,

@@ -11,6 +11,9 @@
   "entry": [
     "main.js"
   ],
+  "kernels": [
+    "wnw-kernel.js"
+  ],
   "order": 20,
   "icon": "✎",
   "type": "widget",

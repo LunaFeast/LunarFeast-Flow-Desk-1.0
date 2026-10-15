@@ -632,7 +632,7 @@ function treeOf(from){
    uitext.cjs 是这一份清单的生成器本身：它嘴里念的是"清单怎么写的"说明文字，
    不是界面上的字，扫进去就成了清单里的脏行（出处那一栏还会是个问号）。 */
 const SKIP_REL = new Set();
-const SKIP_NAME = new Set(['uitext.cjs', 'wnw-kernel.js', 'wnw-custom-kernel.js']);
+const SKIP_NAME = new Set(['uitext.cjs', 'wnw-kernel.js', 'wnw-custom-kernel.js', 'rp-kernel.js']);
 /* 只认 .js / .cjs，不跟着收 .mjs —— 这是量过的，不是漏的：
    被扫的那几棵树里每一份 .mjs 都是敲命令行跑的构建脚本（生成页面、本地那台服务器、量色表、
    出内核、铺出厂镜像、出发布物），嘴里念的是打包进度，界面上一个字都不显示；
