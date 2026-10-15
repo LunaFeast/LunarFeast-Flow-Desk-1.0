@@ -3,7 +3,9 @@
    撤掉 Electron 那一步把它转成源码 —— 转之前量过，盘上这一份与生成器产出的一字不差。
    里面那张「哪颗命令收哪几栏」的表（下面的 参表）由每一趟自检对着壳里的声明量：
    判据在 src\tools\probes\gate-bridge46.mjs，它自己独立读 Rust 那一头，不抄这里的写法。
-   壳里已搬通的命令：62 颗 · 桥里请壳的地方：66 处 */
+   量出来的三颗数（2026-10-16 现数，尺子在 gate-bridge46 那一台）：壳里注册的命令 63 颗 ·
+   桥里请的通道 62 颗（全在注册单上，多的那一颗是建目录 —— 写文件顺带的一栏，页面不单独请）·
+   桥里收的消息 7 颗 */
 'use strict';
 /* ============================================================
    Electron 里没有 File System Access API，而 FD/WNW 的"选文件、选目录、写明文"
@@ -26,7 +28,7 @@ function 拿壳(){
 const 请壳 = (n, 包) => 拿壳().core.invoke(n, 包);
 const 听壳 = (n, 手) => { const 壳 = window.__TAURI__;
   return (壳 && 壳.event) ? 壳.event.listen(n, 手) : Promise.reject(new Error('壳没给事件那一层')); };
-const 参表 = {"backup_roots":[],"backup_run":["cfg"],"backup_last":["dest"],"backup_check":["cfg"],"cfg_close_get":[],"cfg_close_set":["mode"],"cfg_rime_get":[],"cfg_rime_set":["p"],"code_cat_rename":["from","to"],"comp_read":["id","rel"],"comp_write":["id","rel","text"],"comp_delete":["id"],"data_dir":[],"data_read":["rel"],"data_write":["rel","text"],"data_list":[],"data_wipe":[],"lib_read":["name"],"lib_write":["name","text"],"fs_read":["p"],"fs_read_range":["p","start","length"],"fs_stat":["p"],"fs_write":["p","data","mkdir"],"fs_append":["p","text"],"fs_mkdir":["p"],"fs_unlink":["p","recursive"],"fs_list":["p"],"fs_tree":["p","exts"],"fs_read_text":["p"],"fs_resolve":["p"],"img_peek":["p","maxw"],"img_open":["p"],"icons_list":[],"font_list":["force"],"about_info":[],"ming_system":[],"ocr_swatch":["p"],"media_state":[],"media_hold":[],"media_release":[],"media_cmd":["msg"],"media_players":[],"media_pin":["target"],"media_dir_pick":[],"media_dir_set":["p"],"media_flag":["k","v"],"media_bridge":[],"pack_list":[],"pack_file":["id","rel"],"pack_set":["ids"],"pack_import":["payload"],"pack_wipe":["files","shared"],"fsa_pick_files":["opts"],"fsa_pick_dir":["opts"],"sys_rebuild":[],"vol_get":[],"vol_set":["v"],"vol_mute":["mode"],"web_title":["url"],"win_ctl":["act"],"app_restart":[],"win_close_answer":["action"]};
+const 参表 = {"backup_roots":[],"backup_run":["cfg"],"backup_last":["dest"],"backup_check":["cfg"],"cfg_close_get":[],"cfg_close_set":["mode"],"cfg_rime_get":[],"cfg_rime_set":["p"],"code_cat_rename":["from","to"],"comp_read":["id","rel"],"comp_write":["id","rel","text"],"comp_delete":["id"],"box_inspect":["id"],"data_dir":[],"data_read":["rel"],"data_write":["rel","text"],"data_list":[],"data_wipe":[],"lib_read":["name"],"lib_write":["name","text"],"fs_read":["p"],"fs_read_range":["p","start","length"],"fs_stat":["p"],"fs_write":["p","data","mkdir"],"fs_append":["p","text"],"fs_mkdir":["p"],"fs_unlink":["p","recursive"],"fs_list":["p"],"fs_tree":["p","exts"],"fs_read_text":["p"],"fs_resolve":["p"],"img_peek":["p","maxw"],"img_open":["p"],"icons_list":[],"font_list":["force"],"about_info":[],"ming_system":[],"ocr_swatch":["p"],"media_state":[],"media_hold":[],"media_release":[],"media_cmd":["msg"],"media_players":[],"media_pin":["target"],"media_dir_pick":[],"media_dir_set":["p"],"media_flag":["k","v"],"media_bridge":[],"pack_list":[],"pack_file":["id","rel"],"pack_set":["ids"],"pack_import":["payload"],"pack_wipe":["files","shared"],"fsa_pick_files":["opts"],"fsa_pick_dir":["opts"],"sys_rebuild":[],"vol_get":[],"vol_set":["v"],"vol_mute":["mode"],"web_title":["url"],"win_ctl":["act"],"app_restart":[],"win_close_answer":["action"]};
 const 名换算 = n => n.replace(/:/g, '_').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 const 对不上 = (n, 有, 递) => {
   if(递 <= 有) return true;
@@ -455,6 +457,11 @@ window.FD_APP = {
     catch(e){ return { ok:false, msg:'插件文件写不进去：' + ((e && e.message) || e) }; } },
   async compDelete(id){ try{ return await ipcRenderer.invoke('comp:delete', String(id || '')); }
     catch(e){ return { ok:false, msg:'这一格删不掉：' + ((e && e.message) || e) }; } },
+  /* ---------- 自有容器那一份包（.fdpkg）：整包查一遍，把信息段与逐块结果报回页面 ----------
+     插件分离第 3 批那三种时机（开机自检、加载那一下、正用着）与插件管理那一屏吃的都是这一颗。
+     读不读得动、哪一块对不上号、要的主程序比这台高 —— 那七句话由壳里那层判断给，这里不改写。 */
+  async boxInspect(id){ try{ return await ipcRenderer.invoke('box:inspect', String(id || '')); }
+    catch(e){ return { ok:false, msg:'这一份包读不动：' + ((e && e.message) || e) }; } },
   /* 生成页面进度：主进程每开一步、构建脚本每出一行都推一句过来（页面上那条进度条吃这个） */
   onRebuildStep(fn){
     const wrap = (e, s) => { try{ fn(s); }catch(err){} };

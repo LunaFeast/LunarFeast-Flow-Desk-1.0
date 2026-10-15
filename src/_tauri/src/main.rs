@@ -34,6 +34,9 @@
         解开的文件夹整格抄进来），同名一句退回、绝不动他原有的包；
         清数据那一颗只动用户目录以内与数据层根底下那两处，插件那一格与名单永远留着，一颗都不许多删。
         摊包走的还是共用的 fd_core::zip_pack —— 壳里到现在也只有那一颗解包器）。
+     ⑫ 自有容器那一份包（插件分离第 3 批 3.3 甲：box:inspect 一颗；四段的读法、字段齐不齐、逐块哈希、
+        这台读不读得动、那七句各是各的报话全在 fd_core::pack_box，动手在 tauri_bind::box_cmds。
+        只认 data\plugins\<包名>.fdpkg 那一份字节，越出去一律不读；大小那道闸借 pack:file 那一把 24MB 的尺）。
    命令名这一头有个硬限制：Rust 函数名就是页面上 invoke 的那个串，里面不能有冒号，
    所以现有主进程的「fs:read」这一类写法在壳里落成「fs_read」，冒号那道换算放在还没写的 JS 桥上做 ——
    页面上请壳的那串字一个字都不改（他定的「前端原样保留」）。
@@ -118,6 +121,10 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             shell_info,
+            /* 自有容器那一份包：读回来查一遍（插件分离第 3 批 3.3 甲）。
+               判断（四段的读法、字段齐不齐、逐块哈希、这台读不读得动、那七句报话）全在 fd_core::pack_box，
+               动手（只认 data\plugins\<包名>.fdpkg 那一份字节）在 tauri_bind::box_cmds。 */
+            tauri_bind::box_cmds::box_inspect,
             tauri_bind::fs_cmds::fs_read,
             tauri_bind::fs_cmds::fs_read_range,
             tauri_bind::fs_cmds::fs_stat,

@@ -34,8 +34,13 @@ const 命令 = rd('src/_tauri/src/tauri_bind/fs_cmds.rs');
 const 壳里 = p => rd('src/_tauri/' + p);
 const 窗 = 壳里('src/tauri_bind/win_cmds.rs');
 const 清单 = 壳里('Cargo.toml');
-/* 纯判断那一格整格扫：往后每一颗判断都落在这格，规矩一起管住，不用一颗补一条 */
+/* 纯判断那一格整格扫：往后每一颗判断都落在这格，规矩一起管住，不用一颗补一条。
+   测试段先摘掉：那一段里为了列"这一格不许出现哪几颗"，把禁字写成了字面串（2026-10-16 pack_box 那颗自扫的
+   测试就是这么把自己判红的）—— 禁的是判断那一段真去摸磁盘、真去认壳，不是测试不许提到它们。 */
 const 判断 = fs.readdirSync(path.join(壳根, 'src', 'core')).filter(f => f.endsWith('.rs'))
+  .map(f => rd('src/_tauri/src/core/' + f).split('#[cfg(test)]')[0]).join('\n');
+/* 连着测试段的那一份：只给"这一格里真有几颗测试在跑"那两条判据数数用 */
+const 全格 = fs.readdirSync(path.join(壳根, 'src', 'core')).filter(f => f.endsWith('.rs'))
   .map(f => rd('src/_tauri/src/core/' + f)).join('\n');
 const 脚本 = rd('src/_tauri/build.mjs');
 const 占位页 = rd('src/_tauri/ui/index.html');
@@ -79,8 +84,8 @@ for(const c of 通道)
 台.判('注册单上第一颗是报版本与树位的那一颗', 壳.includes('generate_handler![') && 壳.includes('shell_info'));
 
 台.题('五、纯判断那一格有测试在跑，脚本能单独跑它');
-台.数('纯判断那一格里几颗测试', (判断.match(/#\[test\]/g) || []).length);
-台.判('测试不少于五颗', (判断.match(/#\[test\]/g) || []).length >= 5);
+台.数('纯判断那一格里几颗测试', (全格.match(/#\[test\]/g) || []).length);
+台.判('测试不少于五颗', (全格.match(/#\[test\]/g) || []).length >= 5);
 台.判('构建脚本认 --测 这一档', 脚本.includes("argv.includes('--测')") && 脚本.includes("TEST ? 'test'"));
 台.判('跑测试那一趟不带 --release（不产壳、不占地方），--debug 那一档也真不传 --release', /CHECK \|\| TEST \|\| DEBUG \? \[/.test(脚本));
 台.判('跑完测试就收尾，不去找那颗 exe', /if\(TEST\)/.test(脚本));
@@ -155,7 +160,7 @@ for(const 件 of ['win:state', 'fd:close-ask'])
 台.题('十一、窗口那一点纯判断有测试在跑，托盘那一档 feature 开着');
 台.判('纯判断那一格里有 win_policy（缩放档位在那儿，带测试）',
   /win_policy/.test(判断) && fs.existsSync(path.join(壳根, 'src', 'core', 'win_policy.rs'))
-  && /zoom_step/.test(判断) && (判断.match(/#\[test\]/g) || []).length >= 8);
+  && /zoom_step/.test(判断) && (全格.match(/#\[test\]/g) || []).length >= 8);
 台.判('缩放档位夹在 0.5 到 2 之间（那两道夹住写在纯判断那一格）',
   /0\.5/.test(判断) && /2\.0/.test(判断));
 台.判('托盘那一档 feature 开着（关窗口那张框「收进托盘」的落点）',

@@ -72,4 +72,9 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 # 拆包只有 fd_core::zip_pack 那一颗，目录() 与 取一份() 两头共用）。
 # 只开默认那两档（rust_backend + runtime_detection）：纯 Rust 的那一款，不链 C 的 zlib。
 flate2 = "1"
+# 自有容器（.fdpkg）逐块核"这一块与包上写的那个数对得上没有"要 SHA-256：
+# 走图里已经带着的这一颗（wry → sha2 那条链上本来就挂着它，缓存里就是 0.10.9 这一版，不另下一套东西）。
+# 为什么不在壳里自己写：先自己写了一版，三句已知向量一句都没对上一字 —— 这一颗是"包有没有被改过"那把尺，
+# 尺错了比没尺更糟（判据钉在 fd_core::pack_box 那三道向量上）。
+sha2 = "0.10"
 tauri-plugin-single-instance = "2.5.3"

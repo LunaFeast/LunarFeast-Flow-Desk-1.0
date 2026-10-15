@@ -19,6 +19,7 @@ pub mod log_line;
 pub mod media_rule;
 pub mod ming_mode;
 pub mod ocr_boxes;
+pub mod pack_box;
 pub mod pack_rule;
 pub mod page_pick;
 pub mod perm_rule;

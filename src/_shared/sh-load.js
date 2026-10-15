@@ -422,7 +422,7 @@ const PackLoader = {
    ============================================================ */
 const APP_DENY = ['packList', 'packSet', 'packFile', 'packImport', 'packWipe', 'rebuild',
   'onRebuildDone', 'onRebuildStep',
-  'compRead', 'compWrite', 'compDelete',
+  'compRead', 'compWrite', 'compDelete', 'boxInspect',
   'readPageFile', 'writePageFile', 'writePageBytes', 'appendPageFile', 'pageFileExists',
   'delPageFile', 'pagePath', 'pathOf',
   'dataRead', 'dataWrite', 'dataList', 'dataWipe', 'aboutInfo',

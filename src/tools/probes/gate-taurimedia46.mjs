@@ -569,10 +569,11 @@ function 依赖名(源) {
   return [...(止 < 0 ? 后 : 后.slice(0, 止)).matchAll(/^([A-Za-z0-9_.-]+)[ \t]*=/gm)].map(m => m[1]);
 }
 台.数('Cargo.toml 里 [dependencies] 那一格的 crate', 依赖名(清单).join(' '));
-台.判('依赖名单还是那一串（批六登记的那一颗 flate2 是 zip_pack 本来就写死要用的解压件，png → flate2 那条链上早就带着它，不另下一套；批十加的那一颗 tauri-plugin-single-instance 是官方插件、走"只许开一个程序"那一条，同批登记进 THIRD-PARTY.txt）',
-  JSON.stringify(依赖名(清单)) === JSON.stringify(['tauri', 'serde', 'serde_json', 'tauri-plugin-dialog', 'windows', 'tokio', 'chrono', 'flate2', 'tauri-plugin-single-instance'])
+台.判('依赖名单还是那一串（批六登记的那一颗 flate2 是 zip_pack 本来就写死要用的解压件，png → flate2 那条链上早就带着它，不另下一套；批十加的那一颗 tauri-plugin-single-instance 是官方插件、走"只许开一个程序"那一条，同批登记进 THIRD-PARTY.txt；插件分离第 3 批 3.2 登记的那一颗 sha2 是自有容器逐块核"这一块没被改过"的尺，wry → sha2 那条链上本来就带着它、离线缓存里就是 0.10.9 这一版，与 flate2 同一档：不进 THIRD-PARTY.txt，也不许多下一套）',
+  JSON.stringify(依赖名(清单)) === JSON.stringify(['tauri', 'serde', 'serde_json', 'tauri-plugin-dialog', 'windows', 'tokio', 'chrono', 'flate2', 'sha2', 'tauri-plugin-single-instance'])
   && 清单.includes('windows = { version = "0.62"'))
-  && rd('THIRD-PARTY.txt').includes('tauri-plugin-single-instance');
+  && rd('THIRD-PARTY.txt').includes('tauri-plugin-single-instance') && !rd('THIRD-PARTY.txt').includes('flate2')
+  && !rd('THIRD-PARTY.txt').includes('sha2');
 
 台.题('八、没搬齐 / 做不全等的那几处，代码里看得见这句话（不许哪天删了注释当成已经搬齐）');
 台.判('音量那一路：没挂 RegisterControlChangeNotify 那颗 COM 回调，这一条写在文件顶上',
@@ -614,11 +615,16 @@ const 全测试 = fs.readdirSync(path.join(ROOT, 'src', '_tauri', 'src', 'core')
   .join('').match(/#\[test\]/g) || [];
 台.数('全仓纯判断那一格的测试总数', 全测试.length + ' 颗');
 台.判('总数比上一批的 107 颗多了（不许多加不减，也不许把旧的撤掉）', 全测试.length > 107);
-台.判('跑测试那一道此刻是全绿 232 颗零警告（212 是批六第二步 → 219 是运行日志那 7 颗 → 220 是批七补本地协议类型表那 1 颗 → 233 是批九网格吸附那 13 颗 → 234 是议题 16 补 MusicBee 那一行明文那 1 颗 → 235 是议题 17、18 闪退那一处：中文目录名不许按字节切 → 233 是插件分离第 2 批 2.5：页面上那颗「改代码」与那颗「恢复出厂」撤了，壳里 comp:list / comp:restore / comp:factory 三颗跟着撤，它们那两道测试一起没了 → 232 是第 2 批 2.6：data\\plugins-factory\\ 那一格整格撤，「这一家在原厂那一格的哪一格」那道判断与它那道测试一起没了 —— 两处此刻同一个现场），build.mjs --测 的数与本道同一现场',
-  全测试.length === 232);
+台.判('跑测试那一道此刻是全绿 251 颗零警告（212 是批六第二步 → 219 是运行日志那 7 颗 → 220 是批七补本地协议类型表那 1 颗 → 233 是批九网格吸附那 13 颗 → 234 是议题 16 补 MusicBee 那一行明文那 1 颗 → 235 是议题 17、18 闪退那一处：中文目录名不许按字节切 → 233 是插件分离第 2 批 2.5：页面上那颗「改代码」与那颗「恢复出厂」撤了，壳里 comp:list / comp:restore / comp:factory 三颗跟着撤，它们那两道测试一起没了 → 232 是第 2 批 2.6：data\\plugins-factory\\ 那一格整格撤，「这一家在原厂那一格的哪一格」那道判断与它那道测试一起没了 → 251 是第 3 批 3.2：自有容器那一格 pack_box.rs 添的 19 颗（三句 SHA-256 已知向量、号怎么比、文件头与那两位标志、信息段字段齐不齐与路径干不干净、kernels 与 files 咬得上、块布局、整包过检标成用户插件、改一个字节报的是哪一块、少一块报短了不许顺带报哈希、要的主程序更高、带签名的这台读不了、钥匙表只加不减、那七句报话各是各的措辞、这一格不认识壳也不碰磁盘）；这一格 251 颗，加上动手那一格 box_cmds.rs 回话那 3 颗（好包十栏、坏一块报的是哪一块、读不到只回两栏），build.mjs --测 此刻 254 颗零警告 —— 两处此刻同一个现场',
+  全测试.length === 251);
 台.判('纯判断那一格每颗 pub fn 都有人叫（动手那两层或测试段里叫到，不留死口）',
   [...纯.matchAll(/^pub fn ([A-Za-z0-9_\u4e00-\u9fff]+)\(/gm)].map(m => m[1])
-    .every(名 => 两层.includes('判::' + 名) || 测试段.includes(名 + '(')));
+    .every(名 => {
+      /* 两个同名不同格：pack_box 那两处的签名段字段名，与 pack_rule 读包用的那两颗是两回事，点名列出来 */
+      if(名 === '读头' || 名 === '折信息段')
+        return /pack_box::(读头|折信息段)/.test(两层) || 测试段.includes(名 + '(');
+      return 两层.includes('判::' + 名) || 测试段.includes(名 + '(');
+    }));
 台.判('动磁盘与动系统的那一手在第三层（那两本里真有 std::fs 与 windows 那套）',
   动.includes('std::fs::write') && 声.includes('CoCreateInstance') && 动.includes('use windows::Media::Control'));
 

@@ -2,6 +2,7 @@
 /* 四层里的第三层：跟壳、跟系统打交道的那一层 —— 命令注册、文件读写、对话框、窗口、持久化。
    判断在 core 那一层做完，这一层只照判断去动手。 */
 pub mod backup_cmds;
+pub mod box_cmds;
 pub mod cfg_cmds;
 pub mod code_cmds;
 pub mod comp_cmds;
