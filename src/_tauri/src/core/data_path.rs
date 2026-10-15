@@ -96,9 +96,10 @@ pub fn 库名在册(名: &str) -> bool {
 /// 一键清理那张字条的名字：落在数据层那一格里（主进程那边 WIPE_FILE，121 行）
 pub const 字条名: &str = "wipe-user.json";
 
-/// 清理那一趟留着的几格（主进程那边 WIPE_KEEP，122 行）：插件那一格是程序不是数据、
-/// 原版插件那一格是导入时留的底、日志、搬家那本账 —— 一颗都不许多留，也不许少留。
-pub const 留着那几格: [&str; 4] = ["plugins", "plugins-factory", "logs", "relocate.txt"];
+/// 清理那一趟留着的几格（主进程那边 WIPE_KEEP）：插件那一格是程序不是数据、日志、搬家那本账
+/// —— 一颗都不许多留，也不许少留。从前这里还留着一格「plugins-factory」（导入时留的原版），
+/// 那一格随插件分离第 2 批 2.6 整格撤了，名单跟着少一颗。
+pub const 留着那几格: [&str; 3] = ["plugins", "logs", "relocate.txt"];
 
 #[cfg(test)]
 mod 验判断 {
@@ -172,10 +173,10 @@ mod 验判断 {
     }
 
     #[test]
-    fn 清理那一趟的落点与留着的四格照旧() {
+    fn 清理那一趟的落点与留着的三格照旧() {
         assert_eq!(字条名, "wipe-user.json");
-        assert_eq!(留着那几格, ["plugins", "plugins-factory", "logs", "relocate.txt"]);
-        /* 那张字条自己不在这四格里：它自己由开机那一趟删（这一句钉的是「别把它算成要留的」） */
+        assert_eq!(留着那几格, ["plugins", "logs", "relocate.txt"]);
+        /* 那张字条自己不在这三格里：它自己由开机那一趟删（这一句钉的是「别把它算成要留的」） */
         assert!(!留着那几格.contains(&字条名));
     }
 }

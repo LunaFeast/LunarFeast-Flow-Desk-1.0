@@ -23,7 +23,7 @@
      八、pack:import：那十句原话逐字对、门牌折成绝对那一手住在纯判断那一格、
          两种形状（.zip 摊开 / 解开的文件夹整格抄）各自的回执（id / where / files / name）逐格对、
          「同名绝不动手」那两道闸与包名那道闸朝 comp_rule 借（不抄第二份 ID_OK）、
-         留一份原版的两把格朝 comp_cmds 借、摊包只有共用那一颗解包器、
+         摊包只有共用那一颗解包器、从前那一手「导入顺手留一份原版」连着它的第二把格一起撤了（插件分离第 2 批 2.5 与 2.6）、
          落点只准落在 那一列（data\plugins）那一格里，别的格一颗都不许写；
      九、pack:wipe：删的就两摊（用户目录以内点名的那几份 + 数据层根底下点名的那几份），
          留的一律留着（插件那一格与它底下的、数据层根本体、本家以外的每一格）—— 逐格钉住；
@@ -31,7 +31,7 @@
          files 报的是页面递进来的原文、shared 报的是折过的那一串（两处不同，一处都不许多折、也不许少折）；
      十、纯判断那一格带测试、不动磁盘、不认识壳；
      十一、账：这一批每一颗桥都请得到、都在壳的注册单上，main.rs 顶上不再写「还剩几颗没搬」那一句，
-          总账那把尺只在 gate-bridge46 那一处；跑测试此刻全绿 233 颗零警告；
+          总账那把尺只在 gate-bridge46 那一处；跑测试此刻全绿 232 颗零警告；
           本批那几本文本里一个字节都没写这台机器的盘符、帐户名、私人目录名。
    ============================================================ */
 import fs from 'node:fs';
@@ -413,7 +413,7 @@ for (const [颗, 期望] of 那十句)
   一颗(动, '落一份压包').includes('清单上的id(&单, &末段去后缀(那串))')
   && 一颗(动, '落一棵文件夹').includes('清单上的id(&单, &末段(那串))'));
 台.判('包名那道闸朝 comp_rule 借（同一份表，不在这一本里抄第二遍）',
-  动.includes('use crate::fd_core::comp_rule::{定落点, 原厂那一家, 包名干净};')
+  动.includes('use crate::fd_core::comp_rule::包名干净;')
   && (动.match(/包名干净\(&包名\)/g) || []).length === 2 && !动码.includes('[A-Za-z0-9._-]'));
 台.判('同名绝不动手：文件夹与同名 zip 两种都算「这里已经有一份」，两条分支各一道闸',
   一颗(动, '落一份压包').includes('盘上有(&并路(格, &包名))') && 一颗(动, '落一份压包').includes('压包后缀')
@@ -442,14 +442,13 @@ for (const [颗, 期望] of 那十句)
 台.判('name 那一栏退包名且不 trim（与 id 那一栏差一手，两处都不许自己发明）',
   一颗(纯, '清单上的名字').includes('.get("name")')
   && 一颗(纯, '清单上的id').includes('.trim()') && !一颗(纯, '清单上的名字').includes('.trim()'));
-台.判('导入即留一份原版：两条分支各叫一次，落点朝 comp_cmds 那两把格借（不在这一本里抄 "plugins-factory"）',
-  (动.match(/留一份原版\(&?包名\)/g) || []).length === 2
-  && 一颗(动, '留一份原版').includes('crate::tauri_bind::comp_cmds::活的那一格()')
-  && 一颗(动, '留一份原版').includes('crate::tauri_bind::comp_cmds::原厂那一格()')
-  && !动码.includes('"plugins-factory"'));
-台.判('留底那一步先抹旧底再整棵抄，留不成不拦导入（回执直接丢掉）',
-  一颗(动, '留一份原版').includes('抹掉半截(&到);') && 一颗(动, '留一份原版').includes('抄一棵树(&活.落, &到)')
-  && (动.match(/let _ = 留一份原版/g) || []).length === 2);
+/* 从前导入那一下还顺手往 原厂那一格（data\plugins-factory\）留一份原版，给那颗「恢复出厂」取。
+   那颗钮随插件分离第 2 批 2.5 撤、那一格随 2.6 整格撤 —— 下面两条钉的是"撤干净了"：
+   两条分支都不再叫任何留底的手，这一本里也搜不到那一格的名。 */
+台.判('导入不再留一份原版：两条分支都不叫那一手，那一颗与它用的那三颗抄树工具一起没了（认代码不认注释）',
+  !动码.includes('留一份原版') && !动码.includes('抄一棵树') && !动码.includes('是不是格('));
+台.判('这一本里不再出现 "plugins-factory" 那一名，也不朝 comp_cmds 借第二把格',
+  !动码.includes('plugins-factory') && !动码.includes('comp_cmds::原厂那一格'));
 台.判('摊法壳里只有一颗（两条分支共用，没有第二份解包落地的代码）',
   (动.match(/fn 摊成一家\(/g) || []).length === 1);
 台.判('导入成了之后不再叫任何重扫，pack_cmds 顶上那几处差不再写这一条',
@@ -563,10 +562,9 @@ for (const 禁 of ['std::fs', 'File::open', 'fs::write', 'fs::read', 'read_dir',
 台.判('动磁盘那一手真在第三层（这一本里有 std::fs 与 read_dir）', 动.includes('use std::fs;') && 动码.includes('fs::read_dir'));
 台.判('这一本里问盘的那几手都问不到就当没有（不 expect、不 unwrap、不 panic），五颗都不抛给页面',
   !动码.includes('.expect(') && !/\.unwrap\(\)/.test(动码) && !动码.includes('panic!')
-  && (动.match(/fn (是不是份|是不是格|盘上有|抹那一份|抹掉半截)\(/g) || []).length === 5);
-台.判('批七那三颗的落点全部从借来的那几把格出（那一列 / 原厂那一格 / 数据层根 / 用户数据格），本里没有第五把尺',
+  && (动.match(/fn (是不是份|盘上有|抹那一份|抹掉半截)\(/g) || []).length === 4);
+台.判('批七那三颗的落点全部从借来的那几把格出（那一列 / 数据层根 / 用户数据格），本里没有第四把尺',
   (动.match(/那一列的格\(\)/g) || []).length >= 5
-  && 动.includes('crate::tauri_bind::comp_cmds::原厂那一格()')
   && 动.includes('crate::tauri_bind::data_cmds::数据层格()')
   && 动.includes('crate::tauri_bind::pick_cmds::数据格()')
   && !动码.includes('"plugins"') && !动码.includes('"plugins-factory"') && !动码.includes('"userdata-'));
@@ -601,10 +599,10 @@ const 缺 = 对名单(这批, 桥, 壳注册单());
 台.判('main.rs 的注册单上这三颗排在 ⑪ 那一段后面（一格一段，不是散着塞的）',
   壳.indexOf('⑪ 插件那一列剩下那三颗') < 壳.indexOf('pack_cmds::pack_set')
   && 壳.includes('tauri_bind::pack_cmds::pack_import') && 壳.includes('tauri_bind::pack_cmds::pack_wipe'));
-台.判('跑测试那一道此刻是全绿 233 颗零警告（212 → 219 运行日志那 7 颗 → 220 本地协议类型表那 1 颗 → 233 批九网格吸附那 13 颗 → 234 议题 16 补 MusicBee 那一行明文那 1 颗 → 235 议题 17、18 闪退那一处：中文目录名不许按字节切 → 233 插件分离第 2 批 2.5：撤掉 comp:list / comp:restore / comp:factory 那三颗，它们那两道测试一起没了），与本道数的字数同一现场',
-  全测试数() === 233);
+台.判('跑测试那一道此刻是全绿 232 颗零警告（212 → 219 运行日志那 7 颗 → 220 本地协议类型表那 1 颗 → 233 批九网格吸附那 13 颗 → 234 议题 16 补 MusicBee 那一行明文那 1 颗 → 235 议题 17、18 闪退那一处：中文目录名不许按字节切 → 233 插件分离第 2 批 2.5：撤掉 comp:list / comp:restore / comp:factory 那三颗，它们那两道测试一起没了 → 232 第 2 批 2.6：data\\plugins-factory\\ 那一格整格撤，那道判断与它那道测试一起没了），与本道数的字数同一现场',
+  全测试数() === 232);
 台.判('媒体那一道闸数的字数与本道同一现场（两道闸数的是同一棵树，不许各说各话）',
-  rd('src/tools/probes/gate-taurimedia46.mjs').includes('全测试.length === 233'));
+  rd('src/tools/probes/gate-taurimedia46.mjs').includes('全测试.length === 232'));
 function 全测试数() {
   return fs.readdirSync(path.join(ROOT, 'src', '_tauri', 'src', 'core')).filter(f => f.endsWith('.rs'))
     .map(f => fs.readFileSync(path.join(ROOT, 'src', '_tauri', 'src', 'core', f), 'utf8'))

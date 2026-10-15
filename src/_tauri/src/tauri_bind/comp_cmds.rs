@@ -19,12 +19,12 @@
    落点必须在本家那一格里、那几句拒回来的原话）。
    这一层只做三件事：认那一格在哪、问盘上有没有、把 core 算出来的落点落到磁盘上。
    ------------------------------------------------------------
-   两把格（口径与主进程同一处）：
-     · 活的那一格 = <树根>\data\plugins\<那一家>\ —— 运行时一家家 import 的就是这一格；
-     · 原厂那一格 = <树根>\data\plugins-factory\<那一家>\ —— 导入那一下顺手真复制的一份底。
-       这一格归插件分离第 2 批 2.6 整格撤（页面上已经没有取它的入口），所以这一本里只剩
-       包导入那一步和 media:bridge 那一份兜底还认它，读 / 写 / 删这三颗一个字都不碰它。
-   两把格都从 data_cmds::数据层格() 出（<树根>\data），与定期备份、库文件共用同一颗，不另起第二份口径。 */
+   一把格（口径与主进程同一处）：
+     · 活的那一格 = <树根>\data\plugins\<那一家>\ —— 运行时一家家 import 的就是这一格。
+   从前还有第二把「原厂那一格」（<树根>\data\plugins-factory\，导入那一下顺手复制的一份底），
+   页面上那颗「恢复出厂」随插件分离第 2 批 2.5 撤了、那一格跟着 2.6 整格撤 ——
+   没有用户装机要照顾，要换回早先那一份就把自己手里那一个包重装一次。
+   这一把格从 data_cmds::数据层格() 出（<树根>\data），与定期备份、库文件共用同一颗，不另起第二份口径。 */
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
@@ -40,13 +40,6 @@ fn 说错(e: std::io::Error) -> String { e.to_string() }
 /* 活的那一格：<树根>\data\plugins（code:catRename 那一颗也认这一颗，两处一个口径） */
 pub(crate) fn 活的那一格() -> String {
     crate::tauri_bind::data_cmds::数据层格().join("plugins").to_string_lossy().to_string()
-}
-
-/* 原厂那一格：<树根>\data\plugins-factory（main.cjs 的 ORIG_ROOT）。
-   给 media_cmds 那颗 media:bridge 也认这一颗 —— 包里那一份插件文件读不到时，原件就是从这一格取同一份兜底的，
-   两本共用一个口径，不在第二本里再抄一遍「plugins-factory」那一名 */
-pub(crate) fn 原厂那一格() -> String {
-    crate::tauri_bind::data_cmds::数据层格().join("plugins-factory").to_string_lossy().to_string()
 }
 
 /* 盘上到底有没有：两份「问系统」的手，对应原件里那两个 statSync 的 try/catch（问不到就当没有，不抛） */

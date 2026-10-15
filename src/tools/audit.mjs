@@ -56,8 +56,7 @@ head('一、同一个名字出现多处 · 只报内容不一样的（一样的�
 {
   /* 这一节按"光比名字"找重复，所以两类要先剔掉，不然全是假报：
      · 插件内部的标准名字（main.js / icon.svg / manifest.json / bank.txt / recipe.json）——
-       每家都叫这个名，六家凑一起就成了"六个内容一种名字"，那是内容对不对得上的事，不是重名；
-       data\plugins-factory\ 那一格（外43：导入时留的原版）同一条规矩：它本来就是设计好的第二份。 */
+       每家都叫这个名，六家凑一起就成了"六个内容一种名字"，那是内容对不对得上的事，不是重名。 */
   /* 名字一样、内容本来就该不一样的那几份：产物里的 root.json 按它自己的位置重算相对路径，
      package.json 是现场生成的三个 exe 共用入口（见 mirror.mjs）；
      fd-serve.mjs 在 src\tools 下那一个是老门牌，整个文件就是一句 import 转发到 src\_fd\ 那一份（它自己写着为什么）；
@@ -72,7 +71,7 @@ head('一、同一个名字出现多处 · 只报内容不一样的（一样的�
   for(const rel of walk(ROOT, '')){
     const n = path.basename(rel);
     if(!/\.(js|cjs|mjs|ps1|dll|md|yaml|json|svg|txt)$/.test(n)) continue;
-    const m = rel.replace(/\\/g, '/').match(/^data\/(?:plugins|plugins-factory)\/[^/]+\/(.+)$/);
+    const m = rel.replace(/\\/g, '/').match(/^data\/plugins\/[^/]+\/(.+)$/);
     if(m && PACK_STANDARD_NAMES.indexOf(path.basename(m[1])) >= 0) continue;
     if(SAME_NAME_DIFFERENT_JOB.indexOf(n) >= 0) continue;
     if(!byName.has(n)) byName.set(n, []);
@@ -160,8 +159,9 @@ head('三、插件清单 assets 点的随行文件 · 包里在不在（出厂�
   }
   if(!n) say('  · 没有任何包点随行文件');
   else ok(n + ' 处点名的随行文件都在包里');
-  /* 反着钉一条：插件的代码不许进程序代码那一层。插件只进两格 ——
-     data\plugins\ 和 data\plugins-factory\；src\ 底下只要冒出一格「插件清单 + main.js」同在一格的样子，
+  /* 反着钉一条：插件的代码不许进程序代码那一层。插件只进 data\plugins\ 那一格
+     （从前还进一格 data\plugins-factory\，插件分离第 2 批 2.6 整格撤了）；
+     src\ 底下只要冒出一格「插件清单 + main.js」同在一格的样子，
      就是塞错了地方（这一棵从前还多盯一层 resources\app\data\plugins\，那一层随 Electron 一起退了）。 */
   const 错处的 = [];
   const 找包 = (格, 深) => {
@@ -173,7 +173,7 @@ head('三、插件清单 assets 点的随行文件 · 包里在不在（出厂�
   };
   找包(path.join(ROOT, 'src'), 1);
   if(错处的.length) bad('src\\ 底下有插件的形状（插件清单与 main.js 同一格）：' + 错处的.join('、') +
-    ' —— 插件只进 data\\plugins\\ 与 data\\plugins-factory\\，程序代码这一层不收');
+    ' —— 插件只进 data\\plugins\\ 那一格，程序代码这一层不收');
   else ok('src\\ 那一层里没有插件的形状 · 程序代码那一层不带插件');
 }
 

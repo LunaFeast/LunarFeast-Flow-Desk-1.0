@@ -60,7 +60,7 @@ export const 八项 = [
   { id: 'wnw-custom', 中文: '推演组件定制', 住在哪: '独立那一家 + 出内核那颗', 形状: 'whole-file',
     量这份: ['data/plugins/wnw-custom/manifest.json', 'src/_wcustom/build-kernel.mjs'],
     分支: 'feature/new/wnw-custom',
-    动的地方: ['data/plugins/wnw-custom 整格（活的）与 data/plugins-factory/wnw-custom（原版，发布时现拷）',
+    动的地方: ['data/plugins/wnw-custom 那一格（活的）',
       'src/_wcustom/src 那四份源码与 src/_wcustom/build-kernel.mjs',
       'src/_fd/build.mjs 里读推演组件定制那颗产物的那一段',
       'src/_build/plugin-repos.mjs 家表里那一家（七家变六家）'] },

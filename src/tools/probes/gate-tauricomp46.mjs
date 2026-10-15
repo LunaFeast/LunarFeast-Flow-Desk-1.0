@@ -14,8 +14,8 @@
         包名白名单、8MB 那道顶、那几句拒回来的原话 —— 字面值两头逐条对，
         动手那一层一个字都没重写（重写就是第二份真身，迟早漂移）；
      四、越界那道判断带测试，且钉住这五条硬样本：本家那几份放行、.. 拒、绝对路径拒、空串拒、改到别人家那一格拒；
-     五、原厂那一格（<数据层>\plugins-factory）还归包导入那一步留底与 media 那一份兜底用，
-        comp 这一摊不再叫它 —— 那两把格都从同一颗数据层格出，不另起第二份口径；
+     五、原厂那一格（<数据层>\plugins-factory）随插件分离第 2 批 2.6 整格撤了：壳里三本代码、那把尺、
+        开发那台服务器都不再认它，只剩活的那一格（都从同一颗数据层格出，不另起第二份口径）；
      六、comp:write 被挡时回的形状与 Electron 那颗一致：只有 ok + msg 那两格，一句都不许多；
         成了那一支只有 ok + size；
      七、code:catRename 那三种写法、两张后缀表与两个深度、回执那七栏，两头同一份；
@@ -33,7 +33,9 @@ const 动 = rd('src/_tauri/src/tauri_bind/comp_cmds.rs');
 const 改 = rd('src/_tauri/src/tauri_bind/code_cmds.rs');
 const 纯 = rd('src/_tauri/src/core/comp_rule.rs');
 const 名 = rd('src/_tauri/src/core/cat_rename.rs');
-const 包 = rd('src/_tauri/src/tauri_bind/pack_cmds.rs');   /* 留一份原版那一步住这本（原厂那一格现在的用户） */
+const 包 = rd('src/_tauri/src/tauri_bind/pack_cmds.rs');   /* 导入那一条住这本（从前顺手留一份原版，第 2 批 2.6 撤了） */
+const 媒 = rd('src/_tauri/src/tauri_bind/media_cmds.rs');  /* MusicBee 那一份插件文件从包里读，认的是活的这一格 */
+const 服 = rd('src/_fd/fd-serve.mjs');                     /* 本地开发那台服务器：/_comp 挂的是同一把尺 */
 const 那两格 = 纯 + '\n' + 名;
 const 那两层 = 动 + '\n' + 改;
 
@@ -200,9 +202,8 @@ const ID式 = 切(尺, 'ID_OK');
 /* 动手那一层只叫判断，不自己判 */
 台.判('越界那道闸（定落点）在动手那一层被叫到三处（读 / 写 / 删各一处）',
   (动.match(/定落点\(&活的那一格\(\)/g) || []).length === 3);
-台.判('原厂那一格那道判断（原厂那一家）还在纯判断那一格里，但 comp 这一摊不再叫它 —— 认它的是包导入留底和 media 那一份兜底',
-  /pub fn 原厂那一家\(/.test(纯) && !动.includes('原厂那一家')
-  && rd('src/_tauri/src/tauri_bind/pack_cmds.rs').includes('原厂那一家(&原厂'));
+台.判('原厂那一格那道判断（原厂那一家）整颗撤了（插件分离第 2 批 2.6）—— 纯判断那一格里不再算它的位置',
+  !纯.includes('原厂那一家') && !动.includes('原厂那一家') && !包.includes('原厂那一家'));
 台.判('从前那张「可改后缀」表与「排前那三份」跟着列文件那颗一起撤了（两头一处不剩）',
   !纯.includes('可改后缀') && !纯.includes('排前那三份') && !尺.includes('TEXT_EXT'));
 台.判('动手那两层里没重写那几句拒话（一句都不许多，全靠 core 的常量）',
@@ -236,32 +237,37 @@ function 一颗测试(名) {
 台.判('纯判断那两格各带一颗 mod 验判断', (那两格.match(/mod 验判断/g) || []).length === 2);
 const 新增测试 = [纯, 名].reduce((a, s) => a + ((s.match(/#\[cfg\(test\)\][\s\S]*$/) || [''])[0].match(/#\[test\]/g) || []).length, 0);
 台.数('这一批纯判断那一格有几颗测试', 新增测试 + ' 颗');
-/* 撤掉列 / 恢复 / 有没有原版那三颗时，它们自己的两道测试（十种可改后缀、清单排序）一起没了：
-   原来是 26 颗，现在 24 颗。往下钉住 24 —— 少一道就是有人把还在用的判断连测试一起删了。 */
-台.判('不少于二十四颗（撤掉那三颗带走两道，其余一颗不许少）', 新增测试 >= 24);
+/* 撤掉列 / 恢复 / 有没有原版那三颗时，它们自己的两道测试（十种可改后缀、清单排序）一起没了（26 → 24）；
+   第 2.6 撤原厂那一格那道判断，又带走一道「这一家在原厂那一格的哪一格」（24 → 23）。
+   往下钉住 23 —— 再少一道就是有人把还在用的判断连测试一起删了。 */
+台.判('不少于二十三颗（撤掉那几颗带走三道，其余一颗不许少）', 新增测试 >= 23);
 const 全测试 = fs.readdirSync(path.join(ROOT, 'src', '_tauri', 'src', 'core')).filter(f => f.endsWith('.rs'))
   .map(f => fs.readFileSync(path.join(ROOT, 'src', '_tauri', 'src', 'core', f), 'utf8'))
   .join('').match(/#\[test\]/g) || [];
 台.数('全仓纯判断那一格的测试总数', 全测试.length + ' 颗');
 台.判('总数比上一批的 81 颗多了（不许多加不减，也不许把旧的撤掉）', 全测试.length > 81);
 
-台.题('五、原厂那一格（<数据层>\\plugins-factory）现在只剩两处认它：包导入留底和 media 那一份兜底');
-台.判('壳里那两把格：活的那一格 = 数据层\\plugins、原厂那一格 = 数据层\\plugins-factory',
-  /fn 活的那一格\(\) -> String \{[\s\S]*?\.join\("plugins"\)/.test(动) && /fn 原厂那一格\(\) -> String \{[\s\S]*?\.join\("plugins-factory"\)/.test(动));
+/* 认的是代码不是话：那几本顶上交代历史的注释里还写得到这些名（第 2 批撤了什么），
+   按去注之后的代码算 —— 留着注释是给人读这段历史的，不算漏撤。 */
+const 动净 = 去注(动), 包净 = 去注(包), 媒净 = 去注(媒), 尺净 = 去注(尺), 服净 = 去注(服);
+台.题('五、原厂那一格（<数据层>\\plugins-factory）整格撤了（插件分离第 2 批 2.6）');
+台.判('壳里只剩一把格：活的那一格 = 数据层\\plugins，"plugins-factory" 那一名三本代码里一处不剩',
+  /fn 活的那一格\(\) -> String \{[\s\S]*?\.join\("plugins"\)/.test(动)
+  && ![动净, 包净, 媒净].some(s => s.includes('plugins-factory')));
 台.判('数据层那一格与 data_cmds 共用一颗（不另起第二份口径，备份那一摊也用它）',
   动.includes('crate::tauri_bind::data_cmds::数据层格()')
   && /pub\(crate\) fn 数据层格\(\) -> PathBuf \{ crate::tree_root\(\)\.join\("data"\) \}/.test(rd('src/_tauri/src/tauri_bind/data_cmds.rs')));
-/* 读 / 写 / 删这三颗只碰活的那一格：原厂那一格这一本里只剩"它在哪儿"那一颗，没人叫它 */
-台.判('comp 这一摊不再从原厂那一格取任何东西（那一格的名字只出现在"这一格在哪"那一句里）',
-  !动.includes('出厂落点') && !动.includes('原厂那一家(')
-  && (动.match(/原厂那一格\(\)/g) || []).length === 1, 'comp_cmds.rs 里 原厂那一格() 被叫的次数');
-台.判('认它的是包导入留底那一步（活的抄进原厂）与 media 那一份兜底',
-  包.includes('原厂那一家(&原厂') && 包.includes('留一份原版') && rd('src/_tauri/src/tauri_bind/media_cmds.rs').includes('原厂那一格'));
-台.判('原厂这一格不写 resources 那层那句旧话（壳里三本与纯判断那一格都不认那一层）',
+台.判('读 / 写 / 删这三颗只碰活的那一格（出厂落点、原厂那一家两颗名代码里一处不剩）',
+  !动净.includes('出厂落点') && !动净.includes('原厂那一家') && !动净.includes('原厂那一格')
+  && (动.match(/活的那一格\(\)/g) || []).length >= 3);
+台.判('导入那一条不再往第二格抄一份：留一份原版、抄一棵树、是不是格三颗代码里一起没了',
+  !包净.includes('留一份原版') && !包净.includes('抄一棵树') && !包净.includes('是不是格(') && !包净.includes('原厂那一家'));
+台.判('media 那一份兜底也只认活的这一格（读不到就回空，由叫它那一头照旧报）',
+  !媒净.includes('原厂那一格') && 媒.includes('活的那一格()'));
+台.判('那一把尺与开发那台服务器都不再认第二格（factory 那几个名字一处不剩）',
+  !尺净.includes('factory') && !服净.includes('plugins-factory') && !服净.includes('FD_FACTORY_COMPONENTS'));
+台.判('这一格不写 resources 那层那句旧话（壳里三本与纯判断那一格都不认那一层）',
   !那两层码.includes('resources') && !纯.includes('resources') && !包.includes('resources'));
-台.判('留底是真复制一份（不硬链接：链接会让活文件与底变成同一份），那一把尺用的也是复制那颗',
-  切(尺, 'copyFile').includes('fs.copyFileSync') && !切(尺, 'copyFile').includes('link')
-  && 包.includes('fs::copy(') && !/symlink|hard_link/.test(包));
 台.判('read 的 rel 口径与 write 不同一处都不许被统一：read 判 trim、write 空串与只剩空白都不认',
   那一颗('read').includes("String(rel).trim() === ''") && 那一颗('write').includes("String(rel).trim() === ''")
   && 纯.includes('Some(x) if x.trim().is_empty()') && 纯.includes('!相对.trim().is_empty()'));

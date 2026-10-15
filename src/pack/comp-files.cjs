@@ -4,11 +4,9 @@
    插件的代码和自带文件都住在 data\plugins\<id>\ 这一格里：
    推演定制存一个新组件写的就是这一格里的 main.js + recipe.json + manifest.json，
    存了就是新的，重载这一家立刻生效 —— 不再有「写一份覆盖副本、等重新生成页面才嵌进去」那一趟。
-   「改代码」那颗钮和它的编辑对话框，连同伴着它长的「列这一格有哪几份文本」那一颗，
-   随插件分离第 2 批 2.5 一起撤了：页面上没有入口，这条通道也就没人请。
-   原版在 data\plugins-factory\<id>\：导入那一下顺手真复制一份进去（程序自带的那一份从前住
-外43 从那一层搬走了 —— 那一层每次更新都被整个换掉，用户的底放进去等于交给更新撤走（插件现在跟着本体进发布物的 data\plugins\）；
-   那一层又每次更新都被整个换掉，用户的底放进去等于交给更新撤走）。
+   「改代码」那颗钮和它的编辑对话框，连同伴着它长的「列这一格有哪几份文本」「拷回原版」「有没有原版」，
+   随插件分离第 2 批 2.5 撤了；原版那一格（data\plugins-factory\）跟着第 2.6 整格撤 ——
+   没有用户装机要照顾，要换回早先那一份，把自己手里那一个包重装一次。
    ----------
    三道闸（谁都绕不过去，包括页面里递上来的路径）：
      1 包名只认干净字符（字母数字点横线下划线），别的一律不落地；
@@ -33,29 +31,11 @@ function segsOf(rel){
 }
 function isDir(p){ try{ return fs.statSync(p).isDirectory(); }catch(e){ return false; } }
 function isFile(p){ try{ return fs.statSync(p).isFile(); }catch(e){ return false; } }
-/* 复制一份文件：连父目录一起建好；返回字节数 */
-function copyFile(from, to){
-  fs.mkdirSync(path.dirname(to), { recursive:true });
-  fs.copyFileSync(from, to);
-  try{ return fs.statSync(to).size; }catch(e){ return 0; }
-}
-/* 整格复制（出厂 → 活的那一层）：一层层走，链接/权限都不认，只认普通文件和目录 */
-function copyTree(from, to){
-  let n = 0;
-  for(const e of fs.readdirSync(from, { withFileTypes:true })){
-    if(e.name.startsWith('.')) continue;
-    const f = path.join(from, e.name), t = path.join(to, e.name);
-    if(e.isDirectory()) n += copyTree(f, t);
-    else if(e.isFile() && isFile(f)) n += (copyFile(f, t), 1);
-  }
-  return n;
-}
 
 module.exports = function make(opt){
   const o = opt || {};
   const dir = k => { const v = typeof o[k] === 'function' ? o[k]() : o[k]; return v ? path.resolve(String(v)) : ''; };
   const LIVE = () => dir('live');          /* data\plugins\ —— 程序现在真正加载的那一层 */
-  const FACT = () => dir('factory');       /* data\plugins-factory\ —— 导入时留的原版 */
 
   /* 包名 + 相对路径 → 这一格里的真路径；不干净的回错误话，绝不落盘 */
   function locate(id, rel){
@@ -73,8 +53,7 @@ module.exports = function make(opt){
   }
   return {
     MAX_BYTES,
-    liveDir:LIVE, factoryDir:FACT,
-    hasFactory(id){ return isDir(path.join(FACT() || '\0', String(id))); },
+    liveDir:LIVE,
 
     /* ---------- 读这一格里的一份文件 ----------
        rel 没给（null / 空串 / undefined 三种都算，主进程那条通道传的是 null）：按入口那份 main.js 办 */
@@ -103,7 +82,7 @@ module.exports = function make(opt){
         return { ok:true, size:buf.length };
       }catch(e){ return { ok:false, msg:'写不进去：' + (e && e.code || e) }; }
     },
-    /* ---------- 抹掉一整格：只按包名动手，不接子路径（「完全删除」那一步用的就是它） ---------- */
+    /* ---------- 抹掉一整格：只按包名动手，不接子路径（「删除」那一步用的就是它） ---------- */
     remove(id){
       const L = locate(id);
       if(L.msg) return { ok:false, msg:L.msg };
@@ -114,45 +93,6 @@ module.exports = function make(opt){
         if(!gone.length) return { ok:false, msg:'这一格本来就不在' };
         return { ok:true, removed:gone };
       }catch(e){ return { ok:false, msg:'删不掉：' + (e && e.code || e), removed:gone }; }
-    },
-    /* ---------- 导入那一下顺手留底：把活的那一格原样复制进原版那一格 ----------
-       真复制、不用链接（链接会让活文件和底变成同一份，「改代码」存一下就改了底，恢复出厂成空话）。
-       先抹掉旧的再拷：这一格里不许留下一个新版没有的文件，不然「恢复出厂」会拿老文件补回新版里删掉的那份。
-       只在导入 / 摊开那一条道上调用 —— 用户改过的东西绝不会被这一步碰到。 */
-    keepFactory(id){
-      const L = locate(id);
-      if(L.msg) return { ok:false, msg:L.msg };
-      if(!isDir(L.file)) return { ok:false, msg:'这一格还不在，留不出底：' + L.id };
-      const fact = FACT();
-      if(!fact) return { ok:false, msg:'原版那一格还没定下来' };
-      const to = path.join(fact, L.id);
-      if(to !== fact && !to.startsWith(fact + path.sep)) return { ok:false, msg:'落点跑出了原版那一格' };
-      try{
-        fs.rmSync(to, { recursive:true, force:true });
-        const n = copyTree(L.file, to);
-        return { ok:true, files:n, where:L.id + '/' };
-      }catch(e){ return { ok:false, msg:'留底没留成：' + (e && e.code || e) }; }
-    },
-    /* ---------- 老树那一下：原版从前住在程序自带那一层（resources\app\data\plugins\），
-       外43 挪进数据层。第一次开机从老位置一家家取过来，目标已经有这一家的一个字不动。
-       只取不删：老那一格在程序层，下一次换版铺程序层时自己就没了。 */
-    adoptOldFactory(from){
-      const fact = FACT();
-      const out = { moved:[], files:0 };
-      if(!fact || !from || !isDir(from)) return out;
-      if(path.resolve(from) === path.resolve(fact)) return out;
-      try{
-        fs.mkdirSync(fact, { recursive:true });
-        for(const e of fs.readdirSync(from, { withFileTypes:true })){
-          if(!e.isDirectory() || e.name.startsWith('.') || !ID_OK.test(e.name)) continue;
-          if(!isFile(path.join(from, e.name, 'manifest.json'))) continue;
-          const to = path.join(fact, e.name);
-          if(isDir(to)) continue;
-          out.files += copyTree(path.join(from, e.name), to);
-          out.moved.push(e.name);
-        }
-      }catch(err){ return Object.assign(out, { msg:'原版那一格取不过来：' + (err && err.code || err) }); }
-      return out;
     }
   };
 };

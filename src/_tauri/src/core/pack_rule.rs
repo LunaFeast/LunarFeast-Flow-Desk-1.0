@@ -887,7 +887,8 @@ mod 验判断 {
         assert!(包那一格留着("某处\\一棵树\\data\\plugins\\off.json", 包格));
         /* 名字像但不是的那一格不挡（原件比的是 resolve 完的前缀） */
         assert!(!包那一格留着("某处\\一棵树\\data\\pluginsx", 包格));
-        /* 原厂底那一格（plugins-factory）原件压根没挡 —— 照实钉住，不许哪天「顺手保守一点」 */
+        /* 从前还有一格「plugins-factory」（导入时留的原版）也只当普通格子 —— 那一格随插件分离第 2 批 2.6 整格撤了，
+           名字像但不是的那一种照旧不挡（原件比的是 resolve 完的前缀） */
         assert!(!包那一格留着("某处\\一棵树\\data\\plugins-factory\\甲家", 包格));
         assert!(!包那一格留着("某处\\一棵树\\data\\logs", 包格));
     }

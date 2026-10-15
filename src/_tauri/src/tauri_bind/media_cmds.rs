@@ -1175,22 +1175,18 @@ fn 卸掉名单(包格: &Path) -> Vec<String> {
 /* ---------- 给 MusicBee 装监听插件那一颗要动的三处盘 ---------- */
 
 /// 音乐遥控器包里那一份插件文件在哪（原件 packAssetOf + packRaw + landAsset 那一段）：
-/// 读插件清单 assets.bridge 那一栏（相对包里那一格），活的这一格读不到就退原厂那一格 ——
-/// 被「改代码」删了还能从底里取同一份（原件 landAsset 底下那三行兜底也是这么走的）。
+/// 读插件清单 assets.bridge 那一栏（相对包里那一格）。
+/// 从前这一格读不到还退一格「原厂」（data\plugins-factory\，导入那一下留的底）—— 那一格随
+/// 插件分离第 2 批 2.6 整格撤了，现在只认活的这一格；拿不到就回空，由叫它那一头照旧报。
 /// 差在哪写着两处，见顶上第⑤条：不落 watcher\、zip 里那一份读不出来。
 fn 包里那份() -> Option<String> {
-    let 家们 = [
-        PathBuf::from(crate::tauri_bind::comp_cmds::活的那一格()).join(那一家),
-        PathBuf::from(crate::tauri_bind::comp_cmds::原厂那一格()).join(那一家),
-    ];
-    for 家 in 家们 {
-        let Ok(文) = std::fs::read_to_string(家.join(包清单名)) else { continue; };
-        let Some(相对) = 判::随行件名(&文, 判::桥件键名) else { continue; };
-        /* 相对那一串按段贴上去（段里有没有 '..' 已经在纯判断那一格挡过了） */
-        let 份 = 相对.split('/').fold(家, |累, 段| 累.join(段));
-        if 份.is_file() {
-            return Some(份.to_string_lossy().to_string());
-        }
+    let 家 = PathBuf::from(crate::tauri_bind::comp_cmds::活的那一格()).join(那一家);
+    let Ok(文) = std::fs::read_to_string(家.join(包清单名)) else { return None; };
+    let Some(相对) = 判::随行件名(&文, 判::桥件键名) else { return None; };
+    /* 相对那一串按段贴上去（段里有没有 '..' 已经在纯判断那一格挡过了） */
+    let 份 = 相对.split('/').fold(家, |累, 段| 累.join(段));
+    if 份.is_file() {
+        return Some(份.to_string_lossy().to_string());
     }
     None
 }

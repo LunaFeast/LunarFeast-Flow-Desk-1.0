@@ -77,12 +77,12 @@ const 源 = () => (包.清单 || []).filter(k => k.startsWith('src/'));
 台.判('src 层里没有一个 node_modules 与一个藏文件',
   源().every(k => !k.split('/').includes('node_modules') && !/(^|\/)\.[^/]/.test(k)));
 const 各家 = 家.map(j => j.id);
-const 缺家 = 各家.filter(id => !有('data/plugins/' + id + '/manifest.json').length || !有('data/plugins-factory/' + id + '/manifest.json').length);
-台.判('这一棵上那 ' + 各家.length + ' 家插件两格齐（活的 + 原版），一家不缺', 缺家.length === 0, 缺家);
+/* 从前这里核的是「活的 + 原版两格齐」—— 原版那一格（data\plugins-factory\）随插件分离第 2 批 2.6 整格撤了 */
+const 缺家 = 各家.filter(id => !有('data/plugins/' + id + '/manifest.json').length);
+台.判('这一棵上那 ' + 各家.length + ' 家插件那一格齐（活的这一格），一家不缺', 缺家.length === 0, 缺家);
 台.判('树根那份说明在包里', 有('安装说明.txt').length === 1, 有('安装说明.txt'));
-const 脏 = () => (包.清单 || []).filter(k => (k === 'data' || k.startsWith('data/'))
-  && !k.startsWith('data/plugins/') && !k.startsWith('data/plugins-factory/'));
-台.判('data\\ 底下除插件两格之外零份（那道硬闸）', 脏().length === 0, 脏().slice(0, 6));
+const 脏 = () => (包.清单 || []).filter(k => (k === 'data' || k.startsWith('data/')) && !k.startsWith('data/plugins/'));
+台.判('data\\ 底下除插件那一格之外零份（那道硬闸）', 脏().length === 0, 脏().slice(0, 6));
 
 台.题('五、产物落哪一格、那颗 exe 没编出来时怎么停、名字上那一段档位的字只管文件名');
 台.判('产物格是 dist\\tauri', /产物在 .*[\\/]dist[\\/]tauri/.test(包.全文), (包.全文.match(/产物在 .*/) || [''])[0]);

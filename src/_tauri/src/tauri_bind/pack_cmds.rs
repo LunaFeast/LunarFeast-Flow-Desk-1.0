@@ -23,11 +23,12 @@
    这一层只做三件事：认那一列在哪一格、问盘上有没有、把 core 算出来的东西落到字节上。
    ------------------------------------------------------------
    那一列住在哪一格（原件 PACKS_DIR = <数据层>\plugins，1751 行）：朝 comp_cmds::活的那一格() 借，
-   与「改代码」那六颗、code:catRename 同一把尺同一处格，不在这一本里再抄一遍 "plugins" 那一名。
+   与 comp_cmds 那一摊三颗、code:catRename 同一把尺同一处格，不在这一本里再抄一遍 "plugins" 那一名。
    压缩包怎么拆也朝共用那一颗借：fd_core::zip_pack 的 目录() 与 取一份()（外46 三 批六之前就有了，
    读中央目录、按本地头取一份、deflate 那一档都归它）—— 这一本里没有第二个解包器，
    包里那份插件清单、包里那一份文件、导入那一条摊开的整包走的都是它（原件三头用的也是同一份 zip-read.cjs）。
-   「留一份原版」那一步的落点朝 comp_rule 那两颗借（定落点 / 原厂那一家），与「改代码」「恢复出厂」同一把尺；
+   从前导入那一下还顺手往 原厂那一格（data\plugins-factory\）留一份原版，落点朝 comp_rule 借；
+   插件分离第 2 批 2.5 撤了那颗「恢复出厂」、2.6 把那一格整格撤了，这一步跟着没 —— 装上一格就是活的这一格。
    「音乐遥控器还在不在」那一问朝 media_cmds::装了音乐遥控器() 借（原件 packHas 那三条），
    收后台监听用的就是 media_cmds 那一颗 收监听（原件 mediaStop）—— 都不在这一本里另起第二份。
    ------------------------------------------------------------
@@ -39,9 +40,10 @@
         页面上看到的还是那一句白话。
      ③ 文件夹那一格读不出名册（原件 1781 行那句 readdirSync 没套 try，抛了会把整颗 packScan 顶起来、
         最后由 preload 那侧的 catch 变成 { ok:false, msg:'插件目录读不到：…' }）：这一头不抛给页面，
-        按「那一家不进这一列」收 —— 与 comp_cmds 那六颗「任何一步都不许抛」同一口径。
-     ④ 原件那几处 logLine('插件', …)（1831 行名单换算、1991 行留底成了、1992 行没留出底）照原样落进
+        按「那一家不进这一列」收 —— 与 comp_cmds 那三颗「任何一步都不许抛」同一口径。
+     ④ 原件那几处 logLine('插件', …) 里此刻还剩的那一处（1831 行名单换算）照原样落进
         data\logs\ 那一天那一个文件 —— 动手在 tauri_bind::log_cmds，那一行的形状在 core::log_line。
+        1991 / 1992 那两句（留底成了报几份、没留出原版报为什么）跟着「导入顺手留一份原版」那一步一起撤了。
      ⑤ 原件 packHas 第一道问的是 fs.existsSync(dir)（格与份都算「在」）：这一头 盘上有() 也是问
         metadata 成不成 —— 同一手；'.' 与 '..' 两种包名在原件走得进「这里已经有一份」那一句，
         这一头先落「包名不干净，不敢落地：」（差一句措辞，两处都动不了本家以外一个字节，详见 pack_rule 顶上第②处）。 */
@@ -52,7 +54,7 @@ use std::path::Path;
 
 use tauri::State;
 
-use crate::fd_core::comp_rule::{定落点, 原厂那一家, 包名干净};
+use crate::fd_core::comp_rule::包名干净;
 use crate::fd_core::data_path::落格;
 use crate::fd_core::pack_rule::{
     包里没有那句, 包名不干净那句, 包读不动那句, 包那一格留着, 不像插件那句, 只收压包那句, 压包后缀, 压包那种,
@@ -75,10 +77,6 @@ fn 那一列的格() -> String { crate::tauri_bind::comp_cmds::活的那一格()
 /* 盘上到底有没有那一份：与主进程那两个 try/catch 同两手（问不到就当没有，不抛）；
    是格还是份由 扫一遍 那一趟问 fs::metadata 判（原件 statSync 同一手），这儿不再单开一颗 */
 fn 是不是份(p: &str) -> bool { fs::metadata(p).map(|m| m.is_file()).unwrap_or(false) }
-
-/* 是不是一格（原件 comp-files.cjs 的 isDir / main.cjs 导入那一条走的 statSync().isDirectory()）：
-   留一份原版之前先问活的那一格在不在 */
-fn 是不是格(p: &str) -> bool { fs::metadata(p).map(|m| m.is_dir()).unwrap_or(false) }
 
 /* 把一格和一颗名字并成一条落点（对应 Node 的 path.join，写法照 comp_cmds 那颗同名工具） */
 fn 并路(格: &str, 名: &str) -> String {
@@ -559,83 +557,6 @@ fn 数一棵树(格: &str, 前: &str, 列: &mut Vec<String>) -> std::io::Result<
     Ok(())
 }
 
-/* 一份文件连父格一起抄过去（原件 copyFile，comp-files.cjs 39~43 行；留一份原版走的就是这一手） */
-fn 抄一份(起: &str, 落: &str) -> std::io::Result<()> {
-    if let Some(父) = Path::new(落).parent() {
-        if !父.as_os_str().is_empty() {
-            fs::create_dir_all(父)?;
-        }
-    }
-    fs::copy(起, 落).map(|_| ())
-}
-
-/* 一棵树原样抄过去（原件 copyTree，comp-files.cjs 45~54 行）：打头的点那种名字不进底、
-   是格就往下走、既不是格也不是份的不抄；回抄了几份 */
-fn 抄一棵树(起: &str, 到: &str) -> std::io::Result<u64> {
-    let mut 数 = 0u64;
-    for 项 in fs::read_dir(起)? {
-        let 项 = 项?;
-        let 名 = 项.file_name().to_string_lossy().to_string();
-        if 名.starts_with('.') {
-            continue;
-        }
-        let 起份 = 并路(起, &名);
-        let 落份 = 并路(到, &名);
-        let 类 = 项.file_type()?;
-        if 类.is_dir() {
-            数 += 抄一棵树(&起份, &落份)?;
-        } else if 类.is_file() && 是不是份(&起份) {
-            抄一份(&起份, &落份)?;
-            数 += 1;
-        }
-    }
-    Ok(数)
-}
-
-/* 导入那一下顺手留一份原版（原件 keepOriginal 1988~1994 行 → COMP.keepFactory，comp-files.cjs 188~201 行）：
-   活的那一格原样复制进 原厂那一格\<那一家>\，先抹掉旧底再抄 —— 「恢复出厂」与随行件兜底取的就是这一份，
-   所以底必须是导入时那一份原样，用户后来在「改代码」里改成什么样都不影响它。
-   那一步的落点朝 comp_rule 那两颗借（定落点 / 原厂那一家），与「改代码」那一摊同一把尺。
-   留不成不拦导入（原件也只是记一句日志）：装是装上了，只是这一家没有底可恢复 ——
-   那一句照原件落 data\logs\（成了报几份、没成报为什么），见顶上第④处 */
-fn 留一份原版(包名: &str) -> Result<u64, String> {
-    let 活 = match 定落点(&crate::tauri_bind::comp_cmds::活的那一格(), 包名, None) {
-        Ok(v) => v,
-        Err(那句) => return Err(那句),
-    };
-    if !是不是格(&活.落) {
-        return Err(format!("这一格还不在，留不出底：{}", 活.包名));
-    }
-    let 原厂 = crate::tauri_bind::comp_cmds::原厂那一格();
-    if 原厂.is_empty() {
-        return Err("原版那一格还没定下来".to_string());
-    }
-    let 到 = match 原厂那一家(&原厂, &活.包名) {
-        Some(v) => v,
-        None => return Err("落点跑出了原版那一格".to_string()),
-    };
-    /* 原件 195 行那一道兜底（to !== fact 且必须以 fact + 分隔开头）：原厂那一家 已经过了包名那道闸，
-       这一道照样留着，它挡的是「跑出自己的那一格」 */
-    if 到 != 原厂 && !到.starts_with(&format!("{}\\", 原厂)) {
-        return Err("落点跑出了原版那一格".to_string());
-    }
-    /* 先抹旧底（原件 rmSync force:true：不在也不算错）再整棵抄 */
-    抹掉半截(&到);
-    match 抄一棵树(&活.落, &到) {
-        Ok(几份) => {
-            crate::tauri_bind::log_cmds::记一笔("插件",
-                format!("原版留进 plugins-factory\\{}\\ · {} 份", 活.包名, 几份));
-            Ok(几份)
-        }
-        Err(e) => {
-            let 那句 = format!("留底没留成：{}", 说错(e));
-            crate::tauri_bind::log_cmds::记一笔("插件",
-                format!("这一家没留出原版（{}）：{}", 活.包名, 那句));
-            Err(那句)
-        }
-    }
-}
-
 /// 导入一家（原件 pack:import）：页面挑一样东西进来，两种形状都认 ——
 /// 一颗 <包名>.zip（别人传给你的成品包，进门就摊成文件夹）与一个解开的文件夹（里面有插件清单）。
 /// 落点就是 那一列 那一格，与生成页面那把尺认的同一处；同名已经在那儿了就一句退回，绝不动他原有的包。
@@ -693,7 +614,6 @@ fn 落一份压包(格: &str, 那串: &str) -> 一份导入 {
             return 一份导入::不成(那句);
         }
     };
-    let _ = 留一份原版(&包名);
     一份导入::成了(&包名, 数, 清单上的名字(&单, &包名))
 }
 
@@ -752,7 +672,6 @@ fn 落一棵文件夹(格: &str, 那串: &str) -> 一份导入 {
             return 一份导入::不成(format!("{}{}", 导入失败那句, 说错(e)));
         }
     }
-    let _ = 留一份原版(&包名);
     一份导入::成了(&包名, 列.len() as u64, 清单上的名字(&单, &包名))
 }
 
@@ -823,5 +742,5 @@ pub fn pack_wipe(files: Option<Value>, shared: Option<Value>) -> 一份清理 {
 
 /* 这一层只准用 core 那把尺：两趟收的判断、那两份名单的读法、开着的怎么换成卸掉的、导入那一条的门牌与那十句白话、
    清那两处该留哪几格、24MB 那道闸 —— 全在 fd_core::pack_rule；解包那一颗用的是共用的 fd_core::zip_pack，
-   「留一份原版」与「装没装音乐遥控器」两问分别朝 comp_rule 与 media_cmds 借 —— 这一本里一个字都没重写。
+   「装没装音乐遥控器」那一问朝 media_cmds 借 —— 这一本里一个字都没重写。
    这一层五颗都不抛给页面（返回的类型都不是 Result），跟 comp_cmds 那一摊同一口径。 */

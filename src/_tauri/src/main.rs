@@ -31,7 +31,7 @@
         fd_core::pack_rule，动手还是 tauri_bind::pack_cmds。写名单那一颗把页面递的「开着的」换成落盘的
         「卸掉的」（= 扫到的全部 减 开着的），递 null 就是删掉 off.json 那份名单，写完顺手查一眼音乐遥控器
         还在不在、不在就收掉后台监听（朝 media_cmds 那一颗借）；导入那一颗两种形状都认（.zip 摊成文件夹、
-        解开的文件夹整格抄进来），同名一句退回、绝不动他原有的包，成了顺手留一份原版（落点朝 comp_rule 借）；
+        解开的文件夹整格抄进来），同名一句退回、绝不动他原有的包；
         清数据那一颗只动用户目录以内与数据层根底下那两处，插件那一格与名单永远留着，一颗都不许多删。
         摊包走的还是共用的 fd_core::zip_pack —— 壳里到现在也只有那一颗解包器）。
    命令名这一头有个硬限制：Rust 函数名就是页面上 invoke 的那个串，里面不能有冒号，
@@ -206,11 +206,11 @@ fn main() {
             tauri_bind::pack_cmds::pack_file,
             /* 批七 · 插件那一列剩下那三颗（main.cjs 1895 / 1995 / 2052 行）：pack:set 写名单（页面递「开着的」，
                落盘换成「卸掉的」= 扫到的全部 减 开着的；递 null / undefined 就是删掉 off.json 那份名单）、
-               pack:import 导入一家（.zip 摊成文件夹、解开的文件夹整格抄进来，两种都顺手留一份原版）、
+               pack:import 导入一家（.zip 摊成文件夹、解开的文件夹整格抄进来，两种都只落在活的这一格）、
                pack:wipe 抹掉卸一家时勾的那两处数据（只动用户目录以内与数据层根底下、插件那一格永远留着）。
                判断（那四句原话与「开着的换成卸掉的」、导入那十句原话与门牌折法、清那两处该留哪几格）
                在 fd_core::pack_rule，动手在 tauri_bind::pack_cmds；摊包走的还是共用的 fd_core::zip_pack，
-               装没装音乐遥控器与收后台监听朝 media_cmds 借，留一份原版的落点朝 comp_rule 借 —— 都没另起第二把尺。 */
+               装没装音乐遥控器与收后台监听朝 media_cmds 借 —— 都没另起第二把尺。 */
             tauri_bind::pack_cmds::pack_set,
             tauri_bind::pack_cmds::pack_import,
             tauri_bind::pack_cmds::pack_wipe,

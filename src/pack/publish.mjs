@@ -22,8 +22,8 @@
          pages\ 只带当前这一支号那一张（老版本一张都不带）和非产物文件、
          src\（重新生成页面要用，node_modules 不带）、
          icons\ 与 material\（取 src\pack\ 里出厂那一份，铺到树根同名那一格 —— 运行时只认树根那一层）、
-         data\plugins\<id>\ 与 data\plugins-factory\<id>\（外46：七家插件跟着本体一起出门，活的与原版各一份）
-     不进：data\ 里除上面那两格以外的一切（用户写的书、词库副本、userdata-*、日志、这台机器的 off.json —— 私密，也不该跟着版本走）、
+         data\plugins\<id>\（外46：七家插件跟着本体一起出门；从前还多一份 data\plugins-factory\，插件分离第 2 批 2.6 整格撤了）
+     不进：data\ 里除上面那一格以外的一切（用户写的书、词库副本、userdata-*、日志、这台机器的 off.json —— 私密，也不该跟着版本走）、
            update\（那是一台机器自己的更新账）、树根现在那两格 icons\ 与 material\（是他自己换过的图，出厂那一份另走一路）、
            老版本的 html（用户那棵树里想留几份留几份，发布物只带当前这一版）
    ============================================================ */
@@ -175,8 +175,10 @@ addLayer('src/', path.join(TREE, 'src'), rel => inNodeModules(rel) || /(^|\/)\.[
 addLayer('icons/', path.join(TREE, 'src', 'pack', 'icons'));
 addLayer('material/', path.join(TREE, 'src', 'pack', 'material'));
 /* 五、插件：外46 起七家跟着本体一起进这一棵树（他 2026-10-10 定：取消发布物零插件）。
-   活的铺到 data\plugins\<id>\、开机就能跑；原版铺到 data\plugins-factory\<id>\、「恢复出厂」取它。
-   两格都取自下面「货架」那一段压零卖包的同一批字节（包内件），所以四处一个号、一份字节。
+   铺到 data\plugins\<id>\、开机就能跑。从前还顺手铺一格「原版」（data\plugins-factory\<id>\，
+   给那颗「恢复出厂」取用）—— 插件分离第 2 批 2.5 撤了那颗钮，第 2.6 把这一格整格撤了：
+   没有用户装机，要换回原版就把自己手里那一份包重装。
+   包内件取自下面「货架」那一段压零卖包的同一批字节，所以两处一个号、一份字节。
    卸没卸过那一格（off.json）不进包 —— 那是每台机器自己的状态，不在发布物里带。 */
 /* 出货之前再过一遍越界这道门（和两个构建同一把尺）：货架上发的源码是要给别人看的，
    组件和主程序之间只能有接口调用，不能有内部耦合。 */
@@ -185,7 +187,7 @@ const packs = packScan(PACKS_DIR).filter(p => !SKIP.has(p.id));
 
 /* ---------- 货架：一个包压成一包 zip，清单里写清它是什么来路 ---------- */
 /* 一个包里有哪些件（名字 → 字节）。货架压 zip 和首装那棵树铺插件两处都取这一里，
-   所以零卖的包、树里活的那一份、树里原版那一份 —— 三处字节相同，不会各铺各的。 */
+   所以零卖的包与树里活的那一份 —— 两处字节相同，不会各铺各的。 */
 function 包内件(p, 用了号){
   const m = p.manifest;
   const names = Array.from(p.files.keys()).sort();
@@ -223,13 +225,12 @@ for(const p of packs){
     files: Array.from(p.files.keys()).sort()
   });
   if(!DRY){ fs.mkdirSync(path.join(OUT_DIR, 'plugins'), { recursive: true }); fs.writeFileSync(path.join(OUT_DIR, 'plugins', m.id + '.zip'), buf); }
-  /* 外46（他 2026-10-10 定：取消发布物零插件）：这一家跟着本体一起进首装那一棵树，两格都铺 ——
-     data\plugins\<id>\ 是开机就能跑的那一份，data\plugins-factory\<id>\ 是「恢复出厂」取的原版。
-     版本号那一格用的就是上面传进来的那串，所以「关于」、零卖的包、树里活的、树里原版四处一个串。
+  /* 外46（他 2026-10-10 定：取消发布物零插件）：这一家跟着本体一起进首装那一棵树。
+     data\plugins\<id>\ 是开机就能跑的那一份。版本号那一格用的就是上面传进来的那串，
+     所以「关于」、零卖的包、树里活的三处一个串。
      卸没卸过那一格（off.json）不进包：那是每台机器自己的状态。 */
   for(const e of 件){
     made.set('data/plugins/' + m.id + '/' + e.name, e.data);
-    made.set('data/plugins-factory/' + m.id + '/' + e.name, e.data);
   }
 }
 shelf.sort((a, b) => a.order - b.order || (a.id < b.id ? -1 : 1));
@@ -253,7 +254,7 @@ made.set('flow-desk-install.json', Buffer.from(JSON.stringify({
   versions: VER, packs: shelf.map(p => p.id),
   /* 每一家插件这一趟带的是哪一串号、它要的外壳最低是哪一号（发布脚本传进来的，不取插件清单那一格） */
   plugins: shelf.map(p => ({ id:p.id, name:p.name, version:p.version, 兼容外壳:p.minShell })),
-  note: '这一棵树是首装摊出来的：整文件夹删掉就算卸载，不写注册表。插件跟着本体一起带（' + shelf.length + ' 家，活的在 data\\plugins\\，原版在 data\\plugins-factory\\），换新版本再双击一颗新的 setup 指到同一棵就是覆盖升级。'
+  note: '这一棵树是首装摊出来的：整文件夹删掉就算卸载，不写注册表。插件跟着本体一起带（' + shelf.length + ' 家，都在 data\\plugins\\），换新版本再双击一颗新的 setup 指到同一棵就是覆盖升级。'
 }, null, 2) + '\n', 'utf8'));
 made.set('安装说明.txt', Buffer.from([
   'Flow-Desk · 便携版（首装）',
@@ -264,21 +265,20 @@ made.set('安装说明.txt', Buffer.from([
   '',
   '  pages\\    程序读的那一张页面（换新版本见下面「更新」）',
   '  data\\     你自己长出来的东西，更新永远不会碰这一层：',
-  '            <书名>\\（正文和它的历史快照）、plugins\\（你装的插件和改过的代码）、',
-  '            plugins-factory\\（导入那一下自动留的原版，「恢复出厂」取的就是这一格）、',
+  '            <书名>\\（正文和它的历史快照）、plugins\\（你装的插件）、',
   '            <包名>-bank\\（组件自带的词库）、logs\\（运行日志）',
   '  update\\   覆盖升级那一摊自己待着：backups\\（每一趟换下来的旧东西，照原样挪回去就还是上一版）',
-  '  src\\      Flow-Desk 自己的源码：只有改了它才需要重新生成页面（功能模块不在这里，装卸和改功能代码都不用这一趟）',
+  '  src\\      Flow-Desk 自己的源码：只有改了它才需要重新生成页面（功能模块不在这里，装卸不用这一趟）',
   '',
   '这一份发布物带着插件（' + shelf.length + ' 家：' + shelf.map(p => p.name).join('、') + '）—— 本体和插件一起出门，开箱就有：',
-  '  data\\plugins\\ 是开机就能跑的那一份；data\\plugins-factory\\ 是原版 —— 「改代码」改坏了点「恢复出厂」从那一格拷回来。',
+  '  data\\plugins\\ 是开机就能跑的那一份。',
   '再装一家新的（拿到的是 <id>.zip 或解开的文件夹）：',
   '  顶栏的 ＋（添加插件）→「导入插件」，挑那个压缩包或那个带插件清单的文件夹；',
   '  或者直接把那一格丢进 data\\plugins\\，重启一次软件就认（压缩包会当场摊开）。',
-  '  导入的同一趟会往 data\\plugins-factory\\ 留一份原版，所以「改代码」改坏了有点「恢复出厂」拷回来。',
+  '插件的代码不在程序里改：要换回早先那一份，把自己手里那一个包重装一次。',
   '装卸都在这同一屏：每一家有「装上 / 卸掉 / info」。',
   '  卸掉 = 下一次开机不再加载它那一份代码（改名单 + 刷新这一页），不是藏起来；勾选「同步清除数据」才会连它存的词库和记录一起清。',
-  '  每一个组件跑的就是 data\\plugins\\<它>\\main.js，改代码对话框里存了就用新的。',
+  '  每一个组件跑的就是 data\\plugins\\<它>\\main.js。',
   '',
   '更新：还是用这一颗 —— 下载新的 Flow_Desk_setup_<版本号>.exe，双击它、把目录指到这一棵上，点「覆盖升级」。',
   '它会先把要换的旧的挪进 update\\backups\\<时间戳>\\ 再摊新的：src\\ 那一层整层挪（那一格里没有你写的东西），',
@@ -297,22 +297,23 @@ made.set('安装说明.txt', Buffer.from([
   ''
 ].join('\r\n'), 'utf8'));
 
-/* ---------- 一道硬闸：data\ 底下只许插件那两格跟着本体出门 ----------
+/* ---------- 一道硬闸：data\ 底下只许插件那一格跟着本体出门 ----------
    外46 之前这一道闸是「data\ 一个字节都不许进」；现在七家插件跟着本体走，放行的只有
-   data\plugins\ 与 data\plugins-factory\ 两层。其余（用户写的书、词库副本、userdata-*、
-   日志、这台机器卸没卸过的 off.json）进一个字节就当场停下 —— 那些是私密，也不该跟着版本走。 */
+   data\plugins\ 那一层（从前还放行 data\plugins-factory\ 那一格，插件分离第 2 批 2.6 整格撤了）。
+   其余（用户写的书、词库副本、userdata-*、日志、这台机器卸没卸过的 off.json）进一个字节就当场停下 ——
+   那些是私密，也不该跟着版本走。 */
 {
-  const 放行 = k => k.startsWith('data/plugins/') || k.startsWith('data/plugins-factory/');
+  const 放行 = k => k.startsWith('data/plugins/');
   const 全部 = [...files.keys(), ...made.keys()];
   const dirty = 全部.filter(k => (k === 'data' || k.startsWith('data/')) && !放行(k));
   if(dirty.length){
-    console.error('首装那棵树里出现了数据层的格子（插件那两格之外一律不进）：\n  ' + dirty.slice(0, 12).join('\n  '));
+    console.error('首装那棵树里出现了数据层的格子（插件那一格之外一律不进）：\n  ' + dirty.slice(0, 12).join('\n  '));
     process.exit(1);
   }
-  /* 正向再钉一条：货架上有几家，树里就得有每一家的两格 —— 漏铺一家就是用户装完少一个功能。 */
-  const 缺 = shelf.filter(p => !made.has('data/plugins/' + p.id + '/manifest.json') || !made.has('data/plugins-factory/' + p.id + '/manifest.json'));
+  /* 正向再钉一条：货架上有几家，树里就得有每一家那一格 —— 漏铺一家就是用户装完少一个功能。 */
+  const 缺 = shelf.filter(p => !made.has('data/plugins/' + p.id + '/manifest.json'));
   if(缺.length){ console.error('插件没铺进首装那棵树：' + 缺.map(p => p.id).join('、')); process.exit(1); }
-  console.log('  data\\ 那道闸过了：' + 全部.length + ' 份路径里落在 data\\ 底下的只有插件那两格 · ' + shelf.length + ' 家×两格齐');
+  console.log('  data\\ 那道闸过了：' + 全部.length + ' 份路径里落在 data\\ 底下的只有插件那一格 · ' + shelf.length + ' 家齐');
 }
 
 /* ---------- 体积先看一眼：整包里最肥的是那个 200MB 的 exe，不划算就别真打 ---------- */
@@ -451,4 +452,4 @@ console.log('WROTE ' + out);
 console.log('  壳 ' + (stubBuf.length / 1024).toFixed(0) + 'KB + 树 ' + (copied / 1048576).toFixed(1) + 'MB = ' + index.setup.size);
 /* 那两格落在哪一格，按实际的产物格说 —— 原先写死「dist\」，产物出到 dist\tauri\ 时这句话就是假的 */
 console.log('  货架 ' + shelf.length + ' 个包在 ' + path.join(OUT_DIR, 'plugins') + ' · 清单 ' + path.join(OUT_DIR, 'index.json'));
-console.log('  插件跟着本体走：' + shelf.length + ' 家在 data\\plugins\\（活的）与 data\\plugins-factory\\（原版）各一份 · 零卖的包另在产物格那一个 plugins\\ 里');
+console.log('  插件跟着本体走：' + shelf.length + ' 家都在 data\\plugins\\ · 零卖的包另在产物格那一个 plugins\\ 里');

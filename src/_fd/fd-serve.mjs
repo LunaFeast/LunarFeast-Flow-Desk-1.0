@@ -1,8 +1,7 @@
 /* Flow-Desk 本地服务器
    必须用它打开 FD：File System Access（授权真实数据目录）只在 http://127.0.0.1 或 https 下可用，file:// 不行。
    用法：node fd-serve.mjs   然后浏览器访问 http://127.0.0.1:8791/
-   可选环境变量：PORT、FD_DIR（FD 产物目录）、FD_ICONS（图标那一层，挂到 /icons/）、
-     FD_FACTORY_COMPONENTS（导入那一下留的原版那一格，默认指 resources\app\data\plugins）
+   可选环境变量：PORT、FD_DIR（FD 产物目录）、FD_ICONS（图标那一层，挂到 /icons/）；
    除了发文件，还挂三条写通道：/_comp 是插件那一格的读写和装卸用的那三道闸（就是主进程那一把尺 src\pack\comp-files.cjs），
    /_lib 存的是 #291 色卡、#292 外观方案、外29 丁组 图片库那三份 YAML，/_img 收导入的那一张图的字节。
    还挂一条读的：/_icons 把 icons\ 和 data\images\ 两层扫成一张「名字 → 地址」的表（主进程那层桥在这台没有），
@@ -124,11 +123,9 @@ function serveFile(res, abs, alt){
 }
 /* ---------- /_comp：插件那一格的读写（和主进程同一把尺） ----------
    页面递来的都是 {op, id, rel, text}：包名和路径由 comp-files.cjs 查过才落地，
-   跑出 data\plugins\ 的一律写不进去。装卸那一头只碰 off.json 和目录清单两件事。
-   原版那一格在 data\plugins-factory\（外43 从 resources\app\data\plugins 挪过来的，跟主进程同一个位置）。 */
+   跑出 data\plugins\ 的一律写不进去。装卸那一头只碰 off.json 和目录清单两件事。 */
 const COMP = makeComp({
-  live: path.join(DATA_DIR, 'plugins'),
-  factory: process.env.FD_FACTORY_COMPONENTS || path.join(DATA_DIR, 'plugins-factory')
+  live: path.join(DATA_DIR, 'plugins')
 });
 const OFF = () => path.join(DATA_DIR, 'plugins', 'off.json');
 /* 名单反着记：off.json 里只有「被卸掉的」。文件不在 = 一家都没卸，扫到的全生效。 */

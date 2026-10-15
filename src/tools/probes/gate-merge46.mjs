@@ -51,7 +51,7 @@ for(const f of ['src/_build/p1.js', 'src/_build/p6.js', 'src/_build/rp-kernel.mj
 for(const q of ['data/plugins/notes/main.js', 'data/plugins/why-not-write/main.js', 'src/_wcustom/src/sh-code.js',
                 'src/pack/plugin/FlowDeskBridge.cs', 'src/_build/p1.js', 'src/_wnw/src/w1-core.js', 'src/_wnw/build-kernel.mjs'])
   台.判(q + ' 该认（没被排掉）', !成(['check-ignore', '-q', '--', q]));
-for(const q of ['data/plugins/off.json', 'data/plugins-factory/notes/main.js',
+for(const q of ['data/plugins/off.json', 'data/userdata-fd/notes.json',
                  'src/_wnw/wnw-kernel.js', 'src/_wcustom/wnw-custom-kernel.js', 'src/pack/plugin/dist/mb_FlowDesk.dll'])
   台.判(q + ' 该排掉', 成(['check-ignore', '-q', '--', q]));
 /* 露在外面的只数「没登记过的那一种」（?? 开头那些 = 既不在仓里、也没被 .gitignore 排掉）。
