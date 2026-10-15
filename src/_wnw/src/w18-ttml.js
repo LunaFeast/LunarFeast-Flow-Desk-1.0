@@ -240,8 +240,11 @@ function wTtmlLine(el, a){
      wClockPad(n, w)         补零
      wTtmlClock(ms)          TTML 属性那种 HH:MM:SS.mmm
      wLrcClock(ms, frac)     歌词时标 m:ss.xxx；frac 给 2 就是 LRC 行首那档百分秒 ss.xx
-     wLrcStamp(ms, inline)   把上面那句包成行首 [..] 或句内 <..>
-   负数和读不出的都按 0 算，不往文件里写负时刻。 */
+   负数和读不出的都按 0 算，不往文件里写负时刻。
+   从前这一份末尾还有一颗 wLrcStamp（把上面那句包成行首 [..] 或句内 <..>）—— 那是 4.7 拆份的时候一起抄过来的，
+   为写这一头一处都不叫它（导出 LRC 那一行自己拼方括号，见 w18-lyric.js 里那句「秒尾那两位直接吃毫秒数往下取整」；
+   句内 <..> 只有音乐遥控器那一家用，它自己那份 ttml.js 里有这颗）。搬过来的多一份没人叫的尺，
+   就是又一处"两份真相"，所以删掉 —— 界面上少一种写法都没有。 */
 function wClockPad(n, w){ return String(n).padStart(w || 2, '0'); }
 function wTtmlClock(ms){
   const t = Math.max(0, Math.round(+ms || 0));
@@ -253,4 +256,3 @@ function wLrcClock(ms, frac){
   const f = frac === 2 ? Math.floor(t % 1000 / 10) : t % 1000;
   return Math.floor(t / 60000) + ':' + wClockPad(Math.floor(t % 60000 / 1000)) + '.' + wClockPad(f, frac || 3);
 }
-function wLrcStamp(ms, inline){ const s = wLrcClock(ms); return inline ? '<' + s + '>' : '[' + s + ']'; }

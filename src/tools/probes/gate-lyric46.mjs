@@ -71,7 +71,7 @@ function 载(源, 名表){
   名表.forEach((名, 序) => { 出[名] = 拿[序]; });
   return 出;
 }
-const 为写 = 载(为写源, ['wTtmlParse', 'wTtmlClose', 'wTtmlClock', 'wLrcClock', 'wLrcStamp', 'wClockPad']);
+const 为写 = 载(为写源, ['wTtmlParse', 'wTtmlClose', 'wTtmlClock', 'wLrcClock', 'wClockPad']);
 const 遥控 = 载(遥控源, ['parse', 'close', 'stamp', 'lrcClock', 'clockPad']);
 
 /* ---------- 两份歌词料：一份侧车形状（文件里的那一份），一份内嵌形状（歌曲标签里的那一份） ---------- */
@@ -124,9 +124,12 @@ const 首 = 收(为写.wTtmlParse(侧车))[0];
 
 台.题('二、时刻那两把尺也逐格比');
 const 刻 = [0, 7, 999, 1000, 61500, 3600000, 3661234, 86399999, -50, NaN, undefined, 'abc'];
-台.判('LRC 时标（行首 [..] 与句内 <..> 两种）十一档全同',
-  刻.every(ms => 为写.wLrcStamp(ms) === 遥控.stamp(ms) && 为写.wLrcStamp(ms, true) === 遥控.stamp(ms, true)),
-  刻.map(ms => [为写.wLrcStamp(ms), 遥控.stamp(ms)].join('/')).find((x, i, 全) => x.split('/')[0] !== x.split('/')[1]));
+/* 包成行首 [..] 与句内 <..> 这一档只有音乐遥控器那一家用（为写导出 LRC 那一行自己拼方括号），
+   所以这边拿为写那把尺现拼一个对照，比的还是遥控器那颗 stamp —— 不为它留一颗没人叫的尺。 */
+const 行首 = ms => '[' + 为写.wLrcClock(ms) + ']', 句内 = ms => '<' + 为写.wLrcClock(ms) + '>';
+台.判('LRC 时标（行首 [..] 与句内 <..> 两种）十二档全同',
+  刻.every(ms => 行首(ms) === 遥控.stamp(ms) && 句内(ms) === 遥控.stamp(ms, true)),
+  刻.filter(ms => 行首(ms) !== 遥控.stamp(ms) || 句内(ms) !== 遥控.stamp(ms, true)).join('、'));
 台.判('LRC 时刻 m:ss.xxx（导出与句内打点用的那把尺）十一档全同',
   刻.every(ms => 为写.wLrcClock(ms) === 遥控.lrcClock(ms)),
   刻.map(ms => ms + ':' + 为写.wLrcClock(ms) + '/' + 遥控.lrcClock(ms)).find(x => x.split(':')[1].split('/')[0] !== x.split('/')[1]));
