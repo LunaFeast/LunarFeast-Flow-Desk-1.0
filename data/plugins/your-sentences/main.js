@@ -57,7 +57,10 @@ async function openYsFull(C){
 }
 
 export default {
-  noTitle:true, minW:3, minH:2, def:{ w:5, h:2 },
+  /* minW / minH = 这一家自己答的"最小要多大"，主程序每次要落位都来问这一句（插件分离第 4 批 4.1）。
+     原来这里还写着一对默认尺寸 5 × 2 —— 撤出插件了：默认占多大归主程序那张「出厂布局」表（src/_fd/src/fd3-shell.js 顶上），
+     那张表此刻一格数值都没填（2026-10-16 定的那一版：先不设计数值），没填就按上面这对最小数在左上角依次排开。 */
+  noTitle:true, minW:3, minH:2,
   init(ctx){ P = ctx; },
   expand(ctx){ openYsFull(Object.assign({}, ctx, P)); },
   async mount(body, ctx){

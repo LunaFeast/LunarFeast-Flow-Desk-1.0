@@ -2290,8 +2290,11 @@ function musBridgeField(){
 export default {
   icon:'♪',
   desc:'系统播放器的歌名·进度·播放控制，歌词认 ttml 逐字三行 / lrc / elrc',
-  /* band：整页那一屏要的是中间一条竖带，不是一面墙（外16 甲-3「展开的面板也要收」） */
-  card:{ minW:10, minH:4, def:{ w:16, h:7 }, native:true, band:true, noName:true, wait:'正在连系统播放器…' },
+  /* band：整页那一屏要的是中间一条竖带，不是一面墙（外16 甲-3「展开的面板也要收」）。
+     minW / minH = 这一家自己答的"最小要多大"，主程序每次要落位都来问这一句（插件分离第 4 批 4.1）。
+     原来这里还写着一对默认尺寸 16 × 7 —— 撤出插件了：默认占多大归主程序那张「出厂布局」表（src/_fd/src/fd3-shell.js 顶上），
+     那张表此刻一格数值都没填（2026-10-16 定的那一版：先不设计数值），没填就按上面这对最小数在左上角依次排开。 */
+  card:{ minW:10, minH:4, native:true, band:true, noName:true, wait:'正在连系统播放器…' },
   init(ctx){
     K = ctx;
     /* 把这一家的标签读者挂到共用那一格上：词格的「从歌曲标签提取歌词」用的就是下面这一份 MusEmb，

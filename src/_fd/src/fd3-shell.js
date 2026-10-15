@@ -24,6 +24,25 @@ const isExpanded = (def, it) => !def.noExpanded && it.w * it.h >= GRID_COLS * GR
 /* 字号基准：格子短边 58px 时字号 1.0 */
 const VSC_BASE = 58;
 
+/* ---------- 出厂默认布局方案（插件分离第 4 批 4.1 · #45）----------
+   这张表住在主程序，一行一家：插件 id → 要下发的尺寸与位置（都是网格单位），由他手动填。
+   现在一格数值都没有 —— 他 2026-10-16 定的那一版：「出厂方案先不设计数值，一律各家按自己内部写的
+   最小尺寸，在左上角依次排开」。所以今天每一家第一次上桌走的都是问摆放那第③档（问来的最小尺寸）。
+   等他在界面上调完、测完，再往这里填 w / h / x / y，填了的那一家就按这张表下发；
+   方案的形状（几套、怎么存、怎么切）留到那时候再定。
+   从前那七对默认尺寸写在各家自己定义里（便签 5×3、日程 7×8、金句 5×2、为写 7×2、声笔练习 7×2、
+   推演定制 7×2、音乐遥控器 16×7），这一批从插件那头撤出来，数只留在这几行说明与施工清单那张两栏表里。
+   表里不点名也照旧工作的一家：推演定制现做的组件 —— 那份尺寸是用户自己在配方里写的，仍生效（问摆放第②档）。 */
+const 出厂布局 = new Map([
+  ['notes',                 { w:null, h:null, x:null, y:null }],
+  ['schedule',              { w:null, h:null, x:null, y:null }],
+  ['your-sentences',        { w:null, h:null, x:null, y:null }],
+  ['why-not-write',         { w:null, h:null, x:null, y:null }],
+  ['singbit-input-practice',{ w:null, h:null, x:null, y:null }],
+  ['wnw-custom',            { w:null, h:null, x:null, y:null }],
+  ['music-remote',          { w:null, h:null, x:null, y:null }],
+]);
+
 /* 两套内置方案（PRESETS）和派生函数都在 _shared/sh-color.js，WNW 用同一份 */
 
 /* ---------- 全局色卡 ----------
@@ -1498,9 +1517,11 @@ function fdAsk(q, yes){
 /* ---------- 组件注册表 ---------- */
 const Registry = new Map();
 function registerWidget(def){
-  /* def: {id,name,noTitle,minW,minH,def:{w,h},expand(ctx),mount(el,ctx)} */
+  /* def: {id,name,noTitle,minW,minH,minSize(),expand(ctx),mount(el,ctx)}。
+     从前这里还给 def.def 塞一份 5×3 的兜底 —— 撤了：摆哪一档由主程序那张出厂布局表问出来（`Shell.问摆放`），
+     兜底那一档也只住在问摆放一处，不在注册这一处再存一份。
+     minW / minH 留着不动：那是四角缩放的下限，同时就是"最小要多大"这一问的答案。 */
   if(!def.id || !def.mount) throw new Error('widget 定义不完整：' + def.id);
-  def.def = def.def || { w:5, h:3 };
   def.minW = def.minW || 1; def.minH = def.minH || 1;
   Registry.set(def.id, def);
 }
@@ -1556,8 +1577,32 @@ const Shell = {
     const keep = this.layout.items.filter(it => Registry.has(it.widget));
     if(keep.length !== this.layout.items.length) this.layout.items = keep;
   },
+  /* 一问一答（#45 那一问）：主程序问"这一家最小要多大"，答的是插件自己写的那一份。
+     愿意动态答的自己写一颗 minSize()（按当前内容报，比如按歌名长短、按已读到的条目数），
+     不写就吃它注册时那对 minW / minH。两样都没写 = 没答上，回 null，不许当成 1×1。 */
+  问最小(def){
+    const 答 = typeof def.minSize === 'function' ? (def.minSize() || {}) : {};
+    const w = 答.w || def.minW, h = 答.h || def.minH;
+    return (w > 0 && h > 0) ? { w, h } : null;
+  },
+  /* 这一家第一次上桌该占哪一格（静态储存 + 动态询问两条腿在这儿并起来）。
+     尺寸四档优先级，一张表说尽：① 出厂布局给了这一行 → 按表下发；② 表里没点名 → 吃这一家注册时递上来的
+     那份默认尺寸（推演定制现做的配方写 card.def 就走这一条，用户自己填的数照旧生效）；③ 还没有 → 问来的最小尺寸；
+     ④ 全没有 → 主程序自己的 5×3。位置只认表里点名那一档，且必须落得下、不压着已有的卡，否则交 firstFit 依次排开。
+     只在桌上还缺这一张卡时叫这一颗 —— 已经在桌上的那张卡的 x/y/w/h 谁都不许动（"插件卡片不会自动调整"）。 */
+  问摆放(卡名){
+    const def = Registry.get(卡名); if(!def) return null;
+    const 案 = 出厂布局.get(卡名) || 出厂布局.get(卡名.replace(/^tool-/, '')) || {};
+    const 默 = def.def || {};
+    const 小 = this.问最小(def) || { w:5, h:3 };
+    const w = 案.w || 默.w || 小.w, h = 案.h || 默.h || 小.h;
+    const 格 = { x:案.x, y:案.y, w, h };
+    const 点得下 = Number.isFinite(案.x) && Number.isFinite(案.y) && this.fits(格, null);
+    const r = 点得下 ? 格 : this.firstFit(w, h);
+    return r ? { x:r.x, y:r.y, w:r.w, h:r.h } : null;
+  },
   /* 加载了就上首页（#30 · 2026-10-15）：这一轮加载着的每一家，桌上没有它那张卡就补一张。
-     摆哪一档尺寸吃的是插件自己写的最小那一档（minW / minH，没写就退回它注册时那份默认尺寸），
+     摆哪一档尺寸走上面那颗问摆放（第 4 批 4.1 起：先查主程序那张出厂布局表，再问这一家最小要多大），
      位置交给 firstFit 找第一处放得下的空位；放不下就这一趟不摆，明说一声（不悄悄丢一件功能）。
      不摆卡片的那几家（只往设置里垫几行、只加一个快捷键、只带一个后台监听）在注册表里根本没这一号，
      这一趟自然跳过 —— 外壳不认识任何一家的名字。 */
@@ -1567,9 +1612,7 @@ const Shell = {
       if(!PackOps.forHost(m)) continue;
       const w = Registry.has(m.id) ? m.id : (Registry.has('tool-' + m.id) ? 'tool-' + m.id : null);
       if(!w || this.layout.items.some(it => it.widget === w)) continue;
-      const def = Registry.get(w);
-      const 宽 = (def.minW || (def.def && def.def.w) || 5), 高 = (def.minH || (def.def && def.def.h) || 3);
-      const r = this.firstFit(宽, 高);
+      const r = this.问摆放(w);
       if(!r){ 挤不下的.push(m.name || m.id); continue; }
       this.layout.items.push(Object.assign(
         { id:w + '-' + Date.now().toString(36), widget:w, slot:this.layout.items.length % 5 }, r));
@@ -1581,9 +1624,7 @@ const Shell = {
   autoPlaceAll(){
     const keep = this.layout.items; this.layout.items = [];
     for(const it of keep){
-      const def = Registry.get(it.widget); if(!def) continue;
-      const r = this.firstFit((def.def && def.def.w) || 5, (def.def && def.def.h) || 3);
-      if(!r) continue;
+      const r = this.问摆放(it.widget); if(!r) continue;
       it.x = r.x; it.y = r.y; it.w = r.w; it.h = r.h; delete it.size;
       this.layout.items.push(it);
     }

@@ -33,12 +33,14 @@ const GC = Number(/const GRID_COLS = (\d+), GRID_ROWS = (\d+)/.exec(SHELL)[1]);
 const GR = Number(/const GRID_COLS = \d+, GRID_ROWS = (\d+)/.exec(SHELL)[1]);
 const EA = Number(/const EXPAND_AREA = ([\d.]+)/.exec(SHELL)[1]);
 const AT = GC * GR * EA;
-/* 出厂大小就看这一家自己注册那一句给的 def（从前它抄的是清单里那一行，清单整台撤了） */
-const seg = /card:\{[^}]*def:\{\s*w:\s*(\d+),\s*h:\s*(\d+)/.exec(SRC);
+/* 第一次上桌占多大：插件分离第 4 批 4.1 起这一家自己不再写默认尺寸（原来是 card:{def:{w:16,h:7}}），
+   默认那一档归主程序那张「出厂布局」表，而那张表此刻一格数值都没填 —— 所以出厂这张吃它自己答的最小那一对 10 × 4。
+   结论没变，只是数换一档：40 格照样够不着外壳那条 576 格的面积线。 */
+const seg = /card:\{[^}]*minW\s*:\s*(\d+),\s*minH\s*:\s*(\d+)/.exec(SRC);
 const FW = seg ? +seg[1] : -1, FH = seg ? +seg[2] : -1;
 ok('5 外壳那一档要 ' + AT + ' 格才算展开（' + GC + ' × ' + GR + ' 的 ' + (EA * 100) + '%），' +
    '而音乐遥控器出厂 ' + FW + ' × ' + FH + ' = ' + (FW * FH) + ' 格 —— 靠面积那一条它一辈子走不到（图9 就是这么丢的）',
-  AT === 576 && FW * FH === 112 && FW * FH < AT);
+  AT === 576 && FW * FH === 40 && FW * FH < AT);
 ok('6 所以桌面这一档不再只看外壳那一位：这一张自己按卡高定档，外壳那一条（ctx.expanded）照旧认',
   /this\.full = !!\(ctx\.expanded \|\| ctx\.where === 'pane'\)/.test(SRC) &&
   /!this\.full && host\.clientHeight >= MUS_IN\) this\.full = true/.test(SRC));
@@ -56,5 +58,8 @@ ok('9 摊开就放开手动字号、粗细那两根，收回小卡又自动缩�
   (SRC.match(/this\.typed = this\.full \|\| ctx\.where === 'dock';/g) || []).length === 2);
 
 console.log('\n' + pass + ' 过 ' + fail + ' 不过');
+/* 红就必须让外面接到：从前这一台只把「不过」打在屏幕上、退出码照旧 0，
+   selfcheck 那台因此报「说的和报的对不上」（2026-10-16 抓到，就是 4.1 改了出厂大小那一条红的）。 */
+if(fail) process.exitCode = 1;
 console.log('真拖那一下我自己开探针浏览器做（绝不动他正开着那一家）：这台窗口是隐藏态，' +
   'requestAnimationFrame 和 ResizeObserver 的第一趟都不送到，所以拖完那一下的档必须由顶上第 6 条那句在挂上来时定对 —— 那一句正好量得到。');

@@ -112,7 +112,10 @@ function registerTool(def){
   const c = def.card || {};
   registerWidget({
     id:'tool-' + def.id, name:def.name, noName:c.noName, minW:c.minW || 6, minH:c.minH || 5,
-    def:{ w:(c.def && c.def.w) || 16, h:(c.def && c.def.h) || 12 },
+    /* 默认尺寸这一档原样把配方/插件自己递上来的那份传下去，不在这里加兜底：
+       兜底归主程序那一头（`Shell.问摆放`：出厂布局 → 这一份 → 问来的最小尺寸 → 5×3）。
+       从前这里硬编的一份 16×12 就是"尺寸数字散在插件那一头"的一处，第 4 批 4.1 收进主程序那张表。 */
+    def:c.def,
     expand(){ openToolFull(def, ready); },
     async mount(body, ctx){ return mountToolCard(def, body, ready, ctx && ctx.expanded); }
   });

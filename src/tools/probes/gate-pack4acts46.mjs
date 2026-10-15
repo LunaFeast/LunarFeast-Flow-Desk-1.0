@@ -83,8 +83,10 @@ for(const 件 of [['眼睛（在不在列表里）', /icoMarkup\((?:'|\")eye(Off
 台.题('三、加载了就上首页，不留中间状态');
 台.判('开机那一趟剪完孤卡就补一张（补齐桌面卡紧跟在 pruneMissing 后面）',
   桌.indexOf('this.pruneMissing();') > 0 && 桌.indexOf('this.补齐桌面卡();') > 桌.indexOf('this.pruneMissing();'));
-台.判('补的那一张吃的是插件自己写的最小那一档（minW / minH），位置交给 firstFit',
-  /补齐桌面卡\(\)\{[\s\S]*?def\.minW[\s\S]*?this\.firstFit\(宽, 高\)/.test(桌));
+台.判('补的那一张走的是问摆放那颗（插件分离第 4 批 4.1：主程序那张出厂布局表 → 这一家自己递上来的默认尺寸 → 问来的最小尺寸），位置仍然交 firstFit',
+  /补齐桌面卡\(\)\{[\s\S]{0,900}?this\.问摆放\(w\)/.test(桌)
+  && /问摆放\(卡名\)\{[\s\S]*?案\.w \|\| 默\.w \|\| 小\.w[\s\S]*?this\.firstFit\(w, h\)/.test(桌)
+  && /问最小\(def\)\{[\s\S]*?def\.minSize[\s\S]*?def\.minW/.test(桌));
 台.判('那张卡撤下这颗钮走的是「卸载」同一颗（同一个问话，不再自己抹布局）',
   /PackOps\.unloadAsk\(cid\)/.test(桌) && !/layout\.items = this\.layout\.items\.filter\(x => x\.id !== it\.id\)/.test(只认代码(桌)));
 台.判('外壳不认任何一家的名字：补卡那一趟只问注册表与插件清单',

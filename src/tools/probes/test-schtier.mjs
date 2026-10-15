@@ -75,10 +75,12 @@ const GC = Number(/const GRID_COLS = (\d+), GRID_ROWS = (\d+)/.exec(SHELL)[1]);
 const GR = Number(/const GRID_COLS = \d+, GRID_ROWS = (\d+)/.exec(SHELL)[1]);
 const EA = Number(/const EXPAND_AREA = ([\d.]+)/.exec(SHELL)[1]);
 const EXPAND_AT = GC * GR * EA;
-/* 出厂大小就看这一家自己注册那一句给的 def（从前它抄的是清单里那一行，清单整台撤了） */
-const factory = (() => { const seg = /def:\{\s*w:\s*(\d+),\s*h:\s*(\d+)/.exec(SRC); return seg ? (+seg[1]) * (+seg[2]) : -1; })();
+/* 出厂大小就看这一家自己答的那一对最小数（minW / minH）：插件分离第 4 批 4.1 起，
+   默认占多大不再写在这家自己定义里（原来是 def:{w:7,h:8}），归主程序那张「出厂布局」表 ——
+   那张表此刻一格数值都没填（他定的一律先按各家最小排开），所以第一次上桌就是 5 × 6 = 30 格。 */
+const factory = (() => { const seg = /minW\s*:\s*(\d+),\s*minH\s*:\s*(\d+)/.exec(SRC); return seg ? (+seg[1]) * (+seg[2]) : -1; })();
 ok('5 这两档出厂走得到的路上摆（日程出厂 ' + factory + ' 格 < 150 < 300 < 放大那一条闸 ' + EXPAND_AT + ' 格，桌面共 ' + GC + ' × ' + GR + '）',
-  factory === 56 && X.TIERS[1].at > factory && X.TIERS[2].at < EXPAND_AT && X.TIERS[2].at <= GC * GR, factory + ' / ' + EXPAND_AT);
+  factory === 30 && X.TIERS[1].at > factory && X.TIERS[2].at < EXPAND_AT && X.TIERS[2].at <= GC * GR, factory + ' / ' + EXPAND_AT);
 ok('6 判定只吃 C.item 那一格，没有第二套量像素的口径',
   /tierOf\(C\.item\.w, C\.item\.h\)/.test(SRC) && !/getBoundingClientRect\(\)\.width *>=? *\d+.*tier/i.test(SRC));
 
