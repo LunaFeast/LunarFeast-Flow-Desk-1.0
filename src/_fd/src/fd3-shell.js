@@ -27,24 +27,31 @@ const isExpanded = (def, it) => !def.noExpanded && it.w * it.h >= GRID_COLS * GR
    色号那三份资料只有主程序一份（looks.yaml / palettes.yaml / appearance.json，读的那颗在 _shared/sh-look.js）；
    这一节只管一件事：哪一家挑了哪一套方案。一格一家——
      · 没这一格（默认）= 跟随：跟着主程序当前那一套动，卡片不吃任何自己的变量；
-     · 挑了一条方案 = 独立：那一条的配色 + 外观模式 + 纹理 + 两档圆角 + 字体，算成一份变量写在
+     · 挑了一条方案 = 独立：那一条的配色 + 外观模式 + 纹理 + 两档圆角，算成一份变量写在
        这一家自己那张卡的根元素上。主程序换主题走的是根元素那一层，写在卡上的这些盖在它上面，
        所以「不下发」不用第二套判定 —— 它自己身上那份就是它挑的那一套。
-   名单两条不进来（2026-10-16 定的）：为写维持它自己那一份（w2-theme.js 写在自己的根元素上，
-   设置里那颗「跟随 Flow-Desk 主外观」的勾照旧），声笔练习那一家被 test-rplook 钉着不许有自己的外观。
+   名单里只剩一家不进来（2026-10-16 他点的那一版改的）：声笔练习（singbit-input-practice）被
+   test-rplook 钉着不许有自己的外观。**为写那一家 2026-10-16 迁进这张表了**（点的是「统一一只口」）：
+   它那一层挂在封面里、不在自己那张卡下面，继承不到卡上的变量，所以它读的是这张表算出来的同一份
+   （PackLooks.算一份），它设置里那颗「跟随 Flow-Desk 主外观」的勾和那份配色名单也都写这张表
+   （PackLooks.改）—— 一件事一处记，界面上两处开关只是同一格的两只手。
    标记色那一串仍全局一份：它跟着方案走的是主程序这一头（Marks.随方案），不给每家另起一串——
    另起就等于把「同一张卡上的标记在两处存色号」，那是两份真相。
    存在 appearance.json 的 packs 那一节（与 look / marks 同一层，不进方案快照：换方案不该替你把
    「哪一家独立」这件事改掉）。
    ============================================================ */
-const 外观不接的两家 = ['why-not-write', 'singbit-input-practice'];
+const 外观不接的名单 = ['singbit-input-practice'];
 const PackLooks = {
   get 表(){ return LookStore.data.packs || (LookStore.data.packs = {}); },
-  /* 能挑的一家 = 这一轮加载着的、除了那两家不接的 */
-  可挑(){ return Packs.list().filter(m => PackOps.forHost(m) && 外观不接的两家.indexOf(m.id) < 0); },
+  /* 能挑的一家 = 这一轮加载着的、除了那一家不接的 */
+  可挑(){ return Packs.list().filter(m => PackOps.forHost(m) && 外观不接的名单.indexOf(m.id) < 0); },
   挑的(包){ const 格 = this.表[包]; return (格 && 格.案) || ''; },
   独立(){ return Object.keys(this.表).filter(包 => !!(this.表[包] && this.表[包].案)); },
   定(包, 案){ if(案) this.表[包] = { 案 }; else delete this.表[包]; LookStore.save(); },
+  /* 界面上挑一套只走这一只口：外观那一屏那一片下拉、为写设置里那颗勾和那份名单，都是它。
+     落账之后做两件事 —— 重画桌面（各家卡上那份跟着换），再把新值播给挂在封面里的那一层
+     （为写那一棵不吃继承，只听这一播；没开着时 pushToFrames 自己就不发，不空转）。 */
+  改(包, 案){ this.定(包, 案); Shell.render(); Theme.pushToFrames(); },
   /* 注册名 → 包 id：工具那一族带 tool- 头，其余同名；不是这一轮加载着的一家就回空 */
   包of(注册名){
     const 裸 = String(注册名 || '').replace(/^tool-/, '');
@@ -52,25 +59,39 @@ const PackLooks = {
   },
   /* 一张卡该按哪一套画：这一家挑了方案且那张方案还在文件里才算，方案被删了就当跟随（不摆一句错） */
   生效(包){ const 案 = this.挑的(包); return 案 ? (LookLib.list.find(s => s.方案名 === 案) || null) : null; },
-  /* 一条方案 → 一棵子树上的变量（不碰 Theme.cfg、不碰根元素，全局那一份生效值一个字不动） */
-  画到(元素, 包){
-    const s = this.生效(包);
-    if(!s){ return false; }
-    const 色 = Palette.items.find(x => x.name === s.配色);
+  /* 一套方案 → 一份画得出来的东西（一整张变量表 + 两档圆角 + 模式 / 纹理 / 深浅 + 四块预览色）。
+     卡片那一条（画到）和封面里那一条（为写自己那一层）都从这一颗算出来：一处算，两处吃。
+     字体不在这儿 —— 全站那一份字体只有 Theme.apply 一个出口（test-fontlang 第 17 条钉着），
+     一张卡自己用哪个字体走的是既有那颗字体钮（it.font / it.fontFollow），一键统一收的也是它。 */
+  份of(案){
+    const s = 案 ? (LookLib.list.find(x => x.方案名 === 案) || null) : null;
+    if(!s) return null;
+    const 色 = Palette.items.find(x => x.name === s.配色) || null;
     const t = Object.assign({}, 色 ? tokensOf(色).tokens : (Theme.applied || {}));
     const cfg = 方案成cfg(s);   /* 那条换算与 LookLib.apply 同一批字段，住在 fd3-lib（这一头不再抄一份字面） */
     const dk = 色 ? 色.mode === 'dark' : Look.dark();
     const 补 = Look.readable(t, cfg); if(补) Object.assign(t, 补);
-    for(const k in t) 元素.style.setProperty(k, t[k]);
-    const v = Look.vars(cfg, dk);
-    for(const k in v) 元素.style.setProperty(k, v[k]);
     const 卡角 = clampRadius(cfg.radiusCard) + 'px', 件角 = clampRadius(cfg.radiusCtl) + 'px';
-    元素.style.setProperty('--radius-card', 卡角); 元素.style.setProperty('--radius', 件角);
-    元素.style.setProperty('--r-card', 卡角); 元素.style.setProperty('--r-btn', 件角); 元素.style.setProperty('--r-pill', 件角);
-    /* 字体不在这儿：全站那一份字体只有 Theme.apply 一个出口（test-fontlang 第 17 条钉着），
-       一张卡自己用哪个字体走的是既有那一条 —— 卡片上那颗字体钮（it.font / it.fontFollow），一键统一收的也是它。
-       在这儿再开一条就把那颗钮顶掉了：两处都能写同一个名字，谁后跑谁赢。 */
-    元素.dataset.mode = Look.eff(cfg).mode.k; 元素.dataset.tex = Look.eff(cfg).tex || 'none'; 元素.dataset.dark = dk ? '1' : '0';
+    const 表 = Object.assign({}, t, Look.vars(cfg, dk),
+      { '--radius-card':卡角, '--radius':件角, '--r-card':卡角, '--r-btn':件角, '--r-pill':件角 });
+    const e = Look.eff(cfg);
+    return { 案:s.方案名, 色:色, 明暗:mingPoolOf(色), dark:!!dk, 名:s.方案名,
+      角:{ card:clampRadius(cfg.radiusCard), ctl:clampRadius(cfg.radiusCtl) },
+      模式:e.mode.k, 纹理:e.tex || 'none', 表:表,
+      预览:{ bg:表['--page-bg'] || '#888', card:表['--card-bg'] || '#888',
+        accent:表['--accent'] || '#888', text:表['--text'] || '#888' } };
+  },
+  算一份(包){ return this.份of(this.挑的(包)); },
+  /* 能挑的那几套的名字：为写那一处开关列的就是这一份，不再列它自己那一份池（一处名单，两处点）。
+     每一项带着那套的色卡本体，明暗那一轴和「跨池换就近」都拿它现算，不在这一头再抄一份判定。 */
+  名单(){ return LookLib.list.map(s => { const 份 = this.份of(s.方案名) || {};
+    return { 案:s.方案名, 名:s.方案名, 色:份.色 || null, 明暗:份.明暗 || '', 预览:份.预览 || null }; }); },
+  /* 一条方案 → 一棵子树上的变量（不碰 Theme.cfg、不碰根元素，全局那一份生效值一个字不动） */
+  画到(元素, 包){
+    const 份 = this.算一份(包);
+    if(!份){ return false; }
+    for(const k in 份.表) 元素.style.setProperty(k, 份.表[k]);
+    元素.dataset.mode = 份.模式; 元素.dataset.tex = 份.纹理; 元素.dataset.dark = 份.dark ? '1' : '0';
     return true;
   },
 };

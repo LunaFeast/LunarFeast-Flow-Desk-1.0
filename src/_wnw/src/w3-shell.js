@@ -1374,10 +1374,10 @@ const Settings = {
        搬进 FD 那一张页之后没有「单独打开」这一种了，这一档永远成立 */
     const hosted = true;
     if(hosted){
-      const fol = h('input', { type:'checkbox', checked:Theme.cfg.follow });
-      fol.addEventListener('change', async () => {
-        await Theme.setFollow(fol.checked);
-        fill(); toast(fol.checked ? '已跟随 Flow-Desk 主外观' : '改用为写自己的配色');
+      const fol = h('input', { type:'checkbox', checked:Theme.follows() });
+      fol.addEventListener('change', () => {
+        Theme.setFollow(fol.checked);
+        fill(); toast(fol.checked ? '已跟随 Flow-Desk 主外观' : '改用为写自己挑的那一套方案');
       });
       box.appendChild(h('label', { class:'wnw-switch' }, [fol, h('span', {}, '跟随 Flow-Desk 主外观')]));
     }
@@ -1388,27 +1388,28 @@ const Settings = {
     const fill = () => {
       sel.innerHTML = '';
       /* 名单按当前那条明暗轴筛（外13-M）：另一池的不摆出来，也不灰着让人点不动。
-         轴还没递到的时候不筛（这时候筛等于把名单清空，比摆两套更糟）。 */
+         轴还没递到的时候不筛（这时候筛等于把名单清空，比摆两套更糟）。
+         这份名单就是主程序那一份方案清单（插件分离第 4 批 4.4：一只口，两处点）。 */
       for(const e of Theme.poolNow()){
-        const t = tokensOf(e).tokens;
-        sel.appendChild(h('option', { value:e.id, selected:e.id === Theme.cfg.scheme }, e.name));
-        dots.innerHTML = ['--page-bg', '--card-bg', '--accent', '--text'].map(k =>
-          '<i style="background:' + (t[k] || '#888') + '"></i>').join('');
+        const t = e.预览 || tokensOf(e).tokens;
+        sel.appendChild(h('option', { value:e.id, selected:e.id === Theme.案() }, e.name));
+        dots.innerHTML = ['bg', 'card', 'accent', 'text'].map(k =>
+          '<i style="background:' + (t[k] || t['--' + k] || '#888') + '"></i>').join('');
       }
       sel.disabled = Theme.follows();
       rnd.disabled = Theme.follows();
-      const a = Theme.axis(), all = Theme.pool.length, n = Theme.poolNow().length;
+      const a = Theme.axis(), all = Theme.poolNow().length;
       const an = (typeof MING_NAME !== 'undefined' && MING_NAME[a]) || (a === 'dark' ? '黑暗' : '明亮');
       hint.textContent = (a === 'light' || a === 'dark')
-        ? '明暗这一轴跟着 Flow-Desk：现在这一轴是' + an + '，配色名单只摆本池那 ' + n + ' 套（池里共 ' + all
-          + ' 套，另一池的 ' + (all - n) + ' 套不摆出来）。'
+        ? '明暗这一轴跟着 Flow-Desk：现在这一轴是' + an + '，方案名单只摆本池那 ' + all
+          + ' 套（另一池的不摆出来）。这份名单和 Flow-Desk 外观那一屏的是同一份。'
           + (Theme.follows() ? '现在吃的是宿主那套色，下面这份名单等你把跟随关掉才点得动。' : '')
-        : 'Flow-Desk 还没把明暗那一轴递过来，这份名单先不筛（池里 ' + all + ' 套都摆着）。';
+        : 'Flow-Desk 还没把明暗那一轴递过来，这份名单先不筛。';
     };
     sel.addEventListener('change', () => { Theme.select(sel.value); fill(); });
     /* 随机换一套：也只在本池里抽（外13-M 那条「自动随机同一池」），和 Flow-Desk 那头同名一个 */
     const rnd = h('button', { class:'wnw-btn mini', title:'在当前这一轴的那一池里随机挑一套', onclick:() => {
-      const list = Theme.poolNow().filter(e => e.id !== Theme.cfg.scheme);
+      const list = Theme.poolNow().filter(e => e.id !== Theme.案());
       if(!list.length){ toast('本池里就这一套（或者一套也没有），没有可随机换的'); return; }
       Theme.select(list[Math.floor(Math.random() * list.length)].id); fill();
       toast('随机换到「' + ((Theme.cur() || {}).name || '') + '」（本池内抽的）');
@@ -1472,15 +1473,6 @@ const Settings = {
     box.appendChild(h('div', { class:'wnw-row' }, [
       h('button', { class:'wnw-btn mini', onclick:async () => { await FocusLook.reset(); Settings.open('look'); toast('段落聚焦已回到默认'); } }, '恢复默认')
     ]));
-    const del = h('button', { class:'wnw-btn mini', onclick:async () => {
-      const e = Theme.cur();
-      if(!e || e.locked){ toast('内置配色不删'); return; }
-      if(!await wnwAsk('删掉这条配色「' + (e.name || '') + '」？删了以后正用着它的那一屏退回池子里第一条。')) return;
-      Theme.pool = Theme.pool.filter(x => x.id !== e.id);
-      Theme.cfg.scheme = Theme.pool[0].id; Theme.save(); Theme.apply(); fill();
-    }}, '删掉这条配色');
-    box.appendChild(h('div', { class:'wnw-row' }, [del]));
-
     const draw = () => { fill(); };
     draw();
     /* 宿主换轴 / 换肤那一刻这一屏跟着重画一次：配色名单和那行说明都得跟着轴走（外13-M）。

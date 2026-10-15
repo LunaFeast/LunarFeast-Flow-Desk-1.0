@@ -1,18 +1,23 @@
 /* ============================================================
    WNW 外观（三层模型的第二层）
-   FD 只把「主外观」整套色播过来，跟不跟由这里说了算：
-   跟随开着 → 用 FD 播来的那套；关掉 → 用自己池里选中的那条。
-   圆角两档留空表示跟着 FD 的基准，拖过滑块就自己定。
-   外观模式 / 纹理不在这一层管：宿主在根元素上钉好的那一套，三栏直接跟着吃。
+   ------------------------------------------------------------
+   「跟不跟主程序、独立的时候用哪一套」这件事只记在一处：主程序那一张一家一格的表
+   （`_fd/src/fd3-shell.js` 的 PackLooks，存在 appearance.json 的 packs 那一节）。
+   插件分离第 4 批 4.4 他点的是「迁进新表，统一一只口」，从前这一层自己那一份账（cfg.follow / cfg.scheme
+   加一个自己的配色池）就此退掉：界面上那颗「跟随 Flow-Desk 主外观」的勾、那份配色名单、那颗随机换一套，
+   写的都是上面那张表，读的都是主程序替这一家算出来的那一份（PackLooks.算一份）。
+   为什么不是"卡上写了变量、这一层跟着继承"：为写那一层挂在封面里（#fdCoverBody），不在自己那张卡底下，
+   卡上那一族变量够不到它 —— 所以它自己向那张表要一份现成的，算的那一颗仍是主程序那颗，不在这儿重算第二遍。
+   还留在这一层的只有两档圆角的手调：那是「在生效那一套之上再钉一遍」，不是第二个选色决定。
+   外观模式 / 纹理：跟随的时候归宿主在根元素上钉好的那一套；独立的时候连这两样一起从那张表来（他点的那一版）。
    ============================================================ */
 const Theme = {
   from:'standalone', id:'', dark:false,
-  cfg:{ follow:true, scheme:'', card:'', ctl:'' },
-  pool:[],
+  cfg:{ card:'', ctl:'' },
   fd:null,
   /* 明暗那一轴（外13-M）：宿主递过来的结论，'light' / 'dark' / ''（还没递到）。
      为写这端不自己定三档 —— 跟随系统 / 按时间 / 手动那三档住在 Flow-Desk 的外观设置里，
-     这里只吃它一个结论，然后按同一条轴筛自己这一池配色，两端看到的是同一条轴。 */
+     这里只吃它一个结论，然后按同一条轴筛名单，两端看到的是同一条轴。 */
   ming:'',
   async init(){
     /* 宿主这一套先认下来（模板 head 里的首帧注入用的就是这一份）：
@@ -20,11 +25,8 @@ const Theme = {
     const pre = fdPalette();
     if(pre){ this.from = 'fd'; this.fd = pre; this.id = pre.id; this.ming = pre.ming || ''; }
     const c = await State.get('look', null); if(c) Object.assign(this.cfg, c);
-    const p = await State.get('look-pool', null); if(Array.isArray(p)) this.pool = p;
-    /* 色卡至少说明文和暗两套，用户不选 Rime 也有得挑 */
-    for(const [id, name] of [['light', '明'], ['dark', '暗']])
-      if(!this.pool.find(e => e.id === id)) this.pool.unshift({ id, name, mode:id, locked:true, source:'builtin' });
-    if(!this.cur() && !this.cfg.follow) this.cfg.scheme = 'light';
+    /* 从前这里读一份自己的配色池（look-pool）并补明暗两套内置：池子退了，名单归那张表。
+       旧存档那一格一个字不动地留在原地，只是不再有人读它 —— 不在这里偷偷替用户改数据。 */
     /* 轴已经知道的情况下先把不该留在这一池的配色换掉再上色，免得开机那一帧看着像跨池 */
     this.mingCheck(false);
     wnwOn(window, 'message', ev => {
@@ -43,56 +45,66 @@ const Theme = {
     if(!this._wired){ this._wired = true; Bus.on('theme', () => this.apply()); }
     this.apply();
   },
-  save(){ State.set('look', this.cfg); State.set('look-pool', this.pool); },
-  /* FD 还没播过来之前谈不上跟随：那一头没就绪的这一刻，这一层用自己池里那条 */
-  follows(){ return !!(this.cfg.follow && this.fd && this.fd.tokens); },
-  /* 当前实际生效的整套 token；没有就交回模板的兜底变量 */
+  save(){ State.set('look', this.cfg); },
+  /* ---------- 那一张表（这一层唯一的选色决定就在这儿）---------- */
+  案(){ return (typeof PackLooks !== 'undefined' && PackLooks.挑的) ? (PackLooks.挑的('why-not-write') || '') : ''; },
+  独份(){ return (typeof PackLooks !== 'undefined' && PackLooks.算一份) ? (PackLooks.算一份('why-not-write') || null) : null; },
+  /* 那张表够不到（把这一棵单独拿出来跑的场合）就不是「跟随」也不是「独立」，而是宿主还没播到：
+     这时候吃 fdPalette() 那一份，播不到就用页面模板里的兜底 —— 不在这儿补第二套账 */
+  follows(){ return !this.案(); },
+  /* 当前实际生效的整套变量；宿主还没播、这一家也没挑 → 交回模板的兜底变量 */
   tokens(){
-    if(this.follows()) return this.fd.tokens;
-    const e = this.cur();
-    return e ? tokensOf(e).tokens : null;
+    const 份 = this.独份();
+    if(份) return 份.表;
+    return (this.fd && this.fd.tokens) || null;
   },
-  cur(){
-    if(this.follows()) return null;
-    return this.pool.find(e => e.id === this.cfg.scheme) || this.pool[0] || null;
-  },
+  /* 生效那一套是谁：独立就是那张表点名的那一套（回 {案, id, name} 给界面念名字），跟随就没有"自己那一套" */
+  cur(){ const 案 = this.案(); return 案 ? { 案, id:案, name:案 } : null; },
   /* ---------- 明暗那一轴（外13-M）· 为写这一端 ----------
-     宿主递过来的结论优先（'' = 还没递到：这时按自己当前这套配色现判一个，别硬当明亮）；
-     一套配色归哪一池用的还是宿主那一份口径（mingPoolOf：色卡 明暗 那一栏优先，
-     没写上来才现算 mingDark），这里不另写第二份判定。 */
+     宿主递过来的结论优先（'' = 还没递到：这时才按独立那一套自己归的那一池判一个，别硬当明亮）；
+     一套方案归哪一池用的是宿主那一份口径（mingPoolOf 吃的是那张卡，主程序那头算好了递过来），
+     这里不另写第二份判定。 */
   axis(){
     if(this.ming === 'light' || this.ming === 'dark') return this.ming;
-    const self = this.pool.find(e => e.id === this.cfg.scheme) || this.cur();
-    return (typeof mingPoolOf === 'function' ? mingPoolOf(self) : '') || '';
+    const 份 = this.独份();
+    return (份 && (份.明暗 === 'light' || 份.明暗 === 'dark')) ? 份.明暗 : '';
   },
-  /* 当前这一轴下能挑的那几套：另一池的不摆出来（项目规矩：不支持的组合不渲染，不是灰显）。
-     轴还不知道（''）时不筛 —— 这时候筛就是把整个名单清空，比摆两套更糟。 */
+  /* 能挑的那几套：名单就是主程序那份方案清单（一张名单，两处点 —— 外观那一屏点的是同一份）。
+     按当前这一轴筛：另一池的不摆出来，也不灰着让人点不动。
+     下拉的取值就是方案名，不在这一头另编一套号 —— 那是第二个真相。 */
   poolNow(){
+    const 名 = (typeof PackLooks !== 'undefined' && PackLooks.名单) ? PackLooks.名单() : [];
+    const 记上 = 名.map(e => ({ id:e.案, name:e.名, 案:e.案, 明暗:e.明暗, 色:e.色, 预览:e.预览 }));
     const a = this.axis();
-    if(a !== 'light' && a !== 'dark') return this.pool.slice();
-    const list = this.pool.filter(e => (typeof mingPoolOf === 'function' ? mingPoolOf(e) : a) === a);
-    return list.length ? list : this.pool.slice();
+    if(a !== 'light' && a !== 'dark') return 记上;
+    const 本池 = 记上.filter(e => e.明暗 === a);
+    return 本池.length ? 本池 : 记上;
   },
-  /* 轴变了之后补的一句账：不跟随宿主、而正用的那套不归新的这一池 → 按色调就近换成同池那套，
+  /* 轴变了之后补的一句账：独立正用的那一套不归新的这一池 → 按色调就近换成同池那套，
      并当场说清换了什么（不许静默、也不许留一套跨池的在这儿）。
-     跟随宿主的时候色号就是宿主那套（宿主那头已经把它的色卡换对了），这里只重筛名单。 */
+     跟随的时候色号就是宿主那套（宿主那头已经把它的色卡换对了），这一趟只重筛名单。 */
   mingCheck(announce, want){
     if(typeof want === 'string'){ const k = (want === 'light' || want === 'dark') ? want : ''; if(k === this.ming) return false; this.ming = k; }
-    const a = this.axis();
-    if(a !== 'light' && a !== 'dark') return false;
-    if(this.follows()) return false;
-    const cur = this.pool.find(e => e.id === this.cfg.scheme) || null;
-    if(!cur || (typeof mingPoolOf === 'function' ? mingPoolOf(cur) : a) === a) return false;
-    const nt = (typeof mingNearest === 'function') ? mingNearest(this.pool, cur, a) : null;
-    if(!nt) return false;
-    this.cfg.scheme = nt.id; this.save();
+    const 案 = this.案(); if(!案) return false;
+    const a = this.axis(); if(a !== 'light' && a !== 'dark') return false;
+    const 名 = (typeof PackLooks !== 'undefined' && PackLooks.名单) ? PackLooks.名单() : [];
+    const 现 = 名.find(e => e.案 === 案) || null;
+    if(现 && 现.明暗 === a) return false;
+    const 同池 = 名.filter(e => e.明暗 === a && e.案 !== 案);
+    if(!同池.length) return false;
+    /* 就近按色调挑（和宿主那颗 mingNearest 同一颗函数、同一个口径），挑不动就取名单里同池头一套 */
+    const 色 = (typeof mingNearest === 'function' && 现 && 现.色) ? mingNearest(同池.map(e => e.色).filter(Boolean), 现.色, a) : null;
+    const nt = 同池.find(e => 色 && e.色 === 色) || 同池[0];
+    PackLooks.改('why-not-write', nt.案);
     if(announce) toast('明暗切到' + ((typeof MING_NAME === 'object' && MING_NAME[a]) || a)
-      + '：为写正用的「' + cur.name + '」不归这一池，已按色调就近换成同池的「' + nt.name + '」。');
+      + '：为写正用的「' + 案 + '」不归这一池，已按色调就近换成同池的「' + nt.案 + '」。');
     return true;
   },
-  /* 圆角：先看自己钉过没有，没有就吃 FD 的基准，再没有用全局默认那一档（外13-C：5） */
+  /* 圆角：先看自己钉过没有，没有就吃生效那一套的那两档（独立 = 那一套自己带的，跟随 = 宿主播来的基准），
+     再没有用全局默认那一档（外13-C：5） */
   radius(){
-    const base = (this.fd && this.fd.radius) || {};
+    const 份 = this.独份();
+    const base = (份 && 份.角) || (this.fd && this.fd.radius) || {};
     const card = this.cfg.card === '' ? (base.card === undefined ? 5 : base.card) : +this.cfg.card;
     const ctl  = this.cfg.ctl  === '' ? (base.ctl  === undefined ? 5 : base.ctl)  : +this.cfg.ctl;
     return { card:clampR(card), ctl:clampR(ctl) };
@@ -110,9 +122,12 @@ const Theme = {
     /* 胶囊那一档不再钉死 99px：标签轮廓、chip、徽标、进度条端头这些原来吃 --r-pill 的地方
        现在和控件同一档，全局圆角一个值管到底（外13-C）。 */
     r.setProperty('--r-pill', rad.ctl + 'px');
-    /* 外观模式 + 纹理不归这个跟随开关管：那个开关只管色号，边框和阴影是另一层皮。
-       那一层皮由宿主在根元素上钉好（sh-look.js 那一趟），三栏挂上 data-look 就跟着吃，
-       这一头不再自己钉第二遍。 */
+    /* 外观模式 + 纹理：跟随的时候不归这一层钉（宿主在根元素上钉好，这一层跟着吃，从前就是这么写的）；
+       独立的时候那一套的这两样必须在这儿钉一遍 —— 这一层在封面里，不在自己那张卡底下，
+       卡上那份（PackLooks.画到）继承不过来，回到跟随就把这三记撤掉，不落一手跨池的旧皮。 */
+    const 份 = this.独份();
+    if(份){ box.dataset.mode = 份.模式; box.dataset.tex = 份.纹理; box.dataset.dark = 份.dark ? '1' : '0'; }
+    else { delete box.dataset.mode; delete box.dataset.tex; delete box.dataset.dark; }
     Ff.apply();
     this.read();
     /* 明暗那一轴（外13-M）：钉在为写自己那一层上，宿主的 data-ming 管的是整页那一层。
@@ -131,24 +146,18 @@ const Theme = {
     this.dark = rgb ? (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255 < .5 : false;
     box.dataset.wnwTheme = this.dark ? 'dark' : 'light';
   },
-  /* 池里加一条：同名同色的复用已有的，不越堆越多 */
-  record(entry){
-    const same = this.pool.find(e => e.name === entry.name && (e.colors || []).length &&
-      (e.colors || []).map(c => c.raw).join(',') === (entry.colors || []).map(c => c.raw).join(','));
-    if(same) return same;
-    const e = Object.assign({ id:'l' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36) }, entry);
-    this.pool.push(e); this.save();
-    return e;
-  },
-  select(id){ this.cfg.scheme = id; this.cfg.follow = false; this.save(); this.apply(); },
-  async setFollow(v){
-    this.cfg.follow = !!v; this.save();
-    /* 把跟随关掉的一刻要用自己池里那套了：那套要是不归当前这一轴的那一池，就地换成同池就近的那套 */
-    if(!v) this.mingCheck(true);
+  /* 两只手都写那一张表（表自己会重画桌面并把新值播回来，这一层不再另记一遍） */
+  select(案){ if(案) PackLooks.改('why-not-write', 案); this.apply(); },
+  setFollow(v){
+    if(v) PackLooks.改('why-not-write', '');
+    /* 把跟随关掉的一刻要有一套落地：从当前这一轴的名单里取头一套（这一轴筛过的，不用再去补跨池的账） */
+    else PackLooks.改('why-not-write', this.案() || ((this.poolNow()[0] || {}).案 || ''));
     this.apply();
   }
   /* 从前这里有一条 recordRime()：把 _shared/sh-rime.js 解析出来的小企鹅配色灌进为写自己的池。
      件-9 整条撤下 Rime 配色，这条入口和设置里那个按钮一起撤了。 */
+  /* 从前这里还有一颗 record(entry) 加一份自己的配色池（pool / look-pool）：那是第二个选色决定，
+     插件分离第 4 批 4.4 迁进主程序那张表之后没有谁来读它了，跟着界面上那颗「删掉这条配色」一起退。 */
 };
 function clampR(v){ return Math.max(0, Math.min(30, Math.round(+v || 0))); }
 /* 问这一页当前那套配色（宿主在 fd3-shell.js 里留的 FD_PALETTE_SNAPSHOT）。
