@@ -31,7 +31,7 @@
          files 报的是页面递进来的原文、shared 报的是折过的那一串（两处不同，一处都不许多折、也不许少折）；
      十、纯判断那一格带测试、不动磁盘、不认识壳；
      十一、账：这一批每一颗桥都请得到、都在壳的注册单上，main.rs 顶上不再写「还剩几颗没搬」那一句，
-          总账那把尺只在 gate-bridge46 那一处；跑测试此刻全绿（纯判断那一格 257 颗，build.mjs --测 总数 263 颗）零警告；
+          总账那把尺只在 gate-bridge46 那一处；跑测试此刻全绿（纯判断那一格 262 颗，build.mjs --测 总数 272 颗）零警告；
           本批那几本文本里一个字节都没写这台机器的盘符、帐户名、私人目录名。
    ============================================================ */
 import fs from 'node:fs';
@@ -206,6 +206,13 @@ const 栏名们 = 批.flatMap(x => 表[x[1]] || []);
 台.判('pack:file 那一颗两栏全收字串（桥里把 id 与 rel 都 String(...) 过一遍，空的那栏也是字串）',
   /pub fn pack_file\(id: String, rel: String\)/.test(动)
   && 桥.includes("invoke('pack:file', String(id || ''), String(rel || ''))"));
+台.判('pack:file 读到那一份之前先指着它核一下（#32 第三种时机"正在用着"）：对不上就不把内容递出去，回的是那一句原话',
+  一颗(动, 'pack_file').includes('读过那一份(&格, &id, &净, &节)')
+  && 一颗(动, 'pack_file').indexOf('读过那一份') > 一颗(动, 'pack_file').indexOf('match 取原始')
+  && 动.includes('fn 读过那一份') && 动.includes('fn 容器信息')
+  && rd('src/_tauri/src/core/pack_box.rs').includes('pub fn 核那一份'));
+台.判('没配容器的那一家不受这一道影响（读不到容器就是 None，内容照旧递，不编一句"没得核"）',
+  一颗(动, '容器信息').includes('.ok()?') && 一颗(动, '读过那一份').includes('容器信息(格, 包名)?'));
 台.判('pack:list 那一颗不收栏（桥里就是空手请）',
   /pub fn pack_list\(\) -> 一次扫描/.test(动) && 桥.includes("invoke('pack:list')"));
 台.判('pack:set 那一颗收的是 ids，形状给 Option<Value>（列表 / null / undefined 三种递法都要分得清）',
@@ -259,8 +266,8 @@ for (const [颗, 期望] of 那三句) {
 台.判('取不到那份那一句逐字（拼的是页面递进来的那两串，不是洗过的那一串）',
   纯.includes('format!("包里没有这份文件：{}/{}", id, 相对)'));
 台.判('转不成文本那一句前缀逐字', 纯串.读不出文本那句 === '读不出文本：');
-台.判('取不到那一种情形在壳里落同一句（那一颗 那句 复用三处）',
-  (动.match(/一份包里文件::不成\(那句\)/g) || []).length === 3);
+台.判('取不到那一种情形在壳里落同一句（那一颗 那句 复用四处：洗不净、扫不到这一家、取不到、运行时与包上对不上）',
+  (动.match(/一份包里文件::不成\(那句\)/g) || []).length === 4);
 台.判('那几句白话在动手那一层一个字都没重写（代码里不许出现那种字面，全靠 core 的常量拼）',
   !动码.includes('"包里没有这份文件') && !动码.includes('"插件清单读不成') && !动码.includes('"压缩包里没带插件清单"')
   && !动码.includes('"zip 读不动') && !动码.includes('"读不出文本') && !动码.includes('MB，太大不走这条路'));
@@ -617,10 +624,10 @@ const 缺 = 对名单(这批, 桥, 壳注册单());
 台.判('main.rs 的注册单上这三颗排在 ⑪ 那一段后面（一格一段，不是散着塞的）',
   壳.indexOf('⑪ 插件那一列剩下那三颗') < 壳.indexOf('pack_cmds::pack_set')
   && 壳.includes('tauri_bind::pack_cmds::pack_import') && 壳.includes('tauri_bind::pack_cmds::pack_wipe'));
-台.判('跑测试那一道此刻是全绿 260 颗零警告（212 → 219 运行日志那 7 颗 → 220 本地协议类型表那 1 颗 → 233 批九网格吸附那 13 颗 → 234 议题 16 补 MusicBee 那一行明文那 1 颗 → 235 议题 17、18 闪退那一处：中文目录名不许按字节切 → 233 插件分离第 2 批 2.5：撤掉 comp:list / comp:restore / comp:factory 那三颗，它们那两道测试一起没了 → 232 第 2 批 2.6：data\\plugins-factory\\ 那一格整格撤，那道判断与它那道测试一起没了 → 252 第 3 批 3.2 与 3.3 乙：自有容器那一格 pack_box.rs 添的 20 颗 → 257 第 3 批 3.4 第一步：取一块那两处、扩展名那两枚、包名那一列多认一种运输形状那三道 → 260 第 3 批 3.4 第二步：核活着的那一格那三道）；那一格 260 颗，加上动手那一格 box_cmds.rs 的 6 颗与 pack_cmds.rs 落盘那 3 颗，build.mjs --测 此刻 269 颗零警告），与本道数的字数同一现场',
-  全测试数() === 260);
+台.判('跑测试那一道此刻是全绿 260 颗零警告（212 → 219 运行日志那 7 颗 → 220 本地协议类型表那 1 颗 → 233 批九网格吸附那 13 颗 → 234 议题 16 补 MusicBee 那一行明文那 1 颗 → 235 议题 17、18 闪退那一处：中文目录名不许按字节切 → 233 插件分离第 2 批 2.5：撤掉 comp:list / comp:restore / comp:factory 那三颗，它们那两道测试一起没了 → 232 第 2 批 2.6：data\\plugins-factory\\ 那一格整格撤，那道判断与它那道测试一起没了 → 252 第 3 批 3.2 与 3.3 乙：自有容器那一格 pack_box.rs 添的 20 颗 → 257 第 3 批 3.4 第一步：取一块那两处、扩展名那两枚、包名那一列多认一种运输形状那三道 → 262 第 3 批 3.4 第二、三步：核活着那一格那三道 + 运行时指着那一份核那两道）；那一格 262 颗，加上动手那一格 box_cmds.rs 的 6 颗与 pack_cmds.rs 落盘那 4 颗，build.mjs --测 此刻 272 颗零警告），与本道数的字数同一现场',
+  全测试数() === 262);
 台.判('媒体那一道闸数的字数与本道同一现场（两道闸数的是同一棵树，不许各说各话）',
-  rd('src/tools/probes/gate-taurimedia46.mjs').includes('全测试.length === 260'));
+  rd('src/tools/probes/gate-taurimedia46.mjs').includes('全测试.length === 262'));
 function 全测试数() {
   return fs.readdirSync(path.join(ROOT, 'src', '_tauri', 'src', 'core')).filter(f => f.endsWith('.rs'))
     .map(f => fs.readFileSync(path.join(ROOT, 'src', '_tauri', 'src', 'core', f), 'utf8'))

@@ -213,6 +213,22 @@ pub struct 一份清理 {
    与上面 是不是份 不是一把尺 —— 那一颗是 statSync().isFile()，钉的是 packOne 与导入那两条分支 */
 fn 盘上有(p: &str) -> bool { fs::metadata(p).is_ok() }
 
+/// 这一家在路径里有没有配着一份自有容器；有就把信息段折出来（只读那一段，不逐块算哈希 ——
+/// 运行时每读一份都跑一趟，代价要小）。读不到、不是容器、字段不齐 —— 一律 None = 没得核。
+fn 容器信息(格: &str, 包名: &str) -> Option<crate::fd_core::pack_box::一张信息> {
+    let 到 = format!("{}{}", 并路(格, 包名), crate::fd_core::pack_box::带点后缀);
+    crate::fd_core::pack_box::读信息(&fs::read(到).ok()?)
+}
+
+/// 运行时读到一份东西：拿着这一家那份容器指一下这一份。Some(那一句原话) = 与包上对不上，
+/// 调用方就不该把内容递出去；None = 没得核（没有容器）或包上没写着这一份，或本来就是对的。
+fn 读过那一份(格: &str, 包名: &str, 相对: &str, 字节: &[u8]) -> Option<String> {
+    let 信 = 容器信息(格, 包名)?;
+    (crate::fd_core::pack_box::核那一份(&信, 相对, 字节)
+        == Some(crate::fd_core::pack_box::哈希不对那句))
+        .then(|| format!("{}：{}", crate::fd_core::pack_box::哈希不对那句, 相对))
+}
+
 /* 当前那一格（原件 path.resolve 用的是进程当前目录，Electron 起的就是这一棵树所在那一格）：
    问不到就退回壳自己所在那一格，只为把「那份东西读不到：」那一句报成一条绝对地址，不影响动盘 */
 fn 当前那一格() -> String {
@@ -434,6 +450,12 @@ pub fn pack_file(id: String, rel: String) -> 一份包里文件 {
     /* 原件 1883 行是严格大于：正好 24MB 还走这条路 */
     if 大 > 封顶字节 {
         return 一份包里文件::不成(太大那句(大));
+    }
+    /* #32 那三种时机里的第三种（正在用着）：读到这一份，顺手拿这一家自己那份容器指着它核一下。
+       没那份容器（文件夹或旧 zip 进来的）= 没得核，照旧给；对不上就不给内容，回的是那一句原话
+       —— 界面上拿它判要不要停这一家（那三步的界面归第 4 批）。 */
+    if let Some(那句) = 读过那一份(&格, &id, &净, &节) {
+        return 一份包里文件::不成(那句);
     }
     match String::from_utf8(节) {
         Ok(文) => 一份包里文件 { ok: true, text: Some(文), size: Some(大), msg: None },
@@ -950,7 +972,34 @@ mod 临时落盘验 {
         let 回 = serde_json::to_value(落一份容器(&沙.to_string_lossy(), &源.to_string_lossy())).unwrap();
         assert_eq!(回["ok"], false);
         assert!(回["msg"].as_str().unwrap().contains("先更新主程序再加载它"), "{:?}", 回);
-        assert!(!沙.join("notes").exists());
+        assert!(!沙.join("notes").exists(), "要求版本高也不许先摊开再说");
         let _ = fs::remove_dir_all(&沙);  /* 清不干净不算这一颗失败：Windows 上刚写的文件可能被索引器短暂占着 */
+    }
+
+    /* 把容器与摊开那一格一起摆进沙盒（装那一手干的事；这里只摆料，不测那一手） */
+    fn 摆进沙盒(到: &std::path::Path, 字: &[u8]) {
+        fs::write(到.join(format!("notes.{}", crate::fd_core::pack_box::扩展名)), 字).unwrap();
+        let 信 = crate::fd_core::pack_box::读信息(字).unwrap();
+        for 份 in 信.files.iter() {
+            let 落 = 到.join("notes").join(&份.路径);
+            if let Some(父) = 落.parent() { let _ = fs::create_dir_all(父); }
+            fs::write(&落, 取一块(字, &份.路径).unwrap()).unwrap();
+        }
+    }
+
+    #[test]
+    fn 运行时读到一份_与包上对不上就指得出_没容器就不管() {
+        let 到 = 沙盒("读");
+        let 字 = 字节();
+        摆进沙盒(&到, &字);
+        let 沙串 = 到.to_string_lossy().to_string();
+        assert_eq!(读过那一份(&沙串, "notes", "main.js", &取一块(&字, "main.js").unwrap()), None, "原样那一份没得说，内容照旧递");
+        let 那句 = 读过那一份(&沙串, "notes", "main.js", "heLlo".as_bytes());
+        assert!(那句.is_some() && 那句.unwrap().contains("main.js"), "运行时撞到不符要指得出是哪一份");
+        assert_eq!(读过那一份(&沙串, "notes", "别人家的.txt", b"x"), None, "包上没写着的那一份，这张表不管");
+        let 别处 = 沙盒("无容器");
+        assert_eq!(读过那一份(&别处.to_string_lossy(), "notes", "main.js", b"hello"), None, "没那份容器 = 没得核");
+        let _ = fs::remove_dir_all(&到);
+        let _ = fs::remove_dir_all(&别处);
     }
 }
