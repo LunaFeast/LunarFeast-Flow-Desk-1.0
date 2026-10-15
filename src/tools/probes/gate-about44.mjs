@@ -90,5 +90,10 @@ function 全扫(认){
 台.判('货架清单和安装标记里那一份号同源（都吃传进来的那一串）', /version: 出/.test(公) && /plugins: shelf\.map/.test(公));
 台.判('关于那一格不再吃更新包的信息（只报本机是什么，updVersions 那一颗名整棵源码里一处不剩）',
   全扫(s => /updVersions/.test(s)).length === 0, 全扫(s => /updVersions/.test(s)).join(' | '));
+/* 第 1 批把为写、声笔输入法练习那两份内核从页面里搬进 data\plugins\<自己那一格>\ 之后，
+   页面顶层已经没有 window.WNW_KERNEL / window.RP_KERNEL 这两颗名了：关于那一屏还照旧去问，
+   问到的永远是空的，界面上就写出一句假话。号的真身改吃插件清单那一列（上面第 87 行那条钉的就是它）。 */
+台.判('关于那一屏不再问窗口上的内核名（问了也是空，只会露一句假话）',
+  !页.includes('WNW_KERNEL') && !页.includes('RP_KERNEL') && !页.includes('kernelVersion'));
 
 台.收尾();

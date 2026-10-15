@@ -2365,12 +2365,10 @@ function tabProgram(){
    Flow_Desk_setup_<版本号>.exe，指到同一棵树上点「覆盖升级」；zip 那种形状只留给插件用。
    被覆盖升级换下来的旧东西落在 update\backups\<时间戳>\，那一格里没有用户写的东西，
    所以把最近的几趟列出来，让人知道旧版去哪儿了。data\ 从头到尾不参与。 */
-/* 为写和声笔输入法练习的版本号从各自那一份内核要：它们不再是 pages\ 里的独立页面，
-   代码拼在 Flow-Desk 这一张页里，独立页面的文件名早就不存在了。 */
-function kernelVersion(which){
-  const k = which === 'wnw' ? window.WNW_KERNEL : window.RP_KERNEL;
-  return (k && k.version) || '没装';
-}
+/* 从前这一格还要单独问为写和声笔输入法练习的号 —— 那两家那时候是代码拼在这张页里的内核，
+   页面上没有它们的清单文件可查。现在它们各自住在 data\plugins\<自己那一格>\，
+   号就写在插件清单里：下面「装着的」那一列把盘上每一家连着号一起报出来，两家都在里头，
+   不必再另开一条口去要。 */
 function aboutRows(box){
   /* 第 22 条：这格跟「数据」那档一样是异步问出来的 —— 上回问到的先摆在原地（SetCache.about），
      内容一个字没变就别回写：回写会把文本节点拆了重搭，看着就是白跳一下。 */
@@ -2382,8 +2380,8 @@ function aboutRows(box){
     /* 装着的每一家一行，号取运行时真正加载的那一份清单文件（发布那一趟已经把真号写回它）；
        没写号的那一格照实说「清单里没写号」，不编一个数出来。 */
     const 家 = (r.packs || []).map(p => p.name + '　' + (p.version || '清单里没写号')).join('\n');
-    put(SetCache.about = 'Flow-Desk ' + (v.fd || '?') + '　为写 ' + kernelVersion('wnw', '?') +
-      '　声笔输入法练习 ' + kernelVersion('rp', '没装') + '\n数据在这儿：' + r.data +
+    put(SetCache.about = 'Flow-Desk ' + (v.fd || '?') +
+      '\n数据在这儿：' + r.data +
       '\n页面在这儿：' + r.pages + '（换版换这一层，数据那一层一个字都不动）' +
       (家 ? '\n\n装着的：\n' + 家 : '') +
       (r.backups && r.backups.length ? '\n\n最近的升级备份：' + r.backups.slice(0, 3).join(' · ') : ''));
