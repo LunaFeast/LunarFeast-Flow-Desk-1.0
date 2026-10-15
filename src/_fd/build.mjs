@@ -45,7 +45,10 @@ const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-p
   '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js',
   '../_shared/sh-mus.js','../_shared/sh-gens.js',
   '../_shared/sh-icode.js',
-  '../_shared/sh-banks.js','../_shared/sh-bank-ui.js','../_shared/sh-log.js'];
+  '../_shared/sh-log.js'];
+/* 词库那两份（sh-banks / sh-bank-ui）不再拼在这儿：插件分离第 4 批 4.6 归进推演定制那一棵，
+   跟着那颗产物注入。宿主读它的两处都带"这个名字在不在"的守卫，那一棵没加载就是没有词库这件事（#30）。
+   这句说明写在名单外头 —— gate-concat 那台从「const parts」的开方括号切到收方括号，注释写在里面会被它当一份文件读。 */
 
 /* boot 排最后：加载器、注册表、外壳底子都站好了才开机 */
 const BOOT = 'fd6-boot.js';

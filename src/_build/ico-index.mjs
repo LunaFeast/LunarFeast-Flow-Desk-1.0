@@ -124,7 +124,7 @@ const DESC = {
 /* ---------- 哪张代码文件在叫这张图：扫引用 ----------
    三条路都算引用：icoMarkup('名字')、注册字段 icon:'名字'、
    还有老数据里的字符（sh-ico.js 的字符对照表把 '▤' 认成 log）。 */
-const SCAN_DIRS = ['src/_shared', 'src/_fd/src', 'src/_wnw/src', 'src/pack', 'data/plugins'];
+const SCAN_DIRS = ['src/_shared', 'src/_fd/src', 'src/_wnw/src', 'src/_wcustom/src', 'src/pack', 'data/plugins'];
 const SKIP_FILE = /[\\/](extracted\.js|索引\.txt)$/;
 const EXT_SRC = /\.(js|cjs|mjs|json)$/;
 function walk(dir, out){

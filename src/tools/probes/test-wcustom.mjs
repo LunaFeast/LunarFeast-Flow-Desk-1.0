@@ -25,19 +25,20 @@ const 盘上 = fs.readdirSync(棵 + 'src').filter(n => /\.js$/.test(n)).sort();
 台.数('名单 ' + 名单.length + ' 份 · 磁盘 ' + 盘上.length + ' 份', 盘上.join('、'));
 台.判('名单和磁盘一一对得上（多一份少一份都算漏）',
   名单.slice().sort().join(',') === 盘上.join(','), 名单.join('、') + ' 对 ' + 盘上.join('、'));
-const 旧位置 = ['sh-gen.js', 'sh-wizard.js', 'sh-code.js']
+const 旧位置 = ['sh-gen.js', 'sh-wizard.js', 'sh-code.js', 'sh-banks.js', 'sh-bank-ui.js']
   .filter(n => fs.existsSync(ROOT + 'src/_shared/' + n));
-台.判('那三份在老地方（src\\_shared\\）一份不剩', 旧位置.length === 0, 旧位置.join('、'));
-/* 词库那两份（sh-banks.js / sh-bank-ui.js）留在 _shared 里两家共用，不跟着进这一棵 ——
-   从前这条把 sh-banks.js 也算进"搬走的四份"，那是那一趟没落成的形状；
-   插件分离第 5 批搬仓时它归推演定制那一仓，到时候这条跟着改。 */
-台.判('词库那两份照旧住在 _shared（这一棵不带它，带了就是两份真身）',
-  fs.existsSync(ROOT + 'src/_shared/sh-banks.js') && fs.existsSync(ROOT + 'src/_shared/sh-bank-ui.js'), '');
+台.判('那五份在老地方（src\\_shared\\）一份不剩', 旧位置.length === 0, 旧位置.join('、'));
+/* 词库那两份（sh-banks.js / sh-bank-ui.js）2026-10-16 归进这一棵（插件分离第 4 批 4.6 第二刀）。
+   它 2026-10-13 曾从这一棵搬回 _shared，理由是宿主那几处无守卫地读它；那一处挡路的原因已由 4.6 第一刀补掉
+   （装载器那两只手 + 那颗换词库文件的钮都带"这个名字在不在"，钉在 gate-bank46）。
+   这一棵不带它就是没有词库这件事 —— 一份真身，别处不许再留第二份。 */
+台.判('词库那两份住进这一棵，老地方（_shared）一份不剩',
+  fs.existsSync(棵 + 'src/sh-banks.js') && fs.existsSync(棵 + 'src/sh-bank-ui.js'), '');
 const 装配 = rd('src/_fd/build.mjs');
 /* 第 1 批之后那颗产物不再拼进整页：build.mjs 把它铺进 data\plugins\wnw-custom\，
    开机由加载器照插件清单 kernels 那一点注进来。 */
-台.判('装配单不再点那三份源码，那颗产物改成铺进这一家自己那一格',
-  !/_shared\/(?:sh-gen|sh-wizard|sh-code)\.js/.test(装配) && /wnw-custom-kernel\.js/.test(装配), 'build.mjs 那一段');
+台.判('装配单不再点那五份源码，那颗产物改成铺进这一家自己那一格',
+  !/_shared\/(?:sh-gen|sh-wizard|sh-code|sh-banks|sh-bank-ui)\.js/.test(装配) && /wnw-custom-kernel\.js/.test(装配), 'build.mjs 那一段');
 let 新 = false, 话 = '';
 try{ execFileSync(process.execPath, [棵 + 'build-kernel.mjs', '--比'], {stdio:'pipe'}); 新 = true; }
 catch(e){ 话 = String((e.stderr && String(e.stderr)) || (e.stdout && String(e.stdout)) || e.message).split(/\r?\n/)[0]; }

@@ -9,11 +9,12 @@
    这一台钉的就是这两处补完之后的样子，外加两件"搬文件那一刀不能悄悄坏"的现状钉子：
    装配单还点着这两份、整库改名那条 Rust 硬写着源码格 `_shared` 那一层。
    ============================================================ */
-import { rd, 切, 切方法, 记账 } from './lib-slice.mjs';
+import fs from 'node:fs';
+import { rd, 切, 切方法, 记账, ROOT } from './lib-slice.mjs';
 
 const 台 = 记账('gate-bank46');
 const 载 = rd('src/_shared/sh-load.js');
-const 层 = rd('src/_shared/sh-banks.js');
+const 层 = rd('src/_wcustom/src/sh-banks.js');
 const 主 = rd('src/_fd/src/fd8-tools.js');
 const 为写 = rd('src/_wnw/src/w1-core.js');
 const 为写数据 = rd('src/_wnw/src/w7-data.js');
@@ -94,7 +95,7 @@ const 为写数据 = rd('src/_wnw/src/w7-data.js');
   台.判('私存那两格（_base / _ov / _live）只在词库层这一份文件里出现，别处一家都不许直接读写',
     !/Banks\._(base|ov|live)/.test(为写数据) && !/Banks\._(base|ov|live)/.test(载)
     && !/Banks\._(base|ov|live)/.test(rd('src/_wcustom/src/sh-gen.js'))
-    && !/Banks\._(base|ov|live)/.test(rd('src/_shared/sh-bank-ui.js')));
+    && !/Banks\._(base|ov|live)/.test(rd('src/_wcustom/src/sh-bank-ui.js')));
 }
 
 台.题('三、今天那份"清单驱动"确实是空转（现场量的这一格，别当已经接上）');
@@ -119,20 +120,31 @@ const 为写数据 = rd('src/_wnw/src/w7-data.js');
     })());
 }
 
-台.题('四、搬文件那一刀的四扇门锁着（漏一处就是"文件动了、别处还当它在老地方"）');
+台.题('四、搬文件那一刀的四扇门（2026-10-16 第二刀真搬了，这四条钉的是"搬完之后每一处都跟着改了"）');
 {
   const 装 = rd('src/_fd/build.mjs');
-  台.判('装配单今天还点着这两份，且点在页的名单里（词库层还没搬，这一条是现状钉子）',
-    /'\.\.\/_shared\/sh-banks\.js'/.test(装) && /'\.\.\/_shared\/sh-bank-ui\.js'/.test(装));
-  const 命 = rd('src/_tauri/src/core/cat_rename.rs'), 令 = rd('src/_tauri/src/tauri_bind/code_cmds.rs');
-  台.判('整库改名那条 Rust 侧硬写着"源码格 _shared 那一层、只看 .js、不往里钻"—— 词库层一搬就悄悄掉出改名覆盖，这两处必须一起改',
-    命.includes('_shared') && /collect\(<源码格>\\_shared/.test(命) && 令.includes('_shared'));
-  台.判('推演定制那一棵的产物名单今天仍是三份（sh-gen / sh-wizard / sh-code），词库那两份不在里面',
+  台.判('装配单不再点着这两份（词库层与词库编辑器跟着那颗定制产物注入，整页顶层不再有这两个名字）',
+    !/_shared\/sh-bank/.test(装) && !/_wcustom\/src\/sh-bank/.test(装) && /sh-log\.js/.test(装));
+  台.判('定制那棵的产物名单接上这两份，且次序是"底层在前、用它的在后"',
     (() => { const 部 = rd('src/_wcustom/build-kernel.mjs');
-      return /PARTS = \[\s*'sh-gen\.js',\s*'sh-wizard\.js',\s*'sh-code\.js'/.test(部.replace(/\r/g, ''))
-        && !/sh-banks/.test(部.slice(部.indexOf('const PARTS'), 部.indexOf('const PARTS') + 240)); })());
-  台.判('为写那份说明已经跟着当下改口（从前它写着"外39 起它住 _wcustom/src/"，与 2026-10-13 那一趟搬回相反）',
-    !/外39 起它住 _wcustom/.test(为写) && /2026-10-13 它从 `_wcustom\/src\/` 搬回来过/.test(为写));
+      const 段 = 部.slice(部.indexOf('const PARTS'), 部.indexOf('const PARTS') + 300);
+      return /'sh-banks\.js'/.test(段) && /'sh-bank-ui\.js'/.test(段)
+        && 段.indexOf('sh-banks.js') < 段.indexOf('sh-gen.js') && /'sh-gen\.js'/.test(段); })());
+  const 命 = rd('src/_tauri/src/core/cat_rename.rs'), 令 = rd('src/_tauri/src/tauri_bind/code_cmds.rs');
+  台.判('整库改名那条不再只认源码格 `_shared` 一格 —— 词库层搬进去那一格也收，且 src / comp 那一栏按两格分（少收一格就是悄悄不改）',
+    令.includes('底子那两格') && 令.includes('并路(&源, "_wcustom\\\\src")') && 令.includes('在底子里(&x.file)')
+    && 命.includes('落点.starts_with(去尾分隔(源码那一格).as_str())'));
+  const 名 = rd('src/_build/plugin-repos.mjs');
+  台.判('七家路径那一张表里，这两份归到推演定制那一家（别处不许另抄一份对应表）',
+    /'src\/_wcustom\/src\/sh-banks\.js', 'src\/_wcustom\/src\/sh-bank-ui\.js'/.test(名.replace(/\r?\n\s*/g, ' ')));
+  台.判('宿主读词库层的四处全带"这个名字在不在"：装载器那两只手、卡片菜单那颗、为写侧栏那颗、词库没读到那张卡上那颗钮',
+    /if\(typeof mkBank !== 'function'\) return null;/.test(载) && /banks:typeof Banks !== 'undefined' \? Banks : null/.test(载)
+    && /typeof BankDlg !== 'undefined'/.test(rd('src/_fd/src/fd3-shell.js'))
+    && /typeof BankDlg !== 'undefined'/.test(rd('src/_wnw/src/w3-shell.js'))
+    && /typeof Banks !== 'undefined' && typeof mkBank === 'function'/.test(主));
+  台.判('老地方那两份一份不剩（搬不是复制：留第二份真身就是两份真相）',
+    !fs.existsSync(ROOT + 'src/_shared/sh-banks.js') && !fs.existsSync(ROOT + 'src/_shared/sh-bank-ui.js')
+    && fs.existsSync(ROOT + 'src/_wcustom/src/sh-banks.js') && fs.existsSync(ROOT + 'src/_wcustom/src/sh-bank-ui.js'));
 }
 
 台.题('五、词库层只认宿主接口那一格四样东西（两个宿主各递一份，层本身不认宿主的名）');

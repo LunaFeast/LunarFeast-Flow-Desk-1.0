@@ -339,7 +339,9 @@ const 主删支 = [...那一颗('remove').matchAll(/return (\{[^}]*\})/g)].map(m
   && 名.includes('pub const 没记源码那句: &str = "这台机器没记下源码在哪儿，代码引用改不了";'));
 台.判('两张后缀表与两个深度钉住（源码格只看 .js 不钻，本家那一格看 .js 与 .json 往里钻）',
   名.includes('pub const 源码那种后缀: [&str; 1] = [".js"];') && 名.includes('pub const 插件那两种后缀: [&str; 2] = [".js", ".json"];')
-  && 改.includes('收那几份(&源码那一格, &源码那种后缀, false, 0, &mut 那几份)')
+  && 改.includes('收那几份(格, &源码那种后缀, false, 0, &mut 那几份)')
+  && 改.includes('for 格 in 底子那两格.iter()')
+  && 改.includes('[并路(&源, "_shared"), 并路(&源, "_wcustom\\\\src")]')
   && 改.includes('收那几份(&插件那格, &插件那两种后缀, true, 0, &mut 那几份)'));
 台.判('顶上那一句两种写法逐字钉住',
   名.includes('format!("改了 {} 个文件 · 共 {} 处"') && 名.includes('format!("代码里没有引用【{}】的地方"'));
@@ -352,8 +354,9 @@ const 壳改 = 壳字段(改, '一份改名');
   改.includes('坏.push(format!("{}：读不出", 名))') && 改.includes('坏.push(format!("{}：写不进去（{}）", 名, e))'));
 台.判('packs 那一栏：写不进去的那一份也照样算动到，且 .. 不算一家',
   改.indexOf('坏.push(format!("{}：写不进去') < 改.indexOf('哪一家(') && 名.includes('段 == ".."'));
-台.判('src 与 comp 两栏按「在不在 <源码格>\\_shared 里面」分',
-  改.includes('是共用底子(&源码那一格, &x.file)') && 名.includes('落点.starts_with(去尾分隔(源码那一格).as_str())'));
+台.判('src 与 comp 两栏按「在不在 底子那两格（_shared 与 _wcustom\\src）里面」分 —— 词库层搬进后一格之后少问一格就是悄悄不改',
+  改.includes('在底子里(&x.file)') && 改.includes('底子那两格.iter().any(|格| 是共用底子(格, 路))')
+  && 名.includes('落点.starts_with(去尾分隔(源码那一格).as_str())'));
 台.判('源码格那一颗与 sys:rebuild 共用（认 FD_SRC，没指看树里那一格），不另起第二份认法',
   /pub\(crate\) fn 源码格\(树: &str\) -> Option<String>/.test(rd('src/_tauri/src/tauri_bind/sys_cmds.rs'))
   && 改码.includes('源码格(&树)') && !改码.includes('FD_SRC'));

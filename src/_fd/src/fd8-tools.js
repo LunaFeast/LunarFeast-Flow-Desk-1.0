@@ -159,13 +159,18 @@ function fitLive(host){
   mo.observe(host, { childList:true, subtree:true });
   return { unmount(){ mo.disconnect(); fb.dispose(); } };
 }
-/* 词库读不到时不报错刷屏，给一句白话和一个选文件的按钮 */
+/* 词库读不到时不报错刷屏，给一句白话和一个选文件的按钮。
+   那颗「选一次词库文件」和界面其余三处「改词库」同一个判法（插件分离第 4 批 4.6）：
+   词库层跟着推演定制那一棵注入，那一棵没加载就没有"改词库"这件事 —— 这颗钮不摆，不解释、不摆一句缺失（#30）。
+   留着一颗点不动的钮才是错：点下去读的是两个此刻并不存在的名字。 */
 function toolError(def, err){
   const line = (err && err.message) || String(err);
   return h('div', { class:'fd-empty' }, [
     h('div', {}, def.name + '的词库没读到'),
     h('div', { style:'font-size:.86em;opacity:.75;margin-top:4px' }, line),
-    h('button', { class:'fd-btn', style:'margin-top:8px', onclick:() => pickBank(def.id).catch(e => toast(e.message || String(e))) }, '选一次词库文件')
+    (typeof Banks !== 'undefined' && typeof mkBank === 'function')
+      ? h('button', { class:'fd-btn', style:'margin-top:8px', onclick:() => pickBank(def.id).catch(e => toast(e.message || String(e))) }, '选一次词库文件')
+      : null
   ]);
 }
 function openToolFull(def, ready){
