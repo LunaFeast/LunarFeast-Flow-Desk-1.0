@@ -75,7 +75,11 @@ const 伸手 = ['GenWizard', 'Gen', 'Banks', 'codeEntry', 'PackCode', 'window.']
 const 答 = rd('src/_fd/src/fd5-load.js');
 const 块 = /wcustom:\{[\s\S]*?\n    \}/.exec(答);
 if(!块) throw new Error('没在 fd5-load.js 里找到 wcustom 那一段（换了写法，这台要跟着改）');
-const 造 = new Function('GenWizard', 'FD_VERSION', 'const WCUSTOM_MISSING = ' + JSON.stringify('推演组件定制的内核还没拼进这一版页面')
+/* 那句实话从 fd5-load.js 里现读，不在这里抄第二份 —— 抄一份就等于这台子自己量自己写的字，
+   宿主改了措辞它照样绿（2026-10-15 插件分离第 1 批改文案时看出的这一手）。 */
+const 那句 = /const WCUSTOM_MISSING = '([^']+)'/.exec(答);
+if(!那句) throw new Error('没在 fd5-load.js 里读到 WCUSTOM_MISSING 那一句（换了写法，这台要跟着改）');
+const 造 = new Function('GenWizard', 'FD_VERSION', 'const WCUSTOM_MISSING = ' + JSON.stringify(那句[1])
   + ';\nreturn ' + 块[0].replace(/^wcustom:/, '') + ';');
 const 假内核 = { open(){ 假内核.叫过 = (假内核.叫过 || 0) + 1; }, onSaved:null };
 const 有 = 造(假内核, '1.4.0');
@@ -84,11 +88,12 @@ const 有 = 造(假内核, '1.4.0');
   有.available === true && 假内核.叫过 === 1 && typeof 假内核.onSaved === 'function',
   'available=' + 有.available + ' · 叫了几次=' + 假内核.叫过 + ' · 回调=' + (typeof 假内核.onSaved));
 const 没 = 造(undefined, '1.4.0');
-台.判('内核不在：available 说 false，open 不抛个 undefined 而是给一句实话',
-  没.available === false && /还没拼进这一版页面/.test(String(没.version)), 'available=' + 没.available + ' · version=' + 没.version);
+台.判('内核不在：available 说 false，open 不抛个 undefined 而是给一句实话（那一句说的是"没读进来"这一件真事，不是"这一版没带某某内核"）',
+  没.available === false && /内核没读进来/.test(String(没.version)) && !/这一版|还没拼进/.test(那句[1]),
+  'available=' + 没.available + ' · version=' + 没.version);
 let 抛 = '';
 try{ 没.open(() => {}); }catch(e){ 抛 = e.message; }
-台.判('内核不在还硬开：抛的是那一句实话（不是 undefined 那种看不懂的）', /还没拼进这一版页面/.test(抛), 抛 || '没抛');
+台.判('内核不在还硬开：抛的是那一句实话（不是 undefined 那种看不懂的）', /内核没读进来/.test(抛), 抛 || '没抛');
 /* 咬口：把 available 那一句判反，干净那一跑该开得起来的必须开不到 */
 const 反 = new Function('GenWizard', 'FD_VERSION', 'const WCUSTOM_MISSING = "x";\nreturn '
   + 块[0].replace(/^wcustom:/, '').replace(/typeof GenWizard !== 'undefined'/, "typeof GenWizard === 'undefined'") + ';')(假内核, '1.4.0');
