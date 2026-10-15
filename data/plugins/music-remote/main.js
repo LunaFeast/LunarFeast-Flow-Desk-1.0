@@ -935,7 +935,17 @@ const Music = {
       try{ v.update(); }catch(e){}
     }
     /* 顺手把时钟递给页面上那一个公共的钟（_shared/sh-mus.js）：词格那一档要跟的就是这一份。
-       只递位置 + 那一刻的墙钟 + 倍速这三样，读的一头自己插值，算法与这边 nowMs() 同一套。 */
+       只递位置 + 那一刻的墙钟 + 倍速这三样，读的一头自己插值，算法与这边 nowMs() 同一套。
+       本地那一棵 <audio> 也是一路播放（手动选音频那一条），可它自己会走而上面这三格不会跟着走 ——
+       从前这一条只写卡片不写时钟：卡片读 audio.currentTime、词格读时钟里那份旧 pos，两份位置各走各的
+       （插件分离第 4 批 4.2 要钉的就是"填的和读的必须是同一颗"）。所以报之前先把真值落进这三格。 */
+    if(this.audio){
+      this.pos = Math.round((this.audio.currentTime || 0) * 1000);
+      this.at = Date.now();
+      this.rate = Number(this.audio.playbackRate) || 1;
+      this.status = this.audio.paused ? 'Paused' : 'Playing';
+      if(this.audio.duration) this.dur = Math.round(this.audio.duration * 1000);
+    }
     try{ K.mus && K.mus.set({ pos:this.pos, at:this.at, rate:this.rate, status:this.status,
       title:this.title, artist:this.artist, dur:this.dur }); }catch(e){}
     this.pump();

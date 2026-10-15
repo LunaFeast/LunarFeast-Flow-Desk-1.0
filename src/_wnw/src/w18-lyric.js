@@ -856,7 +856,7 @@ class LyricGrid{
     this.fromMs = (this.fromMs != null && Math.abs(this.fromMs - at) <= 1) ? null : at;
     this.render();
   }
-  playLabel(){ return this.playing ? '停下' : (this.follow ? '跟遥控器播' : '模拟播放'); }
+  playLabel(){ return this.playing ? '停下' : (this.跟着() ? '跟遥控器播' : '模拟播放'); }
   barRefresh(){ if(this.playBtnEl) this.playBtnEl.textContent = this.playLabel(); }
   stopPlay(){
     this.playing = false;
@@ -868,24 +868,26 @@ class LyricGrid{
   }
   /* 页面上那一个公共时钟（_shared/sh-mus.js）：本地开发那台服务器里没有遥控器这一家，取不到就只走模拟 */
   mus(){ return (typeof MusClock === 'undefined') ? null : MusClock; }
-  /* 走的是哪一份表：跟随那一档读音乐遥控器递过来的时钟（歌词延后那一档也算在它里面），
-     模拟那一档就是按下这一刻起自己数。词格这一档自己不放声音 —— 播放器是遥控器那一家。 */
-  nowMs(){
-    if(this.follow){ const M = this.mus(); return M ? M.now() : 0; }
-    return performance.now() - this.t0;
-  }
+  /* 这一颗钟这一趟报过真值没有：那一家没加载、或加载了还没连上一首歌 = 没报过 */
+  有时钟(){ const M = this.mus(); return !!(M && M.got); }
+  /* 走的是哪一份表：跟着那一颗钟（它报过就跟着它，它暂停就停在最后知道的那一格，不许自己瞎走 —— 外15 第 1 条）；
+     这一颗从来没报过 → 自己按文件里已有的时间戳数。第 4 批 4.2 定的就是这一条：删掉音乐遥控器，
+     词格照样能从头播到尾、全程不弹一句错（从前这里拒播还弹一句，把"那一家不在"当成了用户的错）。 */
+  跟着(){ return this.follow && this.有时钟(); }
+  nowMs(){ return this.跟着() ? this.mus().now() : performance.now() - this.t0; }
   play(){
     if(this.playing){ this.stopPlay(); return; }
     this.tl = this.timeline();
     if(!this.tl.end){ toast('这一首还没配时值，播不动 —— 先拖缝或双击拆格把时长给上'); return; }
-    const M = this.mus();
-    if(this.follow && (!M || !M.live())){ toast('音乐遥控器这一头没连上正在放的歌 —— 先在那一家把曲播起来'); return; }
+    /* 只有"那一家在、歌没在放"才说这一句：那一刻跟着的是它那一格，播下去也只会停在原处，说实话比空跑好。
+       那一家整个不在（没报过真值）不走这一句 —— 那一档改走自家那张表，不弹错。 */
+    if(this.follow && this.有时钟() && !this.mus().live()){ toast('音乐遥控器这一头没连上正在放的歌 —— 先在那一家把曲播起来'); return; }
     this.playing = true; this.t0 = performance.now() - (this.fromMs != null ? this.fromMs : 0); this.cur = -1;
     const step = () => {
       if(!this.playing) return;
       const ms = this.nowMs();
       this.mark(ms);
-      if(!this.follow && ms >= this.tl.end + 200){ this.stopPlay(); return; }
+      if(!this.跟着() && ms >= this.tl.end + 200){ this.stopPlay(); return; }
       this.raf = requestAnimationFrame(step);
     };
     this.raf = requestAnimationFrame(step);
@@ -893,8 +895,7 @@ class LyricGrid{
   }
   setFollow(v){
     this.follow = !!v;
-    const M = this.mus();
-    if(this.follow && (!M || !M.live())) toast('音乐遥控器这一头还没连上正在放的歌，等它报上来才跟得住');
+    if(this.follow && this.有时钟() && !this.mus().live()) toast('音乐遥控器这一头还没连上正在放的歌，等它报上来才跟得住');
     this.barRefresh();
   }
   /* 播放只有两档（未播放 / 已播放），正推着的那一格算未播放 —— 但判档一律按每一格自己的时间窗，不看「当前是第几格」：

@@ -263,7 +263,16 @@ T('暂停了就报最后知道那一格，不许自己往前走', g2.nowMs() ===
 g2.follow = false;
 T('关掉跟随之后回到自己那张表（不再报 9000）', g2.nowMs() !== 9000, g2.nowMs() + 'ms');
 TOASTS.length = 0; g2.follow = true; g2.playing = false; g2.play();
-T('没连上正在放的歌时，跟随那一档点播放会说不跟', TOASTS.some(t => /没连上/.test(t)) && !g2.playing, JSON.stringify(TOASTS.slice(-1)));
+T('那一家在、歌没在放时，跟随那一档点播放会说不跟（跟着的只会是它冻结的那一格，说实话比空跑好）',
+  TOASTS.some(t => /没连上/.test(t)) && !g2.playing, JSON.stringify(TOASTS.slice(-1)));
+/* 第 4 批 4.2 那一条验收：把音乐遥控器整一家删掉（这一颗钟一次真值都没报过）→ 词格自己按已有时间戳播，全程不弹一句错 */
+TOASTS.length = 0; MusClock.got = 0; MusClock.status = ''; MusClock.pos = 0;
+g2.follow = true; g2.playing = false; g2.play();
+T('那一家整个不在时点播放：一句错都不弹，照样播起来', TOASTS.length === 0 && g2.playing, JSON.stringify(TOASTS));
+const 自走 = g2.nowMs();
+T('这一档读的是自家那张表（从入点起自己数），不是那颗空钟的 0、也不是它冻结的旧格子', 自走 > 0, 自走 + 'ms');
+g2.stopPlay();
+T('字样跟着换：那一家不在时那颗钮写「模拟播放」，不许还写着「跟遥控器播」', g2.playLabel() === '模拟播放', g2.playLabel());
 g2.follow = false;
 MusClock.set({ pos:1000, at:Date.now(), rate:1, status:'Playing', title:'Demian - Dreamcatcher', dur:0 });
 T('时钟认得"当前这首是不是我要跟的那个词格"', MusClock.match('Dreamcatcher') && !MusClock.match('完全不同的歌'), MusClock.title);

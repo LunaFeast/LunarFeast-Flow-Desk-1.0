@@ -22,7 +22,14 @@ const grab = (src, marker) => {
   const i = src.indexOf(marker);
   if(i < 0) throw new Error('装配单里找不着：' + marker);
   const j = src.indexOf('];', i);
-  return src.slice(i + marker.length, j).split(',').map(s => s.trim()).filter(Boolean);
+  /* 名单里夹的注释先整段摘掉再切，切完剩下不像份名的东西就当场抛。
+     2026-10-16 栽过一次：4.7 那句"歌词解析不再拼在这儿"写在 parts 里面，注释被当成一份文件名去读，
+     这一台于是报"缺数据跑不了"、哑了半轮没人看见 —— 名单里的注释是写法，不是数据。 */
+  const 段 = src.slice(i + marker.length, j).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*/gm, '');
+  const 份 = 段.split(',').map(s => s.trim()).filter(Boolean);
+  const 坏 = 份.filter(s => !/^["'][^"']+["']$/.test(s));
+  if(坏.length) throw new Error('装配单里切出不像份名的东西（注释写进名单里了？）：' + 坏.join(' ⏎ ').slice(0, 160));
+  return 份;
 };
 const names = s => s.replace(/['"]/g, '');
 const parts = grab(build, 'const parts = [').map(names);
