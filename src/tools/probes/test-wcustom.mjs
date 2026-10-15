@@ -54,10 +54,15 @@ const 该有 = ['GenWizard', 'Gen', 'PackCode'];
 台.判('外壳要认的那几个名字都落在顶层（缺一个就是那一处入口点了没动静）',
   该有.every(n => 顶层名.includes(n)), 该有.filter(n => !顶层名.includes(n)).join('、') || '全在');
 const 壳 = rd('src/_fd/src/fd3-shell.js');
-/* 「改代码」那枚铅笔随插件分离第 2 批撤了，外壳里那种「名字在不在」的判法少了一颗 codeEntry */
-台.数('外壳里那种「名字在不在」的判法', (壳.match(/typeof (?:GenWizard|Gen|toolBankWhich)\s*[!=]==?\s*(?:'function'|'undefined')/g) || []).length);
-台.判('外壳确实是一路按「名字在不在」摆入口（不带内核那一版才不会当场抛）',
-  /typeof GenWizard !== 'undefined'/.test(壳) && /typeof Gen\s*!==\s*'undefined'/.test(壳), 'fd3-shell.js');
+const 答卷 = rd('src/_fd/src/fd5-load.js');
+const 为写 = rd('src/_wnw/src/w3-shell.js');
+const 判法 = s => (s.match(/typeof (?:GenWizard|Gen|toolBankWhich)\s*[!=]==?\s*(?:'function'|'undefined')/g) || []).length;
+/* 插件分离第 2 批撤了两处：那颗「改代码」（codeEntry）与「插件管理」那一屏上按 Gen / GenWizard 摆的
+   两颗导入配方、那张加号卡 —— 外壳里这种「名字在不在」的判法因此从 fd3-shell 挪到了
+   宿主交上去的那份答卷（ctx.wcustom 认的就是 GenWizard 在不在）和为写那一屏（导入配方那条还留着）。 */
+台.数('三本里那种「名字在不在」的判法', [壳, 答卷, 为写].map(判法).join(' + ') + ' 处');
+台.判('判法还在，只是搬了地方：宿主那份答卷认 GenWizard 在不在、为写那一屏认 Gen 在不在（不带内核那一版才不会当场抛）',
+  /typeof GenWizard !== 'undefined'/.test(答卷) && /typeof Gen !== 'undefined'/.test(为写), 'fd5-load / w3-shell');
 /* 插件分离第 2 批 2.5：「改代码」那枚铅笔、为写停靠上那颗「改代码」、那只编辑对话框一起撤了。
    钉这里是因为这三处都在推演组件定制那一棵的射程里 —— 撤干净没有，界面上会不会又长出一颗。
    判的是"那颗口没人点、那三个字不进界面上的句子"（注释里交代历史不算，所以认带引号的那一种）。 */
@@ -80,7 +85,7 @@ let 卸掉的 = [];
 try{ 卸掉的 = (JSON.parse(fs.readFileSync(ROOT + 'data/plugins/off.json', 'utf8')).off || []).map(String); }catch(e){}
 台.判('插件清单里的 id 就是目录名，界面上叫「推演组件定制」',
   说.id === 'wnw-custom' && 说.name === '推演组件定制', 说.id + ' / ' + 说.name);
-/* 「在不在不加载名单里」是他那一格的数据状态，不是代码属性：清完用户数据、或者在「添加插件」里
+/* 「在不在不加载名单里」是他那一格的数据状态，不是代码属性：清完用户数据、或者在「插件管理」里
    把七家都卸掉之后，这张卡本来就不该摆 —— 那种时候这一条没有可判的对象，报一句跳过的原因，
    不许按失败算（2026-10-10 他一句「首次安装就是空的」）。 */
 const 卸了 = 卸掉的.includes('wnw-custom');

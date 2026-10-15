@@ -215,8 +215,8 @@ const PackOps = {
     const off = new Set((Array.isArray(d.off) ? d.off : []).map(String));
     return (d.packs || []).filter(p => !off.has(String(p.id))).map(p => String(p.id));
   },
-  /* 这一层里有、这一轮没加载的那些包 —— 「装上」列出来的就是它们 */
-  async installable(){
+  /* 这一层里有、这一轮没加载的那些包 —— 「加载」那一颗列出来的就是它们 */
+  async unloaded(){
     const d = await this.disk(); if(!d) return [];
     const inLoad = new Set(Packs.list().map(m => m.id));
     const out = [];
@@ -301,20 +301,47 @@ const PackOps = {
       for(const k of kvs){ try{ await H().kv.del(k); }catch(e){} }
     }
   },
-  /* 卸掉一个：名单里去掉它，顺手（按勾选项）清数据，然后刷新这一页 */
-  async uninstall(id, opt){
+  /* ---------- 四个动作（#30 · 2026-10-15 定名）----------
+     安装 = 把包放进插件路径（放进来才出现在这一屏，装完不自动加载）
+     加载 = 请进使用页（Flow-Desk 那边下一趟开机就给它摆一张卡）
+     卸载 = 从使用页撤下来（包留在路径里，随时再加载）
+     删除 = 把包从路径里彻底清掉（文件一起没，界面上不再有这一行）
+     四个动作各管一段，谁也不越到谁那儿：改名单的不碰盘，碰盘的先把名单摘干净。 */
+  /* 加载一个：名单里加上它，然后刷新这一页（加载器下一轮就 import 它） */
+  async load(id){
+    const cur = await this.ids();
+    if(!cur){ toast('插件名单读不到 · 这台机器上还没有放进路径的插件'); return false; }
+    if(cur.includes(String(id))) return true;         /* 已经加载着，不用再走一趟 */
+    return this.apply(cur.concat([id]), '加载「' + Packs.name(id) + '」· 改名单…');
+  },
+  /* 卸载一个：名单里去掉它，顺手（按勾选项）清数据，然后刷新这一页 */
+  async unload(id, opt){
     const o = opt || {};
     const cur = await this.ids();
-    if(!cur){ toast('插件名单读不到 · 这台机器上还没有装过插件'); return false; }
+    if(!cur){ toast('插件名单读不到 · 这台机器上还没有放进路径的插件'); return false; }
     if(o.wipe) await this.wipe(id);
-    return this.apply(cur.filter(x => x !== id), '卸掉「' + Packs.name(id) + '」· 改名单…');
+    return this.apply(cur.filter(x => x !== id), '卸载「' + Packs.name(id) + '」· 改名单…');
   },
-  /* 装回来一个：名单里加上它 */
-  async install(id){
-    const cur = await this.ids();
-    if(!cur){ toast('插件名单读不到 · 这台机器上还没有装过插件'); return false; }
-    const nm = Packs.name(id);
-    return this.apply(cur.concat([id]), '装上「' + nm + '」· 改名单…');
+  /* 删除一个：先把路径里那一格连文件一起抹掉，抹成了才去名单里摘它 ——
+     反过来的话，抹不掉就成了"名单说它该加载、盘上却没有这一格"，下一轮开机白跑一趟。
+     落点由主进程那把尺查过：只认 data\plugins\<包名>\ 与同名那颗 <包名>.zip，跑出这一层一律不删。 */
+  async remove(id, opt){
+    const o = opt || {};
+    id = String(id);
+    const cur = (await this.ids()) || [];
+    const A = this.host();
+    if(o.wipe) await this.wipe(id);
+    let r = null;
+    if(A && typeof A.compDelete === 'function') r = await A.compDelete(id);
+    else r = await compPost({ op:'delete', id });
+    if(!r || r.ok === false){
+      this.bar.hide();
+      toast('那一格没删掉：' + ((r && r.msg) || '主进程没回话'));
+      return false;
+    }
+    /* 名单里没有它就别再多写一趟（多写一次就是白翻一次页） */
+    if(!cur.includes(id)){ this.reloadPage('删好了 · 这就刷新这一页'); return true; }
+    return this.apply(cur.filter(x => x !== id), '删掉「' + Packs.name(id) + '」· 改名单…');
   },
   /* 导入一个包：一条通道，压好的 zip 和解开的文件夹都认（看挑到的那一个长什么样） */
   async importOne(kind){
@@ -337,52 +364,85 @@ const PackOps = {
     if(typeof genPendingScanPack === 'function'){
       try{ await genPendingAsk(await genPendingScanPack(r.id)); }catch(e){}
     }
-    /* 导入即装上：名单里补上这一个，然后刷新这一页（加载器下一轮就 import 它） */
+    /* 装完不自动加载（#30 那条）：包进了路径，这一轮先不请它 —— 名单里把这一格记成「不加载」，
+       然后刷新这一页让它出现在这一屏上，要用人家再按「加载」。 */
     const cur = (await this.ids()) || [];
-    if(cur.includes(r.id)){ this.reloadPage('导入好了 · 这就刷新这一页'); return true; }
-    return this.apply(cur.concat([r.id]), '导入「' + (r.name || r.id) + '」· 改名单…');
+    return this.apply(cur.filter(x => x !== r.id), '收进插件路径「' + (r.name || r.id) + '」· 改名单…');
   },
-  /* ---------- 列表里那几个共用的小按钮 ----------
-     「装上」用在没装的那一个上；「卸掉」用在正在加载的那一个上。
-     Flow-Desk 和 Why Not Write 各自的组件列表都调这两个，两边的入口一个都不差。 */
-  installButton(id, name){
+  /* ---------- 这一屏上那四颗钮 ----------
+     「安装」是屏幕级的一颗（把包放进路径，放进来才有这一行）；
+     「加载 / 卸载 / 删除」每一行一颗，用在谁身上写得明白：
+       加载用在路径里有、这一轮没加载的那一家；卸载用在正在加载的那一家；删除用在任意一家。
+     Flow-Desk 的「插件管理」与为写的「打开内容」都调这几颗，两端的入口一个都不差。 */
+  loadButton(id, name){
     if(!this.can()) return null;
-    return h('button', { class:'wnw-btn mini', title:'把这份装回来（写进名单 + 刷新这一页）',
-      onclick:async () => { await this.install(id); } }, '装上' + (name ? ' · ' + name : ''));
+    return h('button', { class:'wnw-btn mini', title:'请进使用页（改名单 + 刷新这一页）' + (name ? ' · ' + name : ''),
+      html:icoMarkup('run') + '加载', onclick:async () => { await this.load(id); } });
   },
-  uninstallButton(id, after){
+  unloadButton(id, after){
     if(!this.can()) return null;
-    return h('button', { class:'wnw-btn mini', title:'停止加载这一段代码（包留在插件库里，随时装回来）',
-      onclick:() => this.uninstallAsk(id, after) }, '卸掉');
+    return h('button', { class:'wnw-btn mini ico', title:'从使用页撤下来 · 包留在插件路径里',
+      'aria-label':'卸载', html:icoMarkup('eject'),
+      onclick:() => this.unloadAsk(id, after) });
   },
-  /* 删除确认：说清楚这是停止加载、数据默认留着，勾上那一句才一起清 */
-  uninstallAsk(id, after){
+  removeButton(id, after){
+    if(!this.can()) return null;
+    return h('button', { class:'wnw-btn mini ico', title:'把这一格连文件一起从插件路径里清掉（删之前问一句）',
+      'aria-label':'删除', html:icoMarkup('trash'),
+      onclick:() => this.removeAsk(id, after) });
+  },
+  /* 屏幕上那颗「安装」：挑一个包放进来（压好的 zip 或解开的文件夹都认） */
+  installButton(){
+    if(!this.can() || !this.canImport()) return null;
+    return h('button', { class:'wnw-btn mini', title:'挑一个包放进插件路径（装完先不加载，要用了再按「加载」）',
+      html:icoMarkup('install') + '安装', onclick:() => this.installAsk() });
+  },
+  /* 卸载前那一句：说清楚这是停止加载、数据默认留着，勾上那一句才一起清 */
+  unloadAsk(id, after){
     const nm = Packs.name(id);
     const info = Packs.info(id) || {};
-    const keys = (info.dataKeys || []).concat(info.kvKeys || []);
-    const shared = (info.sharedKeys || []).length ? (info.sharedKeys || []) : Packs.sharedKeys(id);
-    const all = keys.concat(shared);
+    const all = (info.dataKeys || []).concat(info.kvKeys || []).concat(info.sharedKeys || []);
     const cb = h('input', { type:'checkbox' });
     const box = h('div', { class:'wnw-col' });
     box.appendChild(h('div', { class:'wnw-hint' },
-      '「' + nm + '」是插件。卸掉 = 改名单 + 刷新这一页：这一轮不再加载它，桌上那张卡和它自己那份设置跟着没了。'));
+      '「' + nm + '」是插件。卸载 = 改名单 + 刷新这一页：这一轮不再加载它，桌上那张卡和它自己那份设置跟着没了。'));
     box.appendChild(h('div', { class:'wnw-hint' },
-      '包还收在插件库里 · 想用了在「添加插件」里装回来就是。'));
+      '包还收在插件路径里 · 要用了在这一屏按「加载」就是。'));
     if(all.length) box.appendChild(h('label', { class:'wnw-switch' },
       [cb, h('span', {}, '同步清除数据 · ' + all.length + ' 份（' + all.join('、') + '）')]));
     else box.appendChild(h('div', { class:'wnw-hint' }, '这一家没在插件清单里点名要存什么东西，数据这块没什么可清的。'));
-    H().dlg.open('卸掉插件 · ' + nm, box, [
+    H().dlg.open('卸载插件 · ' + nm, box, [
       h('button', { class:'wnw-btn primary', onclick:async () => {
         H().dlg.close();
-        await this.uninstall(id, { wipe:cb.checked });
-      }}, '卸掉'),
+        await this.unload(id, { wipe:cb.checked });
+      }}, '卸载'),
       h('button', { class:'wnw-btn mini', onclick:() => { H().dlg.close(); if(after) after(); } }, '取消')
     ]);
   },
-  /* 导入那一个：一条口子两种形状都收 —— 压好的 zip（别人传给你的成品包）
-     和解开的文件夹（本地开发、两台机器之间拷图纸）。挑完交给主进程落地，紧接着写进名单、刷新这一页。 */
-  importAsk(after){
-    if(!this.canImport()){ toast('导入插件只在 Flow-Desk 程序里有'); return; }
+  /* 删除前那一句：这一颗比卸载狠 —— 文件也从路径里清掉，问两句：清不清数据、确不确认 */
+  removeAsk(id, after){
+    const nm = (Packs.info(id) || {}).name || id;
+    const info = Packs.info(id) || {};
+    const all = (info.dataKeys || []).concat(info.kvKeys || []).concat(info.sharedKeys || []);
+    const cb = h('input', { type:'checkbox' });
+    const box = h('div', { class:'wnw-col' });
+    box.appendChild(h('div', { class:'wnw-hint' },
+      '「' + nm + '」这一格要从插件路径里清掉：data\\plugins\\' + id + '\\ 整个抹掉，压好的那颗 ' + id + '.zip 也在这一颗的范围里。'));
+    box.appendChild(h('div', { class:'wnw-hint' },
+      '这一步不给自己留退路 —— 想再看它一眼，得重新「安装」一次（手里那份包再放进来）。'));
+    if(all.length) box.appendChild(h('label', { class:'wnw-switch' },
+      [cb, h('span', {}, '连它存的数据一起清 · ' + all.length + ' 份（' + all.join('、') + '）')]));
+    H().dlg.open('删除插件 · ' + nm, box, [
+      h('button', { class:'wnw-btn primary', onclick:async () => {
+        H().dlg.close();
+        await this.remove(id, { wipe:cb.checked });
+      }}, '删除'),
+      h('button', { class:'wnw-btn mini', onclick:() => { H().dlg.close(); if(after) after(); } }, '取消')
+    ]);
+  },
+  /* 「安装」这一颗走的两条道：一条挑压好的包，一条挑解开的文件夹 —— 落点都是插件路径那一层 */
+  installAsk(after){
+    if(!this.canImport()){ toast('安装这一颗要在 Flow-Desk 程序里才办得了'); return; }
     const btn = (txt, kind, tip) => h('button', { class:'wnw-btn', title:tip, onclick:async () => {
       H().dlg.close(); await this.importOne(kind); if(after) after();
     }}, txt);
@@ -390,46 +450,15 @@ const PackOps = {
     box.appendChild(h('div', { class:'wnw-hint' },
       '挑一样东西放进来：压好的压缩包，或者解开的那个文件夹（里面得带着插件清单）。'));
     box.appendChild(h('div', { class:'wnw-hint' },
-      '收进来一律是解开的样子（压缩包只是运输形状，进门就摊开，方便直接看每一段代码、就地改）。同名已经在那儿就退回不动，不悄悄盖掉你原有的包。导入即装上：写进名单，然后刷新这一页。'));
-    H().dlg.open('导入插件', box, [
+      '收进来一律是解开的样子（压缩包只是运输形状，进门就摊开）。同名的已经在那儿就退回不动，不悄悄盖掉你原有的那一份。'));
+    box.appendChild(h('div', { class:'wnw-hint' },
+      '装完先不加载：这一屏上会多出这一行，要用了再按它那一颗「加载」。'));
+    H().dlg.open('安装插件', box, [
       btn('选一个 zip', 'zip', '压好的成品包，一个文件带齐插件清单和代码'),
-      btn('选一个文件夹', 'dir', '解开的样子：本地开发就是这样改的'),
+      btn('选一个文件夹', 'dir', '解开的样子：本地开发就是这样放的'),
       h('button', { class:'wnw-btn mini', onclick:() => { H().dlg.close(); if(after) after(); } }, '取消')
     ]);
-  },
-  /* 「这一家是什么来头」：插件清单里那几项摆成一页 —— 作者和来源是包里自己带的标记，
-     导入进来的第三方包就靠这两行认人。没装的那一个走 diskInfoAsk，形状同一页。 */
-  infoAsk(id){
-    const m = Packs.info(id) || {};
-    this.infoBox({ name:m.name || Packs.name(id), id, version:m.version, author:m.author, source:m.source,
-      where:m.where, desc:m.desc, host:m.host, dataKeys:m.dataKeys, kvKeys:m.kvKeys,
-      sharedKeys:m.sharedKeys, bank:m.bank, assets:m.assets, inProd:true });
-  },
-  diskInfoAsk(p){ this.infoBox(Object.assign({ inProd:false }, p)); },
-  infoBox(m){
-    const line = (k, v) => h('div', { class:'wnw-row', style:'gap:10px' }, [
-      h('span', { class:'wnw-hint', style:'min-width:5.5em' }, k), h('span', {}, String((v && v.length) ? v : '—'))]);
-    const box = h('div', { class:'wnw-col', style:'gap:7px' });
-    box.appendChild(line('名字', m.name));
-    box.appendChild(line('代号', m.id));
-    box.appendChild(line('作者', m.author));
-    box.appendChild(line('来源', m.source));
-    box.appendChild(line('版本', m.version));
-    box.appendChild(line('住在', (m.inProd ? '这一版产物里有它' : '还没装')));
-    box.appendChild(line('给谁用', (m.host || []).join(' / ')));
-    box.appendChild(line('存的东西', ((m.dataKeys || []).concat(m.kvKeys || [])).join('、')));
-    /* 词库跟着功能走：底本就压在这个包里，卸掉包 = 这段代码和这份底本一起走（用户改过的那份另说） */
-    const carries = [];
-    if(m.bank && m.bank.which) carries.push((m.bank.name || m.bank.which) + '（跟着这个包一起带的那一份）');
-    for(const k of Object.keys(m.assets || {})) carries.push(m.assets[k]);
-    box.appendChild(line('自带', carries.join('、')));
-    box.appendChild(line('数据层那一侧', (m.sharedKeys || []).join('、')));
-    box.appendChild(line('说明', m.desc));
-    const ops = [];
-    if(!m.inProd && PackOps.can()) ops.push(h('button', { class:'wnw-btn primary',
-      onclick:async () => { H().dlg.close(); await PackOps.install(m.id); } }, '装上'));
-    ops.push(h('button', { class:'wnw-btn mini', onclick:() => H().dlg.close() }, '关掉'));
-    H().dlg.open('插件信息 · ' + (m.name || m.id), box, ops);
   }
 };
+
 

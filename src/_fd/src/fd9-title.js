@@ -66,7 +66,7 @@ const Title = {
     const gap = () => R.push({ sep:true });
     i('重新载入页面', 'Ctrl R', () => this.run('reload', () => location.reload()));
     i('强制重新载入', 'Ctrl Shift R', () => this.run('reloadForce', () => location.reload()));
-    i('添加插件', '', () => Shell.pickWidget());
+    i('插件管理', '', () => Shell.packManager());
     i('设置', '', () => openSettings());
     gap();
     i('放大', 'Ctrl +', () => this.run('zoomIn'));

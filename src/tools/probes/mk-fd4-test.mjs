@@ -120,7 +120,7 @@ document.body.insertAdjacentHTML('afterbegin',
   '<header class="fd-top"><button class="fd-mbtn"></button>' +
   '<div class="fd-brand">Flow-Desk<small>personal workspace</small></div>' +
   '<div class="fd-when"><b>10:24</b></div><span class="fd-top-sp"></span>' +
-  '<button class="fd-btn">添加插件</button></header>');
+  '<button class="fd-btn">插件管理</button></header>');
 const 顶 = document.querySelector('.fd-top'), 名 = document.querySelector('.fd-brand'),
   表 = document.querySelector('.fd-when'), 钮 = document.querySelector('.fd-btn');
 const 算 = el => getComputedStyle(el).filter;
@@ -136,7 +136,7 @@ T('顶栏这一片本来不糊（计算值 filter: none）', 算(名) === 'none'
 顶.classList.add('dim');
 T('挂上 .dim：名字糊了，blur(1.6px)', 算(名) === 'blur(1.6px)', 算(名));
 T('挂上 .dim：时间那一条跟着糊（它是顶栏里另一句字，不该独醒）', 算(表) === 'blur(1.6px)', 算(表));
-T('挂上 .dim：按钮不糊（菜单、添加插件、设置还是清楚的，糊了的钮看着像坏了）', 算(钮) === 'none', 算(钮));
+T('挂上 .dim：按钮不糊（菜单、插件管理、设置还是清楚的，糊了的钮看着像坏了）', 算(钮) === 'none', 算(钮));
 /* 点名的只有「糊一些」，淡出是另一件事：这条量的是 opacity 一路都 1，没顺手把顶栏淡掉 */
 T('只糊不淡：挂上 .dim 之后 opacity 还是 1', getComputedStyle(名).opacity === '1',
   'opacity=' + getComputedStyle(名).opacity);

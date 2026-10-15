@@ -1170,14 +1170,12 @@ const Desk = {
                 if(isHid) hid.delete(it.kind); else hid.add(it.kind);
                 draw();
               } }),
-            pid ? h('button', { class:'wnw-btn mini', title:'这一家住在哪 · 谁做的（导进来的包看这两行认人）',
-              onclick:() => PackOps.infoAsk(pid) }, 'info') : null,
             R ? h('button', { class:'wnw-btn mini', title:'把这一家的配方原样拷走',
               onclick:() => genExportAsk(R) }, '导出') : null,
             R ? h('button', { class:'wnw-btn mini', title:'连这一家的配方、生成的代码和历次记录一起抹干净',
               onclick:() => genDeleteAsk(R, draw) }, '删除') : null,
-            /* 插件：改名单 + 刷新这一页，这一段代码从这一轮加载里摘走，这个入口跟着没了 */
-            pid ? PackOps.uninstallButton(pid, draw) : null].filter(Boolean)));
+            /* 插件：卸载 = 改名单 + 刷新这一页，这一段代码从这一轮加载里摘走，这个入口跟着没了 */
+            pid ? PackOps.unloadButton(pid, draw) : null].filter(Boolean)));
         }
         body.appendChild(row);
       }
@@ -1192,22 +1190,20 @@ const Desk = {
             const r0 = h('div', { class:'wnw-pick-row' });
             r0.appendChild(h('span', { class:'wnw-hint w-txt', title:m.desc || '' },
               [h('span', { html:icoFor(m.id, m.icon) }), m.name]));
-            r0.appendChild(h('button', { class:'wnw-btn mini', title:'这一家住在哪 · 谁做的',
-              onclick:() => PackOps.infoAsk(m.id) }, 'info'));
-            const ub = PackOps.uninstallButton(m.id, draw); if(ub) r0.appendChild(ub);
+            const ub = PackOps.unloadButton(m.id, draw); if(ub) r0.appendChild(ub);
             body.appendChild(r0);
           }
         }
       }
-      /* 名单里没写它 = 这一轮没加载它，也就在这张列表里露面不了。单列一组，给个「装上」。 */
-      if(!showHidden) for(const p of await PackOps.installable()){
+      /* 插件路径里有这一格、这一轮没加载它（#30：装进来与请进来是两颗，各留一条痕）。单列一组，给个「加载」。 */
+      if(!showHidden) for(const p of await PackOps.unloaded()){
         if(key && !String(p.name || '').toLowerCase().includes(key) && !p.id.toLowerCase().includes(key)) continue;
-        body.appendChild(h('div', { class:'wnw-pick-h' }, '没装 · 这台机器上有这个包，还没装进名单'));
+        body.appendChild(h('div', { class:'wnw-pick-h' }, '路径里有 · 这一轮没加载'));
         const r2 = h('div', { class:'wnw-pick-row' });
-        r2.appendChild(h('span', { class:'wnw-hint w-txt' },
+        r2.appendChild(h('span', { class:'wnw-hint w-txt', title:(p.desc || '') + (p.author ? ' · 作者 ' + p.author : '') },
           [h('span', { html:icoFor(p.id, p.icon) }), p.name + '（' + p.id + '）']));
-        r2.appendChild(h('button', { class:'wnw-btn mini', onclick:() => PackOps.diskInfoAsk(p) }, 'info'));
-        r2.appendChild(h('button', { class:'wnw-btn mini', title:'写进名单 + 刷新这一页', onclick:() => PackOps.install(p.id) }, '装上'));
+        const lb = PackOps.loadButton(p.id); if(lb) r2.appendChild(lb);
+        const rb = PackOps.removeButton(p.id, draw); if(rb) r2.appendChild(rb);
         body.appendChild(r2);
       }
       const recent = ((await State.get('recent', [])) || []).slice(0, 12).filter(rc => Views.get(rc.kind));
@@ -1241,10 +1237,9 @@ const Desk = {
       h('label', { class:'wnw-switch' }, [h('input', { type:'checkbox', onchange:ev => { showHidden = ev.target.checked; draw(); } }),
         h('span', {}, '显示已隐藏')]),
       typeof Gen !== 'undefined' ? h('button', { class:'wnw-btn mini', title:'把别处导出的配方 JSON 装回来',
-        onclick:() => genImportAsk(draw) }, '导入插件') : null,
-      /* 整个包的入口和 FD 那一侧是同一把尺：落进 data\plugins\，写进名单，刷新这一页就装上 */
-      PackOps.can() ? h('button', { class:'wnw-btn mini', title:'选一个压缩包或解开的文件夹，收进插件库并装进名单',
-        onclick:() => PackOps.importAsk(draw) }, '导入插件') : null
+        onclick:() => genImportAsk(draw) }, '导入配方') : null,
+      /* 整个包的入口和 FD 那一侧是同一把尺：收进 data\plugins\，装完先不加载，要用了再按那一颗「加载」 */
+      PackOps.installButton()
     ]));
     box.appendChild(body);
     Overlay.open('打开内容', box, null, { replace:true });

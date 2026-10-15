@@ -14,7 +14,7 @@
    这台机器连不上那一格时（没有主进程也没起开发服务器）配方镜像进宿主 kv，
    页面下次打开照样把它装回来，界面不至于空着。
    那张配方从头到尾是明文数据，由解释器 Gen 读着生成，不 eval。
-   入口两处：FD「添加插件」那格、WNW 设置·功能。
+   入口两处：FD「插件管理」那一屏、WNW 设置·功能。
    宿主契约：h() toast() State BankDlg Gen GenView GenLog Banks bankWhich mkBank 和 TOOL_HOST.dlg。
    ============================================================ */
 const GW_FNS = [

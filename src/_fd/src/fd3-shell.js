@@ -1524,6 +1524,8 @@ const Shell = {
     this.改名搬家();
     /* 卸掉的包那段代码已经不在产物里了，桌上那张卡也就没了 */
     this.pruneMissing();
+    /* 反过来那一半：加载了这一轮就得在桌上有一张卡（#30 那四个动作里 加载 与 卸载 的唯一状态差） */
+    this.补齐桌面卡();
     /* v0.1 的 size 档位制作废，缺显式坐标的一律重新落位 */
     if(this.layout.items.some(it => typeof it.x !== 'number')) this.autoPlaceAll();
     this.mergeDupWidgets();
@@ -1553,6 +1555,28 @@ const Shell = {
   pruneMissing(){
     const keep = this.layout.items.filter(it => Registry.has(it.widget));
     if(keep.length !== this.layout.items.length) this.layout.items = keep;
+  },
+  /* 加载了就上首页（#30 · 2026-10-15）：这一轮加载着的每一家，桌上没有它那张卡就补一张。
+     摆哪一档尺寸吃的是插件自己写的最小那一档（minW / minH，没写就退回它注册时那份默认尺寸），
+     位置交给 firstFit 找第一处放得下的空位；放不下就这一趟不摆，明说一声（不悄悄丢一件功能）。
+     不摆卡片的那几家（只往设置里垫几行、只加一个快捷键、只带一个后台监听）在注册表里根本没这一号，
+     这一趟自然跳过 —— 外壳不认识任何一家的名字。 */
+  补齐桌面卡(){
+    let 补 = 0; const 挤不下的 = [];
+    for(const m of Packs.list()){
+      if(!PackOps.forHost(m)) continue;
+      const w = Registry.has(m.id) ? m.id : (Registry.has('tool-' + m.id) ? 'tool-' + m.id : null);
+      if(!w || this.layout.items.some(it => it.widget === w)) continue;
+      const def = Registry.get(w);
+      const 宽 = (def.minW || (def.def && def.def.w) || 5), 高 = (def.minH || (def.def && def.def.h) || 3);
+      const r = this.firstFit(宽, 高);
+      if(!r){ 挤不下的.push(m.name || m.id); continue; }
+      this.layout.items.push(Object.assign(
+        { id:w + '-' + Date.now().toString(36), widget:w, slot:this.layout.items.length % 5 }, r));
+      补++;
+    }
+    if(挤不下的.length) toast('桌面那一格放不下这几张卡：' + 挤不下的.join('、') + ' · 先挪一挪或撤一张，再按一次「加载」');
+    return 补;
   },
   autoPlaceAll(){
     const keep = this.layout.items; this.layout.items = [];
@@ -1707,7 +1731,7 @@ const Shell = {
   },
   bindTop(){
     Title.mount();
-    document.getElementById('fdAddBtn').onclick = () => this.pickWidget();
+    document.getElementById('fdAddBtn').onclick = () => this.packManager();
     document.getElementById('fdSetBtn').onclick = () => openSettings();
     document.getElementById('fdCoverClose').onclick = () => Cover.close();
     document.getElementById('fdCoverReload').onclick = () => {
@@ -1810,10 +1834,10 @@ const Shell = {
     /* 每张卡一个字体钮（A 带挑脚的图标）：跟着 FD 就用全局那一款，关掉自己挑 */
     tools.push(h('button', { class:'fd-tool', title:'字体 · ' + (this.fontOf(it) || '跟随 Flow-Desk'),
       html:icoMarkup('font'), onclick:() => this.fontDlg(it) }));
-    tools.push(h('button', { class:'fd-tool', title:'从桌上撤下这张卡（插件本身还在，数据和设置都不动 · 想卸掉它去「添加插件」里按卸掉）', html:icoMarkup('close'), onclick:async () => {
-      if(!await fdAsk('撤下「' + def.name + '」这张卡？只是从桌上拿走 —— 插件本身还在，这一家的数据和设置都不动。\n想卸掉它，去「添加插件」里按卸掉。', '撤下')) return;
-      this.layout.items = this.layout.items.filter(x => x.id !== it.id); this.save(); this.render();
-    } }));
+    /* 撤下这张卡 = 卸载这一家（#30 那四个动作里的一颗，不留「加载了但桌上没这张卡」那种中间状态）：
+       走的是插件管理那一屏同一颗钮、同一个问话（里面给着「同步清除数据」那个勾）。 */
+    tools.push(h('button', { class:'fd-tool', title:'卸载「' + def.name + '」· 从使用页撤下来（包留在插件路径里，随时再加载）',
+      html:icoMarkup('eject'), onclick:() => PackOps.unloadAsk(cid) }));
     if(bare) card.appendChild(h('div', { class:'fd-card-head float' }, [h('span',{class:'sp'}), h('span',{class:'fd-card-tools'}, tools)]));
     else card.appendChild(h('div', { class:'fd-card-head' }, [h('span',{class:'dot'}), h('span',{class:'ttl'},def.name), h('span',{class:'sp'}), h('span',{class:'fd-card-tools'}, tools)]));
     const body = h('div', { class:'fd-card-body' });
@@ -1970,100 +1994,67 @@ const Shell = {
       card.addEventListener('pointercancel', done);
     });
   },
-  async pickWidget(){
-    const hid = new Set(await toolHidden());
-    let showHidden = false, q = '';
+  /* ---------- 插件管理（#30 那四个动作 · 2026-10-15 整屏重做）----------
+     这一屏只回答两件事：插件路径里有哪几家、这一轮加载了哪几家。四颗钮一人一段：
+       安装（屏幕级一颗）= 把包放进路径，放进来才出现在这一屏，装完先不加载；
+       加载 = 请进使用页（下一趟开机给它摆一张卡）；卸载 = 从使用页撤下来（包留在路径里）；
+       删除 = 把那一格连文件一起从路径里清掉。
+     从前这一屏上还挂着「放到首页」那颗 +、眼睛（在不在列表里）、info 那一页、两颗「导入插件」、
+     "显示已隐藏"那个勾、右下角那张「用推演组件定制做一个新组件」的加号卡 ——
+     整屏清空，那一排一起没（加载了就上首页，不想要就卸载，不留中间状态；
+     做新组件是推演定制自己那一家的入口，不占这一屏的位子）。
+     配方组件（推演定制做出来的那些）在这条路径里就是普通一家，跟着同一张表走同一套动作。 */
+  async packManager(){
+    let q = '';
     const box = h('div', { class:'wnw-col fd-addbox' });
     const grid = h('div', { class:'fd-gridpick' });
-    const draw = () => {
+    const 空话 = h('div', { class:'fd-empty' });
+    const draw = async () => {
       const kw = q.trim().toLowerCase();
+      const d = await PackOps.disk();
+      const 加载中 = new Set((await PackOps.ids()) || []);
+      const 桌上 = new Set(this.layout.items.map(i => i.widget));
       grid.innerHTML = '';
-      const onHome = new Set(this.layout.items.map(i => i.widget));
-      let shown = 0;
-      const covered = new Set();   /* 哪些包在这一格里已经有一行了（它的组件被列出来了） */
-      for(const [id, def] of Registry){
-        if(hid.has(id) !== showHidden) continue;
-        if(kw && !(def.name + ' ' + id).toLowerCase().includes(kw)) continue;
-        shown++;
-        const has = onHome.has(id);
-        /* 配方组件（Gen 那份）能整个删掉；插件走的是另一条：卸掉 = 改名单 + 刷新这一页，
-           包留在 data\plugins\ 里，装得回来。两种都在这一行末尾摆各自的钮。 */
-        const R = typeof Gen !== 'undefined' && typeof def.id === 'string' &&
-          def.id.startsWith('tool-') ? Gen.get(def.id.slice(5)) : null;
-        const pid = Packs.has(id) ? id : (typeof id === 'string' && id.startsWith('tool-') && Packs.has(id.slice(5)) ? id.slice(5) : '');
-        if(pid) covered.add(pid);
-        grid.appendChild(h('div', { class:'fd-additem' + (has ? ' off' : '') }, [
-          h('button', { class:'fd-addpick', disabled:has, title:has ? '已经在首页了' : '放到首页',
-            onclick:() => { if(!this.firstFit((def.def && def.def.w) || 5, (def.def && def.def.h) || 3)){ toast('页面已经放满了 · 先卸载或拖动腾出格子'); return; }
-              this.layout.items.push({ id:def.id + '-' + Date.now().toString(36), widget:def.id, slot:this.layout.items.length % 5 });
-              const it = this.layout.items[this.layout.items.length - 1];
-              Object.assign(it, this.firstFit((def.def && def.def.w) || 5, (def.def && def.def.h) || 3));
-              this.save(); Modal.close(); this.render();
-            }}, [h('b', {}, has ? '·' : '+'), h('span', {}, def.name)]),
+      const 家 = ((d && d.packs) || [])
+        .filter(p => p.manifest && p.manifest.id && PackOps.forHost(p.manifest))
+        .filter(p => !kw || (String(p.manifest.name || p.id) + ' ' + p.id).toLowerCase().includes(kw))
+        .sort((a, b) => (((a.manifest.order || 100) - (b.manifest.order || 100)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)));
+      for(const p of 家){
+        const m = p.manifest;
+        const id = String(p.id);
+        const 名 = m.name || id;
+        const 上了 = 加载中.has(id);
+        /* 这一家摆不摆卡片只看注册表：只垫设置行、只加一个快捷键、只带后台监听的那些没这一号，
+           它们在桌上本来就不该有卡 —— 那句说明写在 title 里，不占界面一行字。 */
+        const 件名 = 'tool-' + id;
+        const 占卡 = Registry.has(id) || Registry.has(件名);
+        const 名号 = 占卡 && !桌上.has(id) && !桌上.has(件名) ? ' · 桌上还没它那张卡' : '';
+        grid.appendChild(h('div', { class:'fd-additem' + (上了 ? ' off' : '') }, [
+          h('button', { class:'fd-addpick', disabled:上了, title:(m.desc || '') + (上了 ? ' · 已经在用页上了' : ' · 请进使用页') + 名号,
+            onclick:async () => { await PackOps.load(id); } },
+            [h('span', { class:'w-mk', html:icoFor(id, m.icon || 'card') }),
+             h('span', {}, 名), h('span', { class:'fd-addtag' }, 上了 ? '已加载' : '没加载')]),
           h('div', { class:'fd-addops' }, [
-            h('button', { class:'wnw-btn mini ico' + (showHidden ? ' off' : ''),
-              title:showHidden ? '放回列表里，数据没动过' : '只是不再出现在这张列表里，数据和设置都不动',
-              'aria-label':showHidden ? '找回' : '隐藏', html:icoMarkup(showHidden ? 'eyeOff' : 'eye'),
-              onclick:() => {
-                toolHide(id, !showHidden).then(() => { if(showHidden) hid.delete(id); else hid.add(id); draw(); });
-              } }),
-            pid ? h('button', { class:'wnw-btn mini', title:'这一家住在哪 · 谁做的',
-              onclick:() => PackOps.infoAsk(pid) }, 'info') : null,
-            R ? h('button', { class:'wnw-btn mini', onclick:() => genExportAsk(R) }, '导出') : null,
-            R ? h('button', { class:'wnw-btn mini', onclick:() => genDeleteAsk(R, draw) }, '删除') : null,
-            pid ? PackOps.uninstallButton(pid, draw) : null])
+            上了 ? PackOps.unloadButton(id, draw) : PackOps.loadButton(id),
+            PackOps.removeButton(id, draw)].filter(Boolean))
         ]));
       }
-      /* 有的包不占卡片：只往设置里垫几行、只加一个快捷键、只带一个后台监听。
-         这种在上面那张注册表里根本没有行 —— 不补一行就再也找不到卸掉它的入口了。 */
-      for(const m of Packs.list()){
-        if(covered.has(m.id) || !PackOps.forHost(m)) continue;
-        if(kw && !(m.name + ' ' + m.id).toLowerCase().includes(kw)) continue;
-        shown++;
-        grid.appendChild(h('div', { class:'fd-additem' }, [
-          h('button', { class:'fd-addpick', disabled:true, title:m.desc || '',
-            onclick:() => toast('这一家不摆卡片 · 要撤它就按右边的卸掉') },
-            [h('span', { class:'w-mk', html:icoFor(m.id, m.icon || 'card') }), h('span', {}, m.name + '（不占卡片）')]),
-          h('div', { class:'fd-addops' }, [
-            h('button', { class:'wnw-btn mini', title:'这一家住在哪 · 谁做的',
-              onclick:() => PackOps.infoAsk(m.id) }, 'info'),
-            PackOps.uninstallButton(m.id, draw)])
-        ]));
+      const 一行 = grid.children.length;
+      if(!一行){
+        空话.textContent = kw ? '路径里没有叫这个的插件 · 先按上面那颗「安装」放一家进来'
+          : '插件路径里还空着 · 按上面那颗「安装」放一家进来';
+        grid.appendChild(空话);
       }
-      if(!shown) grid.appendChild(h('div', { class:'fd-empty' }, showHidden ? '没有已隐藏的插件' : '没有叫这个的组件'));
-      if(typeof GenWizard !== 'undefined' && !showHidden && !kw)
-        grid.appendChild(h('div', { class:'fd-additem new' }, [
-          h('button', { class:'fd-addpick', onclick:() => { GenWizard.onSaved = () => Shell.pickWidget(); GenWizard.open(''); } },
-            [h('span', { class:'w-mk', html:icoMarkup('plus') }), h('span', {}, '用推演组件定制做一个新组件')])]));
-      /* 磁盘上有、名单里没写的那些包：这一栏给的就是「装回来」。
-         名单是两边共用的，所以在这儿装上，WNW 停靠那边跟着也有。 */
-      if(!showHidden) missingRow(grid, kw);
-    };
-    /* 没装的包那一小段：数据来自 data\plugins\，按 kw 过滤后现拼（读目录是异步的，回来直接垫在列表末尾） */
-    const missingRow = async (grid, kw) => {
-      const want = String(kw || '').toLowerCase();
-      const hit = (await PackOps.installable()).filter(p => !want || (p.name + ' ' + p.id).toLowerCase().includes(want));
-      for(const p of hit) grid.appendChild(h('div', { class:'fd-additem' }, [
-        h('button', { class:'fd-addpick', title:(p.desc || '') + (p.author ? ' · 作者 ' + p.author : '') + (p.source ? ' · 来自 ' + p.source : ''),
-          onclick:async () => { await PackOps.install(p.id); } },
-          [h('span', { class:'w-mk', html:icoMarkup('imp') }), h('span', {}, p.name + '（没装）')]),
-        h('div', { class:'fd-addops' }, [
-          h('button', { class:'wnw-btn mini', onclick:() => PackOps.diskInfoAsk(p) }, 'info'),
-          h('button', { class:'wnw-btn mini', onclick:async () => { await PackOps.install(p.id); } }, '装上')])
-      ]));
     };
     box.appendChild(h('div', { class:'wnw-row' }, [
       h('input', { type:'search', class:'fd-input', placeholder:'搜插件名', style:'flex:1 1 auto',
         oninput:ev => { q = ev.target.value; draw(); } }),
-      h('label', { class:'wnw-switch' }, [h('input', { type:'checkbox', onchange:ev => { showHidden = ev.target.checked; draw(); } }),
-        h('span', {}, '显示已隐藏')]),
-      typeof Gen !== 'undefined' ? h('button', { class:'wnw-btn mini', onclick:() => genImportAsk(draw) }, '导入插件') : null,
-      /* 插件那一头的导入：一个 zip 或一个解开的文件夹，落地就装上 */
-      PackOps.can() ? h('button', { class:'wnw-btn mini', title:'把别人给你的插件放进来（压缩包或解开的文件夹都行）',
-        onclick:() => PackOps.importAsk(draw) }, '导入插件') : null
+      PackOps.installButton(),
+      h('button', { class:'wnw-btn mini', title:PackOps.can() ? '重看一遍插件路径里有什么' : '这台机器读不到插件路径',
+        html:icoMarkup('cycle') + '重看', onclick:() => draw() })
     ]));
     box.appendChild(grid);
-    Modal.open('添加插件', box, null, null, { replace:true });
+    Modal.open('插件管理', box, null, null, { replace:true });
     draw();
   }
 };
@@ -2265,8 +2256,8 @@ body.dragging{user-select:none;cursor:grabbing;}
 #toast,.fd-grid::-webkit-scrollbar-thumb,.scroll-y::-webkit-scrollbar-thumb{border-radius:var(--r-pill,5px);}
 /* 推演组件定制要 1400px：只有它，词库编辑器、推演记录那些对话框还是原来的宽 */
 .fd-dialog.vwide{width:min(1400px,96vw);max-width:96vw;}
-/* 添加插件：面板锁在 560 宽 → 四列正方格，行数和列数差不多，不再摊成一条长带；
-   格脚两个小钮分别管隐藏/找回和完全删除，配方组件才有删除那个。 */
+/* 插件管理：面板锁在 560 宽 → 四列正方格，行数和列数差不多，不再摊成一条长带；
+   一格一家：整块点下去是「加载」，格脚那两颗管「卸载」（只在这家加载着才摆）与「删除」。 */
 .fd-addbox{width:min(560px,86vw);}
 .fd-gridpick{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));}
 .fd-gridpick .fd-empty{grid-column:1/-1;}
@@ -2276,6 +2267,8 @@ body.dragging{user-select:none;cursor:grabbing;}
 .fd-addpick > span{overflow:hidden;text-overflow:ellipsis;}
 .fd-addpick:disabled{cursor:not-allowed;}
 .fd-addpick:not(:disabled):hover{color:var(--accent-text,var(--accent));}
+/* 格脚那一行状态字（已加载 / 没加载）：淡一档，不描边不占高 —— 动作在钮上，这一行只报现状 */
+.fd-addtag{font-size:.72em;opacity:.62;}
 .fd-addops{display:flex;gap:4px;justify-content:center;flex:0 0 auto;}
 .fd-addops .wnw-btn{padding:1px 7px;font-size:.72em;}
 /* 配色下拉：一行里摆「方案名 + 一排色点」，点开是浮着的第二层菜单（原生 select 摆不出色点）。
