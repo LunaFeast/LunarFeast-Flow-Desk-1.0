@@ -1,14 +1,17 @@
-/* 歌词 TTML 解析：共用的一份（外19 词格）
-   这一棵是从 data\plugins\music-remote\main.js 里整段搬出来的，搬的时候只改了函数名（mus* → shTtml*），
-   写法、注释、判断顺序一个字没动 —— 音乐遥控器和为写的词格模式读同一把尺，不各存一份。
-   为什么要有这一份：插件是运行时现 import 的 ES module，它的顶层名字外头拿不到；
-   词格要读逐字时值，就得有一份两边都够得着的。组件那头由加载器随 ctx 发下来
-   （见 _shared/sh-load.js 里 shSplit 那一节，同一个待遇），为写这一头直接调顶层名字。
-   管的事：一行 = 一个 <p>（带 begin/end），一格 = 一个 <span>（逐字），
-   注音 / 翻译 / 罗马音 / 和声各归各的 role，缺 begin 接前一段结尾、缺 end 接后一段开头，
-   行尾接到「下一个时刻」而不是「下一条」。 */
+/* ============================================================
+   音乐控件自己那一份歌词 TTML 解析（插件分离第 4 批 4.7 · #34 那条「各家一份」）
+   ------------------------------------------------------------
+   从前这一把尺住在 _shared/sh-ttml.js，为写与这一家共读一份，加载器随 ctx.ttml 发下来。
+   拆成各家一份之后：这一份是本包自己的模块（顶层名字不外泄，也不碰整页全局 —— 组件包的界
+   由 _build/scan-packs.mjs 那把尺查），为写那一份在 src/_wnw/src/w18-ttml.js。
+   两边算得一模不磨，不靠共用靠对账：src/tools/probes/gate-lyric46.mjs 拿同一份歌词两份
+   （侧车文件那一份 + 歌曲标签里内嵌的那一份）交给两家分别解析，时间戳必须一字不差。
+   写法、判断顺序、注释里那几条理由，都照拆出来的那一份原样搬，只改了函数名。
+   导出三件：parse（整首 TTML → 行与格）、close（把一份行按时刻补齐、行尾接下一个时刻）、
+   stamp（毫秒 → LRC 时标那一句，行首 [..] 或句内 <..>）。
+   ============================================================ */
 
-function shTtmlMs(raw){
+function ttmlMs(raw){
   const s = String(raw == null ? '' : raw).trim();
   if(!s) return NaN;
   if(/^\d*\.?\d+$/.test(s)) return Math.round(parseFloat(s) * 1000);
@@ -23,7 +26,7 @@ function shTtmlMs(raw){
   return Math.round(ms);
 }
 /* 逐字段补齐时间：缺 begin 接前一段的结尾，缺 end 接后一段的开头，末段接到行尾 */
-function shTtmlFlow(segs, lineMs, lineMs2){
+function ttmlFlow(segs, lineMs, lineMs2){
   let prev = lineMs;
   for(const s of segs){
     if(!isFinite(s.ms)) s.ms = prev;
@@ -39,7 +42,7 @@ function shTtmlFlow(segs, lineMs, lineMs2){
   return segs;
 }
 /* 整首：行按时间排，行尾接到下一行的开头 */
-function shTtmlClose(lines){
+export function close(lines){
   const timed = lines.filter(L => isFinite(L.ms));
   if(timed.length < lines.length) return { timed:false, lines };
   lines.sort((a, b) => a.ms - b.ms);
@@ -55,12 +58,13 @@ function shTtmlClose(lines){
       for(let j = i + 1; j < lines.length; j++){ if(lines[j].ms > L.ms){ nx = lines[j].ms; break; } }
       L.ms2 = isFinite(nx) ? nx : L.ms + 4000;
     }
-    shTtmlFlow(L.words, L.ms, L.ms2);
-    if(L.note) shTtmlFlow(L.note, L.ms, L.ms2);
+    ttmlFlow(L.words, L.ms, L.ms2);
+    if(L.note) ttmlFlow(L.note, L.ms, L.ms2);
   }
   return { timed:true, lines };
 }
-/* ---------- 二、TTML（iTunes 逐字歌词）----------
+
+/* ---------- TTML（iTunes 逐字歌词）----------
    <p begin end itunes:key ttm:agent> 一行；子节点 <span begin end> 是逐字原文，
    <span ttm:role="x-translation"> 是翻译，<span ttm:role="x-roman"> 是罗马音注释，
    <span ttm:role="x-bg"> 是这一行里的和声（背景人声跟着主唱一起唱的那几个字）；
@@ -70,7 +74,7 @@ function shTtmlClose(lines){
    iTunesMetadata/transliterations/transliteration 是注音（每个字一个带起止时间的 span），
    iTunesMetadata/translations/translation 是翻译（纯文本，同一个 key 可能有两行 = 正文译法 + 一条 *注）。
    两种写法都常见，一个 .ttml 里往往只有文件头那一份，所以两种写法都得认。 */
-function shTtmlAttrs(el){
+function ttmlAttrs(el){
   const o = {};
   for(let i = 0; i < el.attributes.length; i++){
     const a = el.attributes[i];
@@ -78,42 +82,42 @@ function shTtmlAttrs(el){
   }
   return o;
 }
-function shTtmlKids(el, fn){
+function ttmlKids(el, fn){
   for(let i = 0; i < el.childNodes.length; i++){
     const n = el.childNodes[i];
     if(n.nodeType === 1) fn(n);
   }
 }
-const shTtmlLname = el => String(el.localName || el.nodeName || '').toLowerCase();
+const ttmlLname = el => String(el.localName || el.nodeName || '').toLowerCase();
 /* 子节点里认某一个名字，拿它的文字：声部名就写在 <ttm:agent><ttm:desc> 里 */
-function shTtmlKid(el, name){
+function ttmlKid(el, name){
   let out = '';
-  shTtmlKids(el, n => { if(!out && shTtmlLname(n) === name) out = String(n.textContent || '').trim(); });
+  ttmlKids(el, n => { if(!out && ttmlLname(n) === name) out = String(n.textContent || '').trim(); });
   return out;
 }
 
-function shTtmlParse(text){
+export function parse(text){
   let doc;
   try{ doc = new DOMParser().parseFromString(text, 'application/xml'); }
   catch(e){ return null; }
   if(!doc || doc.getElementsByTagName('parsererror').length) return null;
   const root = doc.documentElement;
-  if(!root || shTtmlLname(root) !== 'tt') return null;
+  if(!root || ttmlLname(root) !== 'tt') return null;
   const notes = {}, headTrans = {}, raw = [], agents = {};
   const walk = el => {
-    const ln = shTtmlLname(el), a = shTtmlAttrs(el);
+    const ln = ttmlLname(el), a = ttmlAttrs(el);
     /* 声部声明：<ttm:agent type="person" xml:id="v1"><ttm:name>RM</ttm:name></ttm:agent>。
        带名字的认名字（<ttm:name> 是标准写法，<ttm:desc> 和属性里带 name/label 的也认），
        没名字的按 type 给一个（person = 主唱，other = 和声），光板 id 不往界面上摆 */
     if(ln === 'agent' && a.id){
-      const nm = shTtmlKid(el, 'name') || shTtmlKid(el, 'desc');
+      const nm = ttmlKid(el, 'name') || ttmlKid(el, 'desc');
       agents[a.id] = { name:String(nm || a.name || a.label || (a.type === 'other' ? '和声' : '主唱')).trim(), type:a.type || 'person' };
     }
     if(ln === 'text' && a.for){
       const segs = [];
-      shTtmlKids(el, s => {
-        const sa = shTtmlAttrs(s), ms = shTtmlMs(sa.begin);
-        if(isFinite(ms) && s.textContent) segs.push({ text:s.textContent, ms, ms2:shTtmlMs(sa.end) });
+      ttmlKids(el, s => {
+        const sa = ttmlAttrs(s), ms = ttmlMs(sa.begin);
+        if(isFinite(ms) && s.textContent) segs.push({ text:s.textContent, ms, ms2:ttmlMs(sa.end) });
       });
       /* 带 span 的是注音（逐字打点）；光秃秃一行字的在 <translations> 里 = 这一行的翻译。
          同一个 key 出现两次是"译法 + 一条注释"，都收着，竖着摆。 */
@@ -124,10 +128,10 @@ function shTtmlParse(text){
       }
     }
     if(ln === 'p'){
-      const L = shTtmlLine(el, a);
+      const L = ttmlLine(el, a);
       if(L) raw.push(L);
     }
-    shTtmlKids(el, walk);
+    ttmlKids(el, walk);
   };
   walk(root);
   if(!raw.length) return null;
@@ -167,7 +171,7 @@ function shTtmlParse(text){
       noteText:note && note.length ? '' : L.roman, trans };
   }).filter(Boolean);
   if(!lines.length) return null;
-  const r = shTtmlClose(lines);
+  const r = close(lines);
   r.worded = true;
   r.fmt = 'ttml';
   /* 真有两个声部交替才把名单带上：整首只有一个声部的文件不摆声部标记 */
@@ -175,8 +179,8 @@ function shTtmlParse(text){
   if(used.size > 1) r.agents = agents;
   return r;
 }
-function shTtmlLine(el, a){
-  const ms = shTtmlMs(a.begin);
+function ttmlLine(el, a){
+  const ms = ttmlMs(a.begin);
   const words = [];
   let trans = '', roman = '';
   const anno = [];
@@ -186,11 +190,11 @@ function shTtmlLine(el, a){
     if(nd.nodeType === 3){
       const gap = String(nd.nodeValue || '');
       if(gap && words.length) words[words.length - 1].text += gap;
-      else if(gap.trim() && !words.length) words.push({ text:gap, ms, ms2:shTtmlMs(a.end) });
+      else if(gap.trim() && !words.length) words.push({ text:gap, ms, ms2:ttmlMs(a.end) });
       continue;
     }
     if(nd.nodeType !== 1) continue;
-    const sa = shTtmlAttrs(nd), txt = nd.textContent || '';
+    const sa = ttmlAttrs(nd), txt = nd.textContent || '';
     if(!txt) continue;
     if(sa.role === 'x-translation'){ trans = txt.trim(); continue; }
     /* x-roman 这一枚挂着两种东西：真罗马音（逐字对得上，该压在原文上方）和一条注释
@@ -203,10 +207,10 @@ function shTtmlLine(el, a){
     }
     /* 和声的字也是唱出来的词，照原位置收下、打个号：从前凡是带 role 的一律丢掉，
        等于把「跟着一起唱的那半句」从歌词里抹了 */
-    if(sa.role === 'x-bg'){ words.push({ text:txt, ms:shTtmlMs(sa.begin), ms2:shTtmlMs(sa.end), bg:true }); continue; }
+    if(sa.role === 'x-bg'){ words.push({ text:txt, ms:ttmlMs(sa.begin), ms2:ttmlMs(sa.end), bg:true }); continue; }
     if(sa.role) continue;
-    if(shTtmlLname(nd) !== 'span'){ words.push({ text:txt, ms, ms2:shTtmlMs(sa.begin) }); continue; }
-    words.push({ text:txt, ms:shTtmlMs(sa.begin), ms2:shTtmlMs(sa.end) });
+    if(ttmlLname(nd) !== 'span'){ words.push({ text:txt, ms, ms2:ttmlMs(sa.begin) }); continue; }
+    words.push({ text:txt, ms:ttmlMs(sa.begin), ms2:ttmlMs(sa.end) });
   }
   if(!words.length) return null;
   /* 英文按词切：文件里一个词被拆成几个音节格（busy = bu / sy，mami = Ma / mi），
@@ -227,28 +231,16 @@ function shTtmlLine(el, a){
     }
     merged.push(w);
   }
-  const end = shTtmlMs(a.end);
+  const end = ttmlMs(a.end);
   return { ms, ms2:end, words:merged, key:a.key || '', agent:a.agent || '', trans, roman, anno };
 }
 
-/* ---------- 往外写时刻的那几把尺（毫秒 → 串），和上面读的那一把配成一对 ----------
-   从前这几句在为写（界面读数、导出 TTML、导出 LRC）和音乐遥控器（导出 LRC）各写了一遍，
-   改一处只生效一半，所以收在这儿。放在文件末尾不动上面那些的行号 —— 为写有注释指着「shTtmlFlow 第 36 行」。
-     shClockPad(n, w)         补零
-     shTtmlClock(ms)          TTML 属性那种 HH:MM:SS.mmm
-     shLrcClock(ms, frac)     歌词时标 m:ss.xxx；frac 给 2 就是 LRC 行首那档百分秒 ss.xx
-     shLrcStamp(ms, inline)   把上面那句包成行首 [..] 或句内 <..>
-   负数和读不出的都按 0 算，不往文件里写负时刻。
-   组件那头吃的是加载器随 ctx.ttml 发下来的 clock / stamp（见 _shared/sh-load.js）。 */
-function shClockPad(n, w){ return String(n).padStart(w || 2, '0'); }
-function shTtmlClock(ms){
-  const t = Math.max(0, Math.round(+ms || 0));
-  return shClockPad(Math.floor(t / 3600000)) + ':' + shClockPad(Math.floor(t % 3600000 / 60000)) + ':' +
-    shClockPad(Math.floor(t % 60000 / 1000)) + '.' + shClockPad(t % 1000, 3);
-}
-function shLrcClock(ms, frac){
+/* ---------- 往外写时刻的那两把尺（毫秒 → 串） ----------
+   本包只往外写 LRC 那一种（导出歌词），所以只留这一对；TTML 那一种的写法在为写自己那一份里。 */
+function clockPad(n, w){ return String(n).padStart(w || 2, '0'); }
+function lrcClock(ms, frac){
   const t = Math.max(0, Math.round(+ms || 0));
   const f = frac === 2 ? Math.floor(t % 1000 / 10) : t % 1000;
-  return Math.floor(t / 60000) + ':' + shClockPad(Math.floor(t % 60000 / 1000)) + '.' + shClockPad(f, frac || 3);
+  return Math.floor(t / 60000) + ':' + clockPad(Math.floor(t % 60000 / 1000)) + '.' + clockPad(f, frac || 3);
 }
-function shLrcStamp(ms, inline){ const s = shLrcClock(ms); return inline ? '<' + s + '>' : '[' + s + ']'; }
+export function stamp(ms, inline){ const s = lrcClock(ms); return inline ? '<' + s + '>' : '[' + s + ']'; }

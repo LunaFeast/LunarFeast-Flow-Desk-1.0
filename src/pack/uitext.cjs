@@ -241,7 +241,6 @@ function packNames(TREE){
 const SH_CN = { 'sh-bank-ui':'词库界面', 'sh-banks':'词库', 'sh-code':'插件文件读写', 'sh-color':'配色',
   'sh-doc':'文档', 'sh-font':'字体', 'sh-gen':'生成器', 'sh-ico':'图标', 'sh-icode':'代码编辑器',
   'sh-log':'生成记录', 'sh-packs':'插件装卸', 'sh-look':'外观这一层', 'sh-mus':'播放进度那一条桥',
-  'sh-ttml':'歌词时间尺（ttml / lrc）',
   'sh-style':'样式', 'sh-wizard':'配方向导', 'sh-rand':'零碎帮手', 'sh-store':'数据库助手',
   'sh-load':'插件加载接线' };
 const FD_CN = { 'fd2-store.js':'存储', 'fd3-lib.js':'三份库文件（色卡 / 外观方案 / 图片库）',
@@ -255,7 +254,8 @@ const WNW_CN = { 'w0-skin.js':'为写的皮肤与骨架', 'w1-core.js':'基础',
   'w11-board.js':'看板', 'w12-rich.js':'富文本', 'w13-docx.js':'导出 Word', 'w14-num.js':'章节序号',
   'w15-hist.js':'历史版本', 'w16-export.js':'导出', 'w17-tags.js':'标签',
   'w20-keystroke.js':'逐字记录',
-  'w22-web.js':'空白网页', 'w21-heat.js':'写作热力图', 'w18-lyric.js':'词格', 'w19-cruise.js':'词巡航' };
+  'w22-web.js':'空白网页', 'w21-heat.js':'写作热力图', 'w18-lyric.js':'词格', 'w19-cruise.js':'词巡航',
+  'w18-ttml.js':'歌词时间尺（ttml / lrc）' };
 const RP_CN = { 'p1.js':'取码与方案', 'p2.js':'文件加载', 'p3.js':'方案族', 'p4.js':'编码规则',
   'p5.js':'编码变换', 'p6.js':'外观与存储' };
 

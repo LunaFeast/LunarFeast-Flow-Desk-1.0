@@ -21,6 +21,9 @@
    musApp 就是 ctx.app —— 插件清单 appChannels 里点名的那十四个媒体通道由宿主发下来，
    宿主那把尺（_shared/sh-load.js 的 packApp）自己会「本框 → 父框 → 顶框」往上找桥，
    所以这个卡在 Flow-Desk 桌面上、和在 Flow-Desk 罩着开的 Why Not Write 停靠里，连的是同一个桥。 */
+/* 歌词解析与时刻写法：本包自己那一份（同目录 ttml.js），不再向宿主借（插件分离第 4 批 4.7）。
+   与为写那一份算得对不对，靠 src/tools/probes/gate-lyric46.mjs 拿同一份歌词对账。 */
+import { parse as ttmlParse, close as ttmlClose, stamp as ttmlStamp } from './ttml.js';
 let K = null;
 const h = (...a) => K.el(...a);
 const toast = (...a) => K.toast(...a);
@@ -28,9 +31,10 @@ const State = { get:(...a) => K.state.get(...a), set:(...a) => K.state.set(...a)
 const musApp = () => K.app;
 
 /* ---------- 一、时间 ---------- */
-/* TTML 解析和它那三枚时值尺（musMs / musFlow / musClose）搬进共用层了（外19 词格与这里同读一份，
-   见 src/_shared/sh-ttml.js）。搬到之后这一包里真的只剩两枚还有人叫 —— 就只留这两枚同名转发，
-   正文其余部分一个字不改。走 ctx 不走整页全局名，是组件包的界（_build/scan-packs.mjs 那把尺查这个）。 */
+/* TTML 解析与它那三枚时值尺（musMs / musFlow / musClose）在本包自己那一格里（同目录 ttml.js，
+   插件分离第 4 批 4.7 之前住 _shared/sh-ttml.js 由宿主发下来）。搬到之后这一包里真的只剩两枚还有人叫 ——
+   就只留这两枚同名转发，正文其余部分一个字不改。走本包模块不走整页全局名，是组件包的界
+   （_build/scan-packs.mjs 那把尺查这个）。 */
 /* 秒表读数：7:04 / 1:07:04 */
 function musClock(ms){
   const t = Math.max(0, Math.round((Number(ms) || 0) / 1000));
@@ -43,9 +47,9 @@ function musLag(ms){
   const v = Math.round(Number(ms) || 0);
   return v > 0 ? '歌词延后 ' + v + 'ms' : v < 0 ? '歌词提前 ' + (-v) + 'ms' : '歌词对齐';
 }
-const musClose = (...a) => K.ttml.close(...a);
+const musClose = (...a) => ttmlClose(...a);
 
-const parseTtml = (...a) => K.ttml.parse(...a);
+const parseTtml = (...a) => ttmlParse(...a);
 
 /* ---------- 三、LRC / eLRC（公开规范那一小块）----------
    行首 [mm:ss.xx]（可以挂好几个 = 同一句在几处重复），元数据 [ti:][ar:][by:][offset:]，
@@ -174,8 +178,8 @@ function musDec(b, o, n, enc){
   }catch(e){ return ''; }
 }
 function musZero(b, o, step){ return step === 2 ? (b[o] === 0 && b[o + 1] === 0) : b[o] === 0; }
-/* 时标那一句的算式在共用层（_shared/sh-ttml.js 的 shLrcStamp），随 ctx.ttml 发下来 */
-function musLrcTag(ms, inline){ return K.ttml.stamp(ms, inline); }
+/* 时标那一句的算式在本包自己那一格里（同目录 ttml.js 的 stamp） */
+function musLrcTag(ms, inline){ return ttmlStamp(ms, inline); }
 
 const MusBin = {
   async size(fh){

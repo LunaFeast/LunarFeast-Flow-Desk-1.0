@@ -1,4 +1,4 @@
-/* 外25 四组 · 词巡航自测页：把 sh-ttml.js + w18-lyric.js + w19-cruise.js 原样塞进浏览器，
+/* 外25 四组 · 词巡航自测页：把 w18-ttml.js + w18-lyric.js + w19-cruise.js 原样塞进浏览器，
    外面只补 kernel 交给它们的那几枚全局（h / State / Menu / Overlay / addCss / Views / Work）和一座假磁盘桥（FD_APP），
    然后真开一趟巡航：真排队列、真点显隐、真打字判分、真等倒计时翻卡。
    为什么在浏览器里跑：这一档全是真 DOM 与真定时器，node 里那套是假的。
@@ -12,7 +12,7 @@ import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const REPO = __树根;
-const SH = fs.readFileSync(REPO + '/src/_shared/sh-ttml.js', 'utf8');
+const SH = fs.readFileSync(REPO + '/src/_shared/w18-ttml.js', 'utf8');
 const LY = fs.readFileSync(REPO + '/src/_wnw/src/w18-lyric.js', 'utf8');
 const CZ = fs.readFileSync(REPO + '/src/_wnw/src/w19-cruise.js', 'utf8');
 const W7 = fs.readFileSync(REPO + '/src/_wnw/src/w7-data.js', 'utf8');

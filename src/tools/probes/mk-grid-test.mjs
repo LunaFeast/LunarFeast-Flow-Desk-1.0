@@ -1,4 +1,4 @@
-/* 词格那一排的界面自测页：把 src/_shared/sh-ttml.js 和 src/_wnw/src/w18-lyric.js 原样塞进浏览器，
+/* 词格那一排的界面自测页：把 src/_wnw/src/w18-ttml.js 和 src/_wnw/src/w18-lyric.js 原样塞进浏览器，
    外面只补 kernel 交给它的那几枚全局（h / esc / toast / Menu / download / addCss / newPara / cleanText / icoMarkup），
    然后真造一棵词格、真打字、真拖缝、真拆真并、真导出，再把导出的逐字 ttml 用同一把尺读回来逐格比。
    为什么在浏览器里跑：这些交互全靠真 DOM（closest / classList / setPointerCapture / input 事件），node 里那套是假的。 */
@@ -12,7 +12,7 @@ import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const REPO = __树根;
-const SH = fs.readFileSync(REPO + '/src/_shared/sh-ttml.js', 'utf8');
+const SH = fs.readFileSync(REPO + '/src/_wnw/src/w18-ttml.js', 'utf8');
 const MU = fs.readFileSync(REPO + '/src/_shared/sh-mus.js', 'utf8');
 const LY = fs.readFileSync(REPO + '/src/_wnw/src/w18-lyric.js', 'utf8');
 /* 真歌词也喂进来：导入那一条要吃真文件，导出去再读回来才算闭环。
@@ -890,7 +890,7 @@ T('没注音的那一格不给「删掉这一格的注音」这一条（点了�
    旧那份只取每格自己的 end-begin，字与字之间那点空档整个丢了，行尾又多出一段 —— 位置越走越早，下一行的「起」再把它拽回来 */
 let 行窗比总 = 0, 空档旧总 = 0, 短了 = [], 超最多 = 0, 超哪行 = '';
 for(let i = 0; i < REALRAW.length; i++){
-  const d = shTtmlParse(REALRAW[i]); if(!d || !d.timed) continue;
+  const d = wTtmlParse(REALRAW[i]); if(!d || !d.timed) continue;
   const g0 = lyricFromTtml(REALRAW[i]); if(!g0) continue;
   const 有效 = d.lines.filter(L => (L.words || []).some(w => String(w.text == null ? '' : w.text).trim()));
   有效.forEach((L, n) => {

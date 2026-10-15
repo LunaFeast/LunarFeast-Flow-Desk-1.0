@@ -30,7 +30,7 @@ const 要点名 = {
   'src/_fd/src/fd3-lib.js':'三份库文件', 'src/_wnw/src/w0-skin.js':'皮肤与骨架',
   'src/_wnw/src/w18-lyric.js':'词格', 'src/_wnw/src/w19-cruise.js':'词巡航',
   'src/_shared/sh-look.js':'外观这一层', 'src/_shared/sh-mus.js':'播放进度那一条桥',
-  'src/_shared/sh-ttml.js':'歌词时间尺', 'src/pack/backup.cjs':'定期备份'
+  'src/_wnw/src/w18-ttml.js':'歌词时间尺', 'src/pack/backup.cjs':'定期备份'
 };
 const 缺 = Object.entries(要点名).filter(([rel, 中]) => {
   const p = U.pageOf(rel, '', dyn, packs).page;

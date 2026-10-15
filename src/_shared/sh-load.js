@@ -570,10 +570,10 @@ const PackCtx = {
     if(F.ask) ctx.ask = F.ask;
     /* 两家产物里同名同义的小工具：直接带上，不算越界也不做门 */
     if(typeof shSplit === 'function'){ ctx.shSplit = shSplit; ctx.shSplitKey = shSplitKey; }
-    /* 歌词的时值尺（外19 词格与音乐遥控器同读这一份，见 _shared/sh-ttml.js）：
-       插件是运行时现 import 的 ES module，它拿不到整页作用域里的顶层名字，只能由这一节发下去；
-       为写那一头是同页的闭包，直接使顶层名字就行，两头用的是同一套算式。 */
-    if(typeof shTtmlParse === 'function') ctx.ttml = { parse:shTtmlParse, close:shTtmlClose, clock:shTtmlClock, stamp:shLrcStamp };
+    /* 歌词的时值尺不再由这一头发下去（插件分离第 4 批 4.7 · #34）：从前音乐遥控器与为写共读
+       _shared/sh-ttml.js 那一份，插件拿不到整页作用域的顶层名字，所以随 ctx 发一手。
+       现在各家自己一份（为写 src/_wnw/src/w18-ttml.js、音乐遥控器 data\plugins\music-remote\ttml.js），
+       两边算得对不对由 src/tools/probes/gate-lyric46.mjs 拿同一份歌词对账，不靠共用。 */
     /* 播放时钟（遥控器往里填、词格读，见 _shared/sh-mus.js）：组件递进来的是同一个对象，
        它填的那一份和为写读的那一份必须是同一个东西，所以这里原样交对象、不包一层。 */
     if(typeof MusClock !== 'undefined') ctx.mus = MusClock;

@@ -1,7 +1,7 @@
 /* 第二张对照页：验「LRC / eLRC 那条路 + 转发接线」。
    上一版按函数名猜着切，漏了 musLrcMs —— 两边都抛同一个错，a === b 就成了，12 项「PASS」其实是都没跑到。
    这一版改两件事：① 按段切（一、时间 + 三、LRC 整段），不猜名字；② 加一道闸，两边同时报错的那一项单独记「没跑到」，
-   并且当场要求 parseLrc 真交出结构（行数 > 0 或明说没戳），共用层那枚 musClose 必须被叫到。 */
+   并且当场要求 parseLrc 真交出结构（行数 > 0 或明说没戳），本包那一份的 musClose 必须被叫到。 */
 /* 外29 第 40 轮：探针搬进仓库 src\tools\probes\ 之后，生成的页面就近落在这旁边，不再写回会话临时目录 */
 import { fileURLToPath as __u2p } from 'node:url';
 const __HERE = __u2p(new URL('.', import.meta.url));
@@ -16,7 +16,7 @@ const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/,
 const REPO = __树根;
 const HEAD = spawnSync('git', ['-C', REPO, 'show', 'HEAD:data/plugins/music-remote/main.js'], { encoding:'buffer' }).stdout.toString('utf8');
 const NOW = fs.readFileSync(REPO + '/data/plugins/music-remote/main.js', 'utf8');
-const SHARED = fs.readFileSync(REPO + '/src/_shared/sh-ttml.js', 'utf8');
+const SHARED = fs.readFileSync(REPO + '/data/plugins/music-remote/ttml.js', 'utf8');
 const L = s => s.split('\n');
 
 /* 按段整切：一、时间 → 三、LRC 结束（四、内嵌歌词 那一行之前），两边各按自己的行号 */
@@ -30,15 +30,16 @@ function sliceBySection(src, marks){
 }
 const OLD = sliceBySection(HEAD, ['/* ---------- 一、时间', '/* ---------- 四、内嵌歌词']);
 const NEWBODY = sliceBySection(NOW, ['/* ---------- 一、时间', '/* ---------- 四、内嵌歌词']);
-/* 新那一份里已经不含 TTML 与时间算式，得把共用层那份拼进来，再补一份 K 桩（close 带计数器） */
-const FORW = L(NOW).filter(l => (l.startsWith('const mus') && l.includes('K.ttml')) || l.startsWith('const parseTtml ='));
+/* 新那一份里已经不含 TTML 与时间算式，得把本包自己那一份 ttml.js 拼进来（摘掉 export 关键字），
+   再补一份同名转发桩 —— 拆完之后这一包里指的就是同目录那份模块（第 4 批 4.7） */
+const FORW = L(NOW).filter(l => (l.startsWith('const mus') && l.includes('ttmlClose(')) || l.startsWith('const parseTtml ='));
 if(FORW.length !== 2) throw new Error('转发枚数不对，现在是 ' + FORW.length + ' 行：' + FORW.join(' / '));
 const NEW = `window.__hits = 0;
-const K = { ttml:{ ms:shTtmlMs, flow:shTtmlFlow,
-  close:(...a) => { window.__hits++; return shTtmlClose(...a); },
-  parse:(...a) => shTtmlParse(...a) } };
-` + SHARED + '\n' + NEWBODY;
-console.log('OLD 段 ' + L(OLD).length + ' 行 / NEW 段 ' + L(NEW).length + ' 行（含共用层 ' + L(SHARED).length + ' 行）');
+const K = { ttml:{ ms:ttmlMs, flow:ttmlFlow,
+  close:(...a) => { window.__hits++; return close(...a); },
+  parse:(...a) => parse(...a) } };
+` + SHARED.replace(/^export\s+/gm, '') + '\n' + NEWBODY;
+console.log('OLD 段 ' + L(OLD).length + ' 行 / NEW 段 ' + L(NEW).length + ' 行（含本包那份 ' + L(SHARED).length + ' 行）');
 console.log('转发枚：\n  ' + FORW.join('\n  '));
 
 const REAL = [];
@@ -92,7 +93,7 @@ const html = ['<!doctype html><meta charset="utf-8"><title>LRC 那条路前后�
   '}',
   'const hh = window.__hits || 0;',
   /* 三道总闸：一项没跑到都不算过 */
-  'out.push((hh > 0 ? "PASS " : "FAIL ") + "共用层那枚 musClose 真被叫到：这一趟 " + hh + " 次");',
+  'out.push((hh > 0 ? "PASS " : "FAIL ") + "本包那一份的 musClose 真被叫到：这一趟 " + hh + " 次");',
   'out.push((errs === 0 ? "PASS " : "FAIL ") + "没有一项是两边同时报错（真跑出结构的 " + ran + " / " + CASES.length + " 条）");',
   'if(hh <= 0 || errs > 0) bad++;',
   'document.getElementById("o").textContent = out.join("\\n") + "\\n\\n共 " + out.length + " 项，FAIL " + bad + " 项（用例 " + CASES.length + " 条）";',

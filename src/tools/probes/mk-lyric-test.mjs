@@ -1,6 +1,6 @@
 /* 词格明文那一层的自测页：编解码 + 从真逐字 TTML 导入 + 走一圈再读回来。
    为什么不写死在 node 里跑：解析 TTML 要用 DOMParser（组件和为写读的都是浏览器那一枚），
-   拿 node 另装一把解析器就等于测了另一套东西。所以这页把 src/_shared/sh-ttml.js 和
+   拿 node 另装一把解析器就等于测了另一套东西。所以这页把 src/_wnw/src/w18-ttml.js 和
    src/_wnw/src/w18-lyric.js 原样塞进去，喂真文件（他库侧车 .ttml 32 份一份不落）。 */
 /* 外29 第 40 轮：探针搬进仓库 src\tools\probes\ 之后，生成的页面就近落在这旁边，不再写回会话临时目录 */
 import { fileURLToPath as __u2p } from 'node:url';
@@ -13,7 +13,7 @@ import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const REPO = __树根;
-const SH = fs.readFileSync(REPO + '/src/_shared/sh-ttml.js', 'utf8');
+const SH = fs.readFileSync(REPO + '/src/_wnw/src/w18-ttml.js', 'utf8');
 const LY = fs.readFileSync(REPO + '/src/_wnw/src/w18-lyric.js', 'utf8');
 const TTMLS = [];
 (function walk(d, depth){

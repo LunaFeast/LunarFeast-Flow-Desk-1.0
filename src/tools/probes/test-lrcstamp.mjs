@@ -1,5 +1,5 @@
 /* 审查第 21 条：词格导出逐句 LRC 那三位毫秒。
-   跑的是 src\_wnw\src\w18-lyric.js 里那份真 lyricToLrc + 真 LyricFmt + src\_shared\sh-ttml.js 里那把真尺，
+   跑的是 src\_wnw\src\w18-lyric.js 里那份真 lyricToLrc + 真 LyricFmt + src\_wnw\src\w18-ttml.js 里那把真尺，
    不抄第二份产品代码；「旧算法」只作为对照出现在断言里（用来说明这一格确实坏过）。 */
 import fs from "node:fs";
 import vm from "node:vm";
@@ -7,7 +7,7 @@ import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 const R = __树根 + '/src/';
 const w18 = fs.readFileSync(R + "_wnw/src/w18-lyric.js", "utf8");
-const ttml = fs.readFileSync(R + "_shared/sh-ttml.js", "utf8");
+const ttml = fs.readFileSync(R + "_wnw/src/w18-ttml.js", "utf8");
 
 function grabObj(name, from){
   const i = from.indexOf("const " + name + " = {");
@@ -34,10 +34,10 @@ const ctx = { console, Math, Number, String, Array, Object, JSON, RegExp, isFini
   LYRIC_LAT: /[A-Za-z\u00C0-\u024F]/ };
 vm.createContext(ctx);
 vm.runInContext(
-  grabFn("shClockPad", ttml) + grabFn("shLrcClock", ttml) + "\n" +
+  grabFn("wClockPad", ttml) + grabFn("wLrcClock", ttml) + "\n" +
   grabObj("LyricFmt", w18) + "\n" + grabFn("lyricToLrc", w18) +
-  "\n;globalThis.__x = { lyricToLrc, shLrcClock, shClockPad };", ctx);
-const { lyricToLrc, shLrcClock, shClockPad } = ctx.__x;
+  "\n;globalThis.__x = { lyricToLrc, wLrcClock, wClockPad };", ctx);
+const { lyricToLrc, wLrcClock, wClockPad } = ctx.__x;
 
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log("  PASS " + n); } else { fail++; console.log("  FAIL " + n + (extra ? " · " + extra : "")); } };
@@ -46,8 +46,8 @@ const 一行 = ms => ({ lines: [{ at: ms, clauses: [{ cells: [{ t: '词', ms: 0 
 const 头 = ms => /^\[([^\]]+)\]/.exec(lyricToLrc(一行(ms), ''))[1];
 /* 改之前那一行的算法（写在这里只为对照，产品里已经没有它了） */
 const 旧头 = ms => { const sec = ms / 1000;
-  return shClockPad(Math.floor(sec / 60)) + ':' + shClockPad(Math.floor(sec % 60)) + '.' +
-    shClockPad(Math.round(sec * 100 % 100)); };
+  return wClockPad(Math.floor(sec / 60)) + ':' + wClockPad(Math.floor(sec % 60)) + '.' +
+    wClockPad(Math.round(sec * 100 % 100)); };
 
 console.log("词格导出逐句 LRC 的时标（真 lyricToLrc 搬进沙箱）\n");
 
@@ -75,12 +75,12 @@ ok("5 同一万里旧算法有 " + 旧不合.length + " 个不合法（每一千
 /* ---------- 和共用那把尺对上（分钟补零这一头之外，百分秒必须是同一档） ---------- */
 const 差 = [];
 for(let ms = 0; ms <= 20000; ms += 7){
-  const 尺 = shLrcClock(ms, 2);                              /* 尺给的是 m:ss.xx（分钟不补零） */
+  const 尺 = wLrcClock(ms, 2);                              /* 尺给的是 m:ss.xx（分钟不补零） */
   const 新 = 头(ms);                                          /* 产品给的是 mm:ss.xx */
   const 同 = 新.replace(/^0(?=\d:)/, '');                     /* 只把补掉的那个 0 还原 */
   if(同 !== 尺) 差.push(ms + '：产品 ' + 新 + ' / 尺 ' + 尺);
 }
-ok("6 每一刻和 shLrcClock(ms,2) 算出的是同一个百分秒档（差 " + 差.length + " 个）", 差.length === 0, 差.slice(0, 5).join(' ‖ '));
+ok("6 每一刻和 wLrcClock(ms,2) 算出的是同一个百分秒档（差 " + 差.length + " 个）", 差.length === 0, 差.slice(0, 5).join(' ‖ '));
 
 /* ---------- 整份文件：多段、多行、带「起」的行、缺 at 的行、间奏空档 ---------- */
 const doc = { lines: [

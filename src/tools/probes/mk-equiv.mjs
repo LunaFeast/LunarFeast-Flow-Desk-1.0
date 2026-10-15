@@ -1,5 +1,5 @@
 /* 生成一张对照页：同一批 TTML 用例分别喂「搬走前那一份」（git HEAD 里的 main.js）和
-   「搬完那一份」（src/_shared/sh-ttml.js），两边结果逐字节比。
+   「搬完那一份」（第 4 批 4.7 之后是为写那一份 src/_wnw/src/w18-ttml.js），两边结果逐字节比。
    只搬名字不改写法 —— 这一条不靠我说，靠这张页跑出来的结果说。 */
 /* 外29 第 40 轮：探针搬进仓库 src\tools\probes\ 之后，生成的页面就近落在这旁边，不再写回会话临时目录 */
 import { fileURLToPath as __u2p } from 'node:url';
@@ -17,13 +17,14 @@ const show = spawnSync('git', ['-C', REPO, 'show', 'HEAD:data/plugins/music-remo
 if(show.status !== 0) throw new Error('git show 没拿到上一版');
 const oldLines = show.stdout.toString('utf8').split('\n');
 const OLD = [oldLines.slice(31, 45), oldLines.slice(57, 95), oldLines.slice(96, 266)].map(a => a.join('\n')).join('\n');
-const NEWFILE = fs.readFileSync(REPO + '/src/_shared/sh-ttml.js', 'utf8');
-const NEW = NEWFILE.split('\n').slice(9).join('\n');       /* 前 9 行是这张文件自己的抬头注释 */
+const NEWFILE = fs.readFileSync(REPO + '/src/_wnw/src/w18-ttml.js', 'utf8');
+const 起 = NEWFILE.split('\n').findIndex(l => /^(function|const|export)\s/.test(l));   /* 抬头注释到第一颗函数为止，不数死行数 */
+const NEW = NEWFILE.split('\n').slice(起).join('\n');
 
 /* 反向自查：把新文件的改名表倒回去，应该正好等于老的那一段 —— 这证明"只改了名字" */
-const MAP = [['shTtmlParse', 'parseTtml'], ['shTtmlLine', 'musTtmlLine'], ['shTtmlAttrs', 'musAttrs'],
-  ['shTtmlKids', 'musKids'], ['shTtmlKid', 'musKid'], ['shTtmlClose', 'musClose'], ['shTtmlFlow', 'musFlow'],
-  ['shTtmlMs', 'musMs'], ['shTtmlLname', 'lname']];
+const MAP = [['wTtmlParse', 'parseTtml'], ['wTtmlLine', 'musTtmlLine'], ['wTtmlAttrs', 'musAttrs'],
+  ['wTtmlKids', 'musKids'], ['wTtmlKid', 'musKid'], ['wTtmlClose', 'musClose'], ['wTtmlFlow', 'musFlow'],
+  ['wTtmlMs', 'musMs'], ['wTtmlLname', 'lname']];
 let back = NEW;
 for(const [a, b] of MAP) back = back.replace(new RegExp('(?<![\\w$])' + a + '(?![\\w$])', 'g'), b);
 const same = back.replace(/\s+/g, ' ').trim() === OLD.replace(/\s+/g, ' ').trim();
@@ -86,10 +87,10 @@ function oldScope(){
 ${OLD}
   return { parse:parseTtml, ms:musMs, flow:musFlow, close:musClose };
 }
-/* ===== 搬完后那一份（src/_shared/sh-ttml.js 原样切的，名字是 shTtml*） ===== */
+/* ===== 搬完后那一份（拆成各家一份之后是为写那一份 src/_wnw/src/w18-ttml.js，名字是 wTtml*） ===== */
 function newScope(){
 ${NEW}
-  return { parse:shTtmlParse, ms:shTtmlMs, flow:shTtmlFlow, close:shTtmlClose };
+  return { parse:wTtmlParse, ms:wTtmlMs, flow:wTtmlFlow, close:wTtmlClose };
 }
 const O = oldScope(), N = newScope();
 const CASES = ${JSON.stringify(ALL)};

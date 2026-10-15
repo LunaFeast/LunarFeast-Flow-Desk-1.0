@@ -42,8 +42,8 @@ for(const f of ['src/_build/p1.js', 'src/_build/p6.js', 'src/_build/rp-kernel.mj
 台.题('二、为写这一家：插件那一格那三件 + src 底下那一批内核源码都在这一个仓里（2026-10-13 他一句「怎么会有主仓/私有两个」）');
 台.判('插件那一格里为写那三件在跟踪名单里（启动卡、插件清单、封面）',
   跟踪.includes('data/plugins/why-not-write/main.js') && 跟踪.includes('data/plugins/why-not-write/manifest.json'));
-台.判('src 底下那 22 份内核源码与出内核那颗脚本都在跟踪名单里（从前那一棵私有的，现在并进这一个仓）',
-  跟踪.filter(f => f.startsWith('src/_wnw/src/w') && f.endsWith('.js')).length === 22 &&
+台.判('src 底下那 23 份内核源码与出内核那颗脚本都在跟踪名单里（从前那一棵私有的，现在并进这一个仓；23 = 原来 22 份 + 第 4 批 4.7 歌词时间尺那一份）',
+  跟踪.filter(f => f.startsWith('src/_wnw/src/w') && f.endsWith('.js')).length === 23 &&
   跟踪.includes('src/_wnw/build-kernel.mjs'),
   跟踪.filter(f => f.startsWith('src/_wnw/')).length + ' 份在名单里');
 

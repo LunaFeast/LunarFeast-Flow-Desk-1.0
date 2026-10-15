@@ -94,7 +94,7 @@ console.log(wholeErr ? '整页拼起来语法不过：' + wholeErr : '整页拼�
 const top = new Set();
 for(const m of js.matchAll(/^(?:function|const|let|class)\s+([A-Za-z_$][\w$]*)/gm)) top.add(m[1]);
 for(const n of ['randInt', 'pickOne', 'shuffle', 'idbOpen', 'idbRun', 'reasonOf', 'IDB', 'IDB_MS',
-  'accentSlotVars', 'shClockPad', 'shTtmlClock', 'shLrcClock', 'shLrcStamp', 'markVar'])
+  'accentSlotVars', 'wClockPad', 'wTtmlClock', 'wLrcClock', 'wLrcStamp', 'markVar'])
   console.log((top.has(n) ? '✓ 顶层有 ' : '✗ 顶层缺 ') + n);
 /* 那一句号的闸在上面（有那一句），产物在不在看 盘上 */
 process.exit(fail.length || wholeErr || !盘上 || !新 || !定制在 || !定制新 || !有那一句 ? 1 : 0);

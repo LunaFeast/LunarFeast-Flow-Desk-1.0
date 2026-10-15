@@ -32,7 +32,7 @@ const 复杂 = [
   { ms: 27000, ms2: 30000, 档: 2 },
   { ms: 30000, ms2: 33000, 档: 4 },
 ];
-/* 行尾接「下一个时刻」，和 _shared/sh-ttml.js 里 shTtmlClose 一个口径 */
+/* 行尾接「下一个时刻」，和 _wnw/src/w18-ttml.js 里 wTtmlClose 一个口径 */
 for(const 行 of [平铺, 复杂]){
   const 时刻 = 行.map(x => x.ms);
   for(const L of 行) if(!(L.ms2 > L.ms)){

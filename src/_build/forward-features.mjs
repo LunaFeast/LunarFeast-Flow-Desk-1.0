@@ -46,7 +46,7 @@ export const 八项 = [
         '章上图标、卷上与章上右键那几项巡航',
       'src/_wnw/src/w3-shell.js ＋ 那张清单里那两条巡航（词巡航、书巡航）',
       'src/_wnw/src/w7-data.js 整本导出读正文那一处（词格那份正文不住在 c.paras）',
-      '公开的 src/_shared/sh-mus.js、sh-ttml.js 只在词格里被叫（那两份自己不进装配名单，留着不动）'] },
+      '公开的 src/_shared/sh-mus.js 只在词格里被叫（那一份自己不进装配名单，留着不动）；歌词时间尺第 4 批 4.7 起各家一份（为写 src/_wnw/src/w18-ttml.js、音乐遥控器包内 ttml.js）'] },
   { id: 'music-dock', 中文: '音乐遥控器停靠', 住在哪: '音乐遥控器那一家 + 为写停靠栏', 形状: 'switch',
     量这句: [['data/plugins/music-remote/manifest.json', '"wnw"']],
     分支: 'feature/new/music-dock',

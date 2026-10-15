@@ -398,7 +398,7 @@ function lyricTagLines(text){
     .filter(Boolean);
 }
 function lyricFromTtml(text){
-  const d = (typeof shTtmlParse === 'function') ? shTtmlParse(text) : null;
+  const d = (typeof wTtmlParse === 'function') ? wTtmlParse(text) : null;
   if(!d || !d.timed) return null;
   /* 声部名单：共用那把尺只在真有两个声部时才把名单带出来，整首一个声部的歌它不摆，
      所以头里那几行自己再认一遍，别让 v1 这种编号漏到界面上当人名。
@@ -803,7 +803,7 @@ class LyricGrid{
     return { rows, end:t };
   }
   msText(ms){ return LyricFmt.okMs(ms) ? Math.round(ms) + 'ms' : '—'; }
-  ioText(ms){ return LyricFmt.okMs(ms) ? shLrcClock(ms) : '—'; }
+  ioText(ms){ return LyricFmt.okMs(ms) ? wLrcClock(ms) : '—'; }
   /* 节拍：一拍 = 拍号分子里那一个大拍（6/8 就是附点四分），BPM 是这一拍一分钟跳几次，
      from 是第一个字落在小节的第几拍（从 1 数）。 */
   beatOf(ms){
@@ -2059,7 +2059,7 @@ function lyricParas(doc){
 
 /* ---------- 词格 → 逐字 TTML（一格一个 <span>，begin / end 由每格时长累加出来）----------
    行 = 一个 <p>（带 begin / end）；段名不进 ttml（那份结构里没有段这一级）；空的格子不占位但时长照样算进去。
-   时长没配的那些格按 0 长出去：共用那把尺（shTtmlFlow 第 36 行）见到 0 长的格会垫成 120 毫秒，
+   时长没配的那些格按 0 长出去：为写自己那把尺（w18-ttml.js 的 wTtmlFlow）见到 0 长的格会垫成 120 毫秒，
    那是它给逐字歌词定的规矩，导出这边不跟它拧 —— 所以这类格读回来是 120 而不是 0；出 ttml 之前先报有几个这样的格。 */
 function lyricWord(t){ return String(t || '').trim(); }
 /* 两格之间要不要垫一个空格：认的是接缝那两个字 —— 前格字尾和后格字头都是西文字母就得垫，
@@ -2089,15 +2089,15 @@ function lyricToTtml(doc){
         if(w){
           有字 = true;
           if(lyricTailLat(prev) && lyricHeadLat(w)) segs.push(' ');
-          segs.push('<span' + (bg ? ' ttm:role="x-bg"' : '') + ' begin="' + shTtmlClock(cur) +
-            '" end="' + shTtmlClock(cur + ms) + '">' + esc(w) + '</span>');
+          segs.push('<span' + (bg ? ' ttm:role="x-bg"' : '') + ' begin="' + wTtmlClock(cur) +
+            '" end="' + wTtmlClock(cur + ms) + '">' + esc(w) + '</span>');
           prev = w;
         }
         cur += ms;
       }
       /* 注音得压在字上才有意义：一格分了几子，注音盖整格那一段；这一格没字，它就没有落脚的地方（明文那份照旧留着） */
       const n = String(c.n == null ? '' : c.n).trim();
-      if(n && 有字) nsp.push('<span begin="' + shTtmlClock(头) + '" end="' + shTtmlClock(cur) + '">' + esc(n) + '</span>');
+      if(n && 有字) nsp.push('<span begin="' + wTtmlClock(头) + '" end="' + wTtmlClock(cur) + '">' + esc(n) + '</span>');
     }
     if(L.trans) segs.push('<span ttm:role="x-translation">' + esc(String(L.trans)) + '</span>');
     let key = '';
@@ -2109,7 +2109,7 @@ function lyricToTtml(doc){
       /* 合唱得在文件里留得下来：一串名字那种靠「两个以上」本身就回得来，只挂一个名字的合唱（他那份里 "all" 就是）靠 type */
       if(L.how === 'choir' || LyricFmt.whoList(who).length > 1) agGrp[who] = true;
       id = ag[who]; }
-    out.push('    <p begin="' + shTtmlClock(begin) + '" end="' + shTtmlClock(cur) + '"' +
+    out.push('    <p begin="' + wTtmlClock(begin) + '" end="' + wTtmlClock(cur) + '"' +
       (key ? ' itunes:key="' + key + '"' : '') + (id ? ' ttm:agent="' + id + '"' : '') + '>' +
       (segs.length ? segs.join('') : esc(LyricFmt.lineText(L))) + '</p>');
   }
@@ -2130,12 +2130,12 @@ function lyricToLrc(doc, title){
   for(const L of (doc && doc.lines) || []){
     /* 带着「起」的那一句照它本来的开口出，不拿上一句的尾巴硬接 —— 间奏那道空档就是这么丢的 */
     if(LyricFmt.okMs(L.at)) cur = L.at;
-    /* 秒尾那两位直接吃毫秒数往下取整（和共用那把尺 shLrcClock(ms,2) 同一档）——
+    /* 秒尾那两位直接吃毫秒数往下取整（和自己那把尺 wLrcClock(ms,2) 同一档）——
        从前是 Math.round(sec*100%100)：995~999 毫秒会被凑成 100，写出 [00:00.100] 这种三位小数又不往秒进位的行。
        负数或读不出的按 0 算（和那把尺同一个口径）；分钟这一头保留两位补零（LRC 常见写法），其余一个字节都不动。 */
     const t = Math.max(0, Math.round(+cur || 0));
-    rows.push('[' + shClockPad(Math.floor(t / 60000)) + ':' + shClockPad(Math.floor(t % 60000 / 1000)) + '.' +
-      shClockPad(Math.floor(t % 1000 / 10)) + ']' + LyricFmt.lineText(L));
+    rows.push('[' + wClockPad(Math.floor(t / 60000)) + ':' + wClockPad(Math.floor(t % 60000 / 1000)) + '.' +
+      wClockPad(Math.floor(t % 1000 / 10)) + ']' + LyricFmt.lineText(L));
     let ms = 0;
     for(const cl of (L.clauses || [])) for(const c of (cl.cells || [])) if(LyricFmt.okMs(c.ms)) ms += c.ms;
     cur += ms;
