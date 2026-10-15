@@ -494,6 +494,17 @@ function ffLangText(map){
     const l = L.find(x => x.k === k); return (l ? l.name : k) + '=' + map[k];
   }).join(';');
 }
+/* 一条方案 → 一份新 cfg（插件分离第 4 批 4.4 给「某一棵子树按这一套画」用）：
+   不改 Theme.cfg、不落文件、不碰配色与标记色。字段口径与下面 LookLib.apply 里那一段是同一批
+   （外观模式 / 纹理那两样 / 两档圆角 / 字体字重），改那边记得改这边 ——
+   这一份从 LookStore.defaults 起，所以方案里没写的档位落回出厂那一档，不落回「当前生效那一档」。 */
+function 方案成cfg(s){
+  return Object.assign({}, LookStore.defaults, {
+    mode: (lookModeByName(s.外观模式) || LOOK_MODES[0]).k,
+    tex: s.texKey !== undefined ? s.texKey : ((lookTexByName(s.纹理) || {}).k || ''),
+    texGray: lookTexWay(s.纹理用法) === '去色',
+    radiusCard: s.卡片圆角, radiusCtl: s.控件圆角, font: s.字体 || '', weight: s.字重 || '' });
+}
 const LookLib = {
   name:LOOKS_FILE,
   ready:false, list:[],

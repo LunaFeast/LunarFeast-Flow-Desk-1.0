@@ -21,6 +21,60 @@ const snapDelta = (px, cell, 步) => snapQ(步, cell) * Math.round(px / cell / s
    插件清单里点了 noExpanded 的那一家不吃这一档（日程：任意大小都照卡面那一格画，全览只走 ⛶）。 */
 const EXPAND_AREA = .25;
 const isExpanded = (def, it) => !def.noExpanded && it.w * it.h >= GRID_COLS * GRID_ROWS * EXPAND_AREA;
+/* ============================================================
+   每一家自己的外观（插件分离第 4 批 4.4 · #36）
+   ------------------------------------------------------------
+   色号那三份资料只有主程序一份（looks.yaml / palettes.yaml / appearance.json，读的那颗在 _shared/sh-look.js）；
+   这一节只管一件事：哪一家挑了哪一套方案。一格一家——
+     · 没这一格（默认）= 跟随：跟着主程序当前那一套动，卡片不吃任何自己的变量；
+     · 挑了一条方案 = 独立：那一条的配色 + 外观模式 + 纹理 + 两档圆角 + 字体，算成一份变量写在
+       这一家自己那张卡的根元素上。主程序换主题走的是根元素那一层，写在卡上的这些盖在它上面，
+       所以「不下发」不用第二套判定 —— 它自己身上那份就是它挑的那一套。
+   名单两条不进来（2026-10-16 定的）：为写维持它自己那一份（w2-theme.js 写在自己的根元素上，
+   设置里那颗「跟随 Flow-Desk 主外观」的勾照旧），声笔练习那一家被 test-rplook 钉着不许有自己的外观。
+   标记色那一串仍全局一份：它跟着方案走的是主程序这一头（Marks.随方案），不给每家另起一串——
+   另起就等于把「同一张卡上的标记在两处存色号」，那是两份真相。
+   存在 appearance.json 的 packs 那一节（与 look / marks 同一层，不进方案快照：换方案不该替你把
+   「哪一家独立」这件事改掉）。
+   ============================================================ */
+const 外观不接的两家 = ['why-not-write', 'singbit-input-practice'];
+const PackLooks = {
+  get 表(){ return LookStore.data.packs || (LookStore.data.packs = {}); },
+  /* 能挑的一家 = 这一轮加载着的、除了那两家不接的 */
+  可挑(){ return Packs.list().filter(m => PackOps.forHost(m) && 外观不接的两家.indexOf(m.id) < 0); },
+  挑的(包){ const 格 = this.表[包]; return (格 && 格.案) || ''; },
+  独立(){ return Object.keys(this.表).filter(包 => !!(this.表[包] && this.表[包].案)); },
+  定(包, 案){ if(案) this.表[包] = { 案 }; else delete this.表[包]; LookStore.save(); },
+  /* 注册名 → 包 id：工具那一族带 tool- 头，其余同名；不是这一轮加载着的一家就回空 */
+  包of(注册名){
+    const 裸 = String(注册名 || '').replace(/^tool-/, '');
+    return this.可挑().some(m => m.id === 裸) ? 裸 : '';
+  },
+  /* 一张卡该按哪一套画：这一家挑了方案且那张方案还在文件里才算，方案被删了就当跟随（不摆一句错） */
+  生效(包){ const 案 = this.挑的(包); return 案 ? (LookLib.list.find(s => s.方案名 === 案) || null) : null; },
+  /* 一条方案 → 一棵子树上的变量（不碰 Theme.cfg、不碰根元素，全局那一份生效值一个字不动） */
+  画到(元素, 包){
+    const s = this.生效(包);
+    if(!s){ return false; }
+    const 色 = Palette.items.find(x => x.name === s.配色);
+    const t = Object.assign({}, 色 ? tokensOf(色).tokens : (Theme.applied || {}));
+    const cfg = 方案成cfg(s);   /* 那条换算与 LookLib.apply 同一批字段，住在 fd3-lib（这一头不再抄一份字面） */
+    const dk = 色 ? 色.mode === 'dark' : Look.dark();
+    const 补 = Look.readable(t, cfg); if(补) Object.assign(t, 补);
+    for(const k in t) 元素.style.setProperty(k, t[k]);
+    const v = Look.vars(cfg, dk);
+    for(const k in v) 元素.style.setProperty(k, v[k]);
+    const 卡角 = clampRadius(cfg.radiusCard) + 'px', 件角 = clampRadius(cfg.radiusCtl) + 'px';
+    元素.style.setProperty('--radius-card', 卡角); 元素.style.setProperty('--radius', 件角);
+    元素.style.setProperty('--r-card', 卡角); 元素.style.setProperty('--r-btn', 件角); 元素.style.setProperty('--r-pill', 件角);
+    /* 字体不在这儿：全站那一份字体只有 Theme.apply 一个出口（test-fontlang 第 17 条钉着），
+       一张卡自己用哪个字体走的是既有那一条 —— 卡片上那颗字体钮（it.font / it.fontFollow），一键统一收的也是它。
+       在这儿再开一条就把那颗钮顶掉了：两处都能写同一个名字，谁后跑谁赢。 */
+    元素.dataset.mode = Look.eff(cfg).mode.k; 元素.dataset.tex = Look.eff(cfg).tex || 'none'; 元素.dataset.dark = dk ? '1' : '0';
+    return true;
+  },
+};
+
 /* 字号基准：格子短边 58px 时字号 1.0 */
 const VSC_BASE = 58;
 
@@ -124,6 +178,9 @@ const LookStore = {
       /* 标记色（外13-N）：和 cur / lookCur 同一层的单独一节，不属于 look 那一节 ——
          外观方案 snapshot 只抄 look，所以这一串不会被任何一套方案带走或覆盖。 */
       marks:marksNorm(x.marks),
+      /* 哪一家独立挑了哪一套方案（第 4 批 4.4）：与 look / marks 同一层的一节，不进方案快照 ——
+         换一套方案不该顺手把「哪一家独立」这件事改掉；空的一节不写进文件（免得存档里挂一堆没挑过的家） */
+      packs:Object.fromEntries(Object.entries(x.packs || {}).filter(([, 格]) => 格 && 格.案)),
       look:Object.assign({}, this.defaults, x.look || {}) };
     /* 记号还没钉上（补齐那一步还没写成功，或者压根没跑成）就继续抄着这一份色卡：
        老存档升上来、写盘那一趟又没成，抹掉就是那几十套配色整个没了，第二天开机只剩文件里两条 */
@@ -1885,6 +1942,8 @@ const Shell = {
     card.appendChild(body);
     const ff = this.fontOf(it);
     if(ff) card.style.fontFamily = ffStack(ff, FF_BASE_FD);
+    /* 这一家挑过一套方案（4.4 的独立那一档）就把那一份变量写在这张卡自己身上；没挑就一个字不写，跟着根元素走 */
+    PackLooks.画到(card, PackLooks.包of(def.id));
     /* 内容缩到 9px 还塞不下时，这道渐隐告诉你下面还有东西 */
     card.appendChild(h('div', { class:'fd-cut' }));
     for(const dir of ['nw','ne','sw','se'])

@@ -2102,6 +2102,50 @@ function tabLook(){
     h('button', { class:'fd-btn mini', title:'只把这套方案的两档圆角和卡片间距回到出厂那一档；配色、方案名和方案清单都不动',
       onclick:() => restoreFactory() }, '恢复出厂取值'),
     h('span', { class:'fd-hint' }, '只回数值：两档圆角回到出厂那一档、卡片间距回到自动，配色、方案名和方案清单一概不动。')])));
+  /* ---------- 每一家自己的外观 + 一键统一（插件分离第 4 批 4.4 · #36）----------
+     色号那三份资料只有主程序一份；这一格只管"哪一家挑了哪一套方案"：默认跟随，挑一套就是独立。
+     独立那一家的配色 + 外观模式 + 纹理 + 两档圆角 + 字体写在它自己那张卡上（PackLooks.画到），
+     主程序换主题写的是根元素那一层，盖在它上面 —— 所以"不下发"不用第二套判定。
+     为写与声笔练习那两家不列（2026-10-16 定的：前者维持它自己那一份 w2-theme，后者被探针钉着不许有自己的外观）。 */
+  const 统一 = () => {
+    const 家 = PackLooks.可挑(), 名 = m => m.name || m.id;
+    const 跟 = 家.filter(m => !PackLooks.挑的(m.id)), 跳 = 家.filter(m => PackLooks.挑的(m.id));
+    Modal.open('一键统一', h('div', { style:'display:grid;gap:8px' }, [
+      h('div', {}, '跟着统一的：' + (跟.length ? 跟.map(名).join('、') : '（这一轮没有加载着的家）')),
+      h('div', {}, '跳过的（自己挑了一套）：' + (跳.length ? 跳.map(名).join('、') : '（没有）')),
+      h('div', { class:'fd-hint' }, '按下去只做一件事：把「跟着统一」那几家各自卡片上钉过的字体收回来，跟主程序这一套走；自己挑了一套的那几家一个字不动。')]),
+      [h('button', { class:'fd-btn', onclick:() => Modal.close() }, '取消'),
+       h('button', { class:'fd-btn primary', onclick:() => {
+         let 收 = 0;
+         for(const it of Shell.layout.items){
+           const 包 = PackLooks.包of(it.widget); if(!包 || PackLooks.挑的(包)) continue;
+           if(it.fontFollow === false || it.font){ it.fontFollow = true; it.font = ''; 收++; }
+         }
+         Modal.close();
+         if(收){ Shell.save(); Shell.render(); toast('已把 ' + 收 + ' 张卡自己钉过的字体收回，跟着主程序这一套走'); }
+         else toast('没有要收的：那几家本来就跟着走');
+       }}, '按下去统一')]);
+  };
+  const 那一家 = h('div', { style:'display:grid;gap:6px;margin-top:16px' });
+  const 画那一家 = () => {
+    那一家.innerHTML = '';
+    const 家 = PackLooks.可挑();
+    if(!家.length) return;
+    那一家.appendChild(h('div', { class:'fd-hint' },
+      '每一家自己用哪一套：默认跟着主程序这一套动；挑一套就是独立 —— 主程序换主题和按一键统一都不下发给它。'));
+    for(const m of 家){
+      const 挑 = PackLooks.挑的(m.id);
+      那一家.appendChild(row(m.name || m.id, h('select', { class:'fd-input', style:'max-width:240px',
+        onchange:ev => { PackLooks.定(m.id, ev.target.value); Shell.render();
+          toast(ev.target.value ? '「' + (m.name || m.id) + '」改成独立用「' + ev.target.value + '」' : '「' + (m.name || m.id) + '」回到跟随主程序'); } },
+        [h('option', { value:'', selected:!挑 }, '跟随主程序'),
+         ...LookLib.list.map(s => h('option', { value:s.方案名, selected:挑 === s.方案名 }, s.方案名))])));
+    }
+    那一家.appendChild(h('button', { class:'fd-btn mini', style:'justify-self:start;margin-top:6px',
+      title:'按下去之前先列一句哪几家跟着统一、哪几家跳过', onclick:() => 统一() }, '一键统一'));
+  };
+  画那一家();
+  p3box.appendChild(那一家);
   start(LookLib.get() || LookLib.snapshot(LookLib.cur || '当前外观'));
   drawScheme(); drawDetail(); drawMing();
   /* 到点换轴 / 系统深浅变了 / 睡醒重认那一趟：这一屏开着就跟着重画（两只下拉的名单和那行小字都得跟着色卡走）。
