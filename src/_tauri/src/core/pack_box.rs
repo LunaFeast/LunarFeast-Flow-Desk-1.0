@@ -622,9 +622,30 @@ mod 验判断 {
         assert_eq!(块[1].数据起点, 块[0].数据起点 + 5 + 块头长);
     }
 
+    /* 发布侧那一颗打包手（src\_build\packbox.mjs）压出来的同一串字节，这一头原样读一遍：
+       JS 压、Rust 读，两边拿同一份件核形状 —— 任一边改了布局或哈希写法，这一颗当场红。
+       那份件是文字十六进制（不是二进制堆），落在 tools 那一格，发布物里带不出去。 */
     #[test]
-    fn 整包好的过检并且标成用户插件() {
-        let 字 = "/* 便签 */".as_bytes();
+    fn 发布侧压的那份试件这一头读得通() {
+        let 文 = include_str!("../../../tools/probes/件-容器.hex");
+        let 字: Vec<u8> = 文.trim().as_bytes()
+            .chunks(2)
+            .map(|双| u8::from_str_radix(std::str::from_utf8(双).unwrap(), 16).unwrap())
+            .collect();
+        let 出 = 查(&字);
+        assert!(出.ok, "{:?}", 出.报);
+        let 信 = 出.信息.clone().unwrap();
+        assert_eq!(信.id, "notes");
+        assert_eq!(信.min_shell, "1.0.0");
+        assert_eq!(信.files.len(), 3);
+        assert_eq!(信.kernels, vec!["box-kernel.js".to_string()]);
+        assert!(出.用户插件(), "未签名的包：这一头认它是用户插件，不当成问题");
+        assert_eq!(出.头一句(), "");
+        assert_eq!(出.逐块.iter().filter(|核| 核.状态 == 对上了).count(), 3, "三块都该与对得上号");
+    }
+
+    #[test]
+    fn 整包好的过检并且标成用户插件() {        let 字 = "/* 便签 */".as_bytes();
         let 信 = 信息段(&[("main.js", &算哈希(字), 字.len() as u64)], "");
         let 一 = 拼一份(&信, &[字], 没签, 没锁);
         let 出 = 查(&一);

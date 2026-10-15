@@ -80,14 +80,16 @@ for(const 禁 of ['std::fs', 'File::open', 'fs::read', 'fs::write', 'tauri::', '
   动.includes('封顶字节') && 动.includes('太大那句') && !/24 \* 1024/.test(动));
 台.判('扩展名全仓只有一枚常量：除 pack_box 那一处与这份闸自己的说明，别处搜不到 fdpkg 那五个字',
   /pub const 扩展名: &str = "fdpkg";/.test(判断) && 动.includes('扩展名') && !动.includes('"fdpkg"'));
-/* 注释里提一句「.fdpkg」是给读代码的人交代形状，不当第二处真身；剥掉注释再扫，剩下的才是拿来拼路径的字面 */
+/* 注释里提一句「.fdpkg」是给读代码的人交代形状，使用法那一行也一样 —— 要拦的是第二份**常量**：
+   一枚被代码拿去拼路径的字面串。所以剥掉注释之后，只认 fdpkg 单独被引号包成一颗串的那种写法。 */
 const 去注 = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+const 常量形 = /["'`]fdpkg["'`]/;
 const 别处 = fs.readdirSync(path.join(ROOT, 'src'), { recursive: true })
   .filter(f => /(\.rs|\.js|\.cjs|mjs)$/.test(String(f)) && !String(f).includes('pack_box.rs')
     && !String(f).includes('gate-tauribox46'))
   .map(f => path.join(ROOT, 'src', String(f)))
-  .filter(p => { try { return 去注(fs.readFileSync(p, 'utf8')).includes('fdpkg'); } catch(e) { return false; } });
-台.判('那一枚常量没被抄成第二处：src 底下（剥掉注释、去掉本闸自己那两串判据，再除 pack_box 那一处）没有别的文件写着 fdpkg：' + 别处.join(' '),
+  .filter(p => { try { return 常量形.test(去注(fs.readFileSync(p, 'utf8'))); } catch(e) { return false; } });
+台.判('那一枚常量没被抄成第二处：src 底下（剥掉注释、去掉本闸自己那两串判据，再除 pack_box 那一处）没有别的文件把 fdpkg 写成一颗串：' + 别处.join(' '),
   别处.length === 0, 别处.map(p => p.replace(ROOT, '')));
 台.判('这一层一句都不许抛给页面（unwrap / expect / panic 一颗不留）',
   !/\bunwrap\(\)/.test(动手) && !/\.expect\(/.test(动手) && !/panic!/.test(动手));
