@@ -67,8 +67,10 @@ const PackLoader = {
       const m = p.manifest;
       if(!m || !m.id) continue;
       if(off.has(String(m.id))) continue;
-      if(p.kind === 'zip'){
-        console.warn('插件「' + m.id + '」还是 zip 那份运输形状：开机那一趟没摊成文件夹（已经有同名文件夹，或者那份包读不动）');
+      /* 运输形状不当运行形状使：zip 与自有容器（第 3 批 3.4）这两种都只列在管理页那一屏，
+         运行时吃的永远是摊开的那一格；这一格没在（或读不动）就跳过这一家，不加载、也不弹错误卡 */
+      if(p.kind === 'zip' || p.kind === 'box'){
+        console.warn('插件「' + m.id + '」还在那份运输形状里（' + p.kind + '）：开机这一趟没拿到摊开的那一格，这一家先不加载');
         continue;
       }
       out.push({ id:String(m.id), manifest:m });

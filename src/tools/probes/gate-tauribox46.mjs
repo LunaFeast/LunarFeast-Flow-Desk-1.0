@@ -83,14 +83,20 @@ for(const 禁 of ['std::fs', 'File::open', 'fs::read', 'fs::write', 'tauri::', '
 /* 注释里提一句「.fdpkg」是给读代码的人交代形状，使用法那一行也一样 —— 要拦的是第二份**常量**：
    一枚被代码拿去拼路径的字面串。所以剥掉注释之后，只认 fdpkg 单独被引号包成一颗串的那种写法。 */
 const 去注 = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-const 常量形 = /["'`]fdpkg["'`]/;
-const 别处 = fs.readdirSync(path.join(ROOT, 'src'), { recursive: true })
-  .filter(f => /(\.rs|\.js|\.cjs|mjs)$/.test(String(f)) && !String(f).includes('pack_box.rs')
-    && !String(f).includes('gate-tauribox46'))
-  .map(f => path.join(ROOT, 'src', String(f)))
-  .filter(p => { try { return 常量形.test(去注(fs.readFileSync(p, 'utf8'))); } catch(e) { return false; } });
-台.判('那一枚常量没被抄成第二处：src 底下（剥掉注释、去掉本闸自己那两串判据，再除 pack_box 那一处）没有别的文件把 fdpkg 写成一颗串：' + 别处.join(' '),
-  别处.length === 0, 别处.map(p => p.replace(ROOT, '')));
+const 常量形 = /["'`]\.?fdpkg["'`]/;   /* 带不带那枚点都算：JS 那一头拼的是 '.fdpkg'，Rust 那一头是 "fdpkg" 与 ".fdpkg" */
+const 数那一处 = (后缀式, 放过) => fs.readdirSync(path.join(ROOT, 'src'), { recursive: true })
+  .filter(f => 后缀式.test(String(f)) && !放过.some(跳 => String(f).includes(跳)))
+  .map(f => ({ 相: String(f).replace(/\\/g, '/'), 文: fs.readFileSync(path.join(ROOT, 'src', String(f)), 'utf8') }))
+  .filter(x => 常量形.test(去注(x.文)))
+  .map(x => ({ 相: x.相, 次: (去注(x.文).match(new RegExp(常量形.source, 'g')) || []).length }));
+const 壳外 = 数那一处(/\.rs$/, ['pack_box.rs', 'gate-tauribox46']);
+台.判('壳那一头没被抄成第二处：除 pack_box 之外，没有别的 .rs 把 fdpkg 写成一颗串（代码与测试段都算，注释除外）：' + 壳外.map(x => x.相).join(' '),
+  壳外.length === 0, 壳外.map(x => x.相));
+/* 页面那一头读不到 Rust 的常量，只许 sh-packs 那一枚 容器后缀 写着它（数的是出现几次，不是一份文件就算过） */
+const 页外 = 数那一处(/\.(js|cjs|mjs)$/, ['gate-tauribox46']);
+台.数('页面那一头这枚后缀落在哪几份文件', 页外.map(x => x.相).join(' ') || '（一处都没有）');
+台.判('页面那一头只有一处写着它（sh-packs.js 那一枚 容器后缀，出现次数 ' + (页外[0] ? 页外[0].次 : 0) + '）',
+  页外.length === 1 && 页外[0].相.endsWith('sh-packs.js') && 页外[0].次 === 1, 页外.map(x => x.相 + '×' + x.次));
 台.判('这一层一句都不许抛给页面（unwrap / expect / panic 一颗不留）',
   !/\bunwrap\(\)/.test(动手) && !/\.expect\(/.test(动手) && !/panic!/.test(动手));
 台.判('盘上读不到与包有问题是两件事，各自的话：读不到只回 ok 与 msg 两栏，包有问题照样把信息段与逐块列出来',

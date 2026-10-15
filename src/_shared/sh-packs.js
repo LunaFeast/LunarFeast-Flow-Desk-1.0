@@ -169,7 +169,13 @@ function slotHex(i){
      · Flow-Desk 程序 → 主进程的 packList / packSet / packImport / packWipe；
      · 本地开发那台 http 服务器 → 同一个 comp-files.cjs 挂在 /_comp 上（下面 DevPacks 那一份）。
    装卸走的名单在磁盘上，两条通道改的是同一份文件。
+   ----------
+   自有容器（插件分离第 3 批 3.4）：压好的那一种包现在是自家格式（.fdpkg），zip 仍认（旧的那一份运输形状）。
+   页面上只多两件事：安装那一道多一颗「挑自家格式的包」、扫描回来的 kind 多一种 'box'；
+   谁读得动、哪一块对不上号、装不装得进来 —— 全由壳里那一层判，这一头不改写句子（那七句原话在 pack_box）。
    ============================================================ */
+/* 自有容器那一位后缀：页面这一头只这一处写着它（壳里那一头是 pack_box::带点后缀，两头各一枚，不互抄） */
+const 容器后缀 = '.fdpkg';
 /* 开发那台服务器的两条通道：递过去的形状和主进程那两条回的一模一样，页面不用分叉 */
 async function compPost(body){
   try{
@@ -227,7 +233,7 @@ const PackOps = {
         version:m.version || '', desc:m.desc || '', icon:m.icon || '', order:m.order,
         dataKeys:m.dataKeys || [], kvKeys:m.kvKeys || [], sharedKeys:m.sharedKeys || [],
         bank:m.bank || null, assets:m.assets || {}, host:m.host || [],
-        where:p.kind === 'zip' ? p.id + '.zip' : p.id + '/', kind:p.kind });
+        where:p.kind === 'zip' ? p.id + '.zip' : p.kind === 'box' ? p.id + 容器后缀 : p.id + '/', kind:p.kind });
     }
     return out;
   },
@@ -343,15 +349,20 @@ const PackOps = {
     if(!cur.includes(id)){ this.reloadPage('删好了 · 这就刷新这一页'); return true; }
     return this.apply(cur.filter(x => x !== id), '删掉「' + Packs.name(id) + '」· 改名单…');
   },
-  /* 导入一个包：一条通道，压好的 zip 和解开的文件夹都认（看挑到的那一个长什么样） */
+  /* 导入一个包：一条通道，压好的 zip、自家格式的容器与解开的文件夹都认（看挑到的那一个长什么样） */
   async importOne(kind){
     const A = this.host();
     if(!this.canImport()){ toast('导入插件只在 Flow-Desk 程序里有'); return false; }
     let h = null;
+    /* 挑文件那两道框都放开"什么都能挑"：收不收由壳里那把尺按后缀判，界面上不许当第二把尺 */
+    const 挑 = async () => {
+      const 列 = await window.showOpenFilePicker({ multiple:false, excludeAcceptAllOption:false,
+        types:[{ description:'Flow-Desk 的包', accept:{ 'application/octet-stream':['.zip', 容器后缀] } }] });
+      return 列.find(Boolean);
+    };
     try{
-      h = kind === 'dir'
-        ? (window.showDirectoryPicker ? await window.showDirectoryPicker({ id:'fd-pack-dir' }) : null)
-        : (await window.showOpenFilePicker({ multiple:false, excludeAcceptAllOption:false })).find(Boolean);
+      h = kind === 'dir' ? (window.showDirectoryPicker ? await window.showDirectoryPicker({ id:'fd-pack-dir' }) : null)
+        : (window.showOpenFilePicker ? await 挑() : null);
     }catch(e){ return false; }   /* 用户按了取消 */
     if(!h){ toast('这一版选不了' + (kind === 'dir' ? '文件夹' : '文件')); return false; }
     const src = (typeof A.pathOf === 'function' && A.pathOf(h)) || h._p || '';
@@ -448,13 +459,14 @@ const PackOps = {
     }}, txt);
     const box = h('div', { class:'wnw-col' });
     box.appendChild(h('div', { class:'wnw-hint' },
-      '挑一样东西放进来：压好的压缩包，或者解开的那个文件夹（里面得带着插件清单）。'));
+      '挑一样东西放进来：压好的包（自家格式那一种，或旧的 zip），或者解开的那个文件夹（里面得带着插件清单）。'));
     box.appendChild(h('div', { class:'wnw-hint' },
-      '收进来一律是解开的样子（压缩包只是运输形状，进门就摊开）。同名的已经在那儿就退回不动，不悄悄盖掉你原有的那一份。'));
+      '收进来一律是解开的样子（压好的那两种都只是运输形状，进门就摊开）。同名的已经在那儿就退回不动，不悄悄盖掉你原有的那一份。'));
     box.appendChild(h('div', { class:'wnw-hint' },
       '装完先不加载：这一屏上会多出这一行，要用了再按它那一颗「加载」。'));
     H().dlg.open('安装插件', box, [
-      btn('选一个 zip', 'zip', '压好的成品包，一个文件带齐插件清单和代码'),
+      btn('选一个压好的包', 'box', '自家格式的包：一个文件带齐插件清单、代码与每份文件的校验数（进门先整个查一遍）'),
+      btn('选一个 zip', 'zip', '旧的那一种运输形状，照样认'),
       btn('选一个文件夹', 'dir', '解开的样子：本地开发就是这样放的'),
       h('button', { class:'wnw-btn mini', onclick:() => { H().dlg.close(); if(after) after(); } }, '取消')
     ]);

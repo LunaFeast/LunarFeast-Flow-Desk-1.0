@@ -27,6 +27,9 @@
    压缩包怎么拆也朝共用那一颗借：fd_core::zip_pack 的 目录() 与 取一份()（外46 三 批六之前就有了，
    读中央目录、按本地头取一份、deflate 那一档都归它）—— 这一本里没有第二个解包器，
    包里那份插件清单、包里那一份文件、导入那一条摊开的整包走的都是它（原件三头用的也是同一份 zip-read.cjs）。
+   自有容器那一种（插件分离第 3 批 3.4）也不在这一本里读四段：文件头怎么认、信息段齐不齐、哪一块对不上号、
+   那七句报话、按表取那一份 —— 全朝 fd_core::pack_box 借（整包检查 / 取一块 / 钥匙表 / 带点后缀）。
+   扫那一列从两趟收成三趟（文件夹、zip、自有容器），赢家还是那一格；运输形状不当运行形状使。
    从前导入那一下还顺手往 原厂那一格（data\plugins-factory\）留一份原版，落点朝 comp_rule 借；
    插件分离第 2 批 2.5 撤了那颗「恢复出厂」、2.6 把那一格整格撤了，这一步跟着没 —— 装上一格就是活的这一格。
    「音乐遥控器还在不在」那一问朝 media_cmds::装了音乐遥控器() 借（原件 packHas 那三条），
@@ -58,13 +61,14 @@ use crate::fd_core::comp_rule::包名干净;
 use crate::fd_core::data_path::落格;
 use crate::fd_core::pack_rule::{
     包里没有那句, 包名不干净那句, 包读不动那句, 包那一格留着, 不像插件那句, 只收压包那句, 压包后缀, 压包那种,
-    压包读不动那句, 同名那格已占, 太大那句, 在根以内, 拆成段, 格没带清单那句, 文件夹那种, 分成两趟, 卸掉监听那句,
+    压包读不动那句, 同名那格已占, 太大那句, 在根以内, 拆成段, 格没带清单那句, 文件夹那种, 分成三趟, 卸掉监听那句,
     卸掉那一格, 卸掉那份, 读不到那份那句, 建不出那句, 记为卸掉, 折成绝对, 老单成列, 老的那份, 洗那串,
     开单成列, 开着的名单, 末段去后缀, 末段, 盘上, 摊那一条, 按名单收, 那份东西, 脏路径那句,
     落不成那句, 清单那份, 清单上的id, 清单上的名字, 清单读不成那句, 没带清单那句, 该看的名, 换成卸掉,
     递的那串, 读不出文本那句, 导入失败那句, 那一条, 已占那句, 是压包那份, 两不象那句,
-    不是列表那句, 名单删不掉那句, 名单写不进那句, 封顶字节,
+    不是列表那句, 名单删不掉那句, 名单写不进那句, 封顶字节, 容器那种, 是容器那份,
 };
+use crate::fd_core::pack_box::{取一块, 整包检查, 钥匙表};
 use crate::fd_core::zip_pack::{取一份, 目录};
 use crate::tauri_bind::media_cmds::{装了音乐遥控器, 收监听, 媒体手};
 
@@ -263,11 +267,31 @@ fn 摊开一家(格: &str, 名: &str, 种: &'static str) -> Option<一个包> {
         let 挡 = crate::fd_core::perm_rule::挡下该挡的(&mut 单);
         return Some(一个包 { id: 名.to_string(), kind: 种, manifest: Some(单), files: Some(名册), error: None, 挡下的: 挡 });
     }
-    /* zip 那一支：先按 <包名>.zip 读到字节（原件读不到回 null，不是报错） */
-    let 节 = match fs::read(并路(格, &format!("{}{}", 名, 压包后缀))) {
+    /* 自有容器那一支（插件分离第 3 批 3.4）：读 <包名>.fdpkg 的字节 → 整包检查 → 从包里取 manifest.json。
+       读不动与不过检回的都是「读不成」那一格（带那一句原话），一家家收的那一头不因此停整趟扫描。 */
+    let 后缀 = if 种 == 容器那种 { crate::fd_core::pack_box::带点后缀 } else { 压包后缀 };
+    let 节 = match fs::read(并路(格, &format!("{}{}", 名, 后缀))) {
         Ok(v) => v,
         Err(_) => return None,
     };
+    if 种 == 容器那种 {
+        let 出 = 整包检查(&节, &crate::version(), 钥匙表);
+        if !出.ok {
+            return Some(一个包::读不成(名, 种, 出.头一句()));
+        }
+        let 文 = match 取一块(&节, 清单那份) {
+            Some(v) => v,
+            None => return Some(一个包::读不成(名, 种, 没带清单那句.to_string())),
+        };
+        return match serde_json::from_slice::<Value>(&文) {
+            Ok(mut 单) => {
+                let 挡 = crate::fd_core::perm_rule::挡下该挡的(&mut 单);
+                Some(一个包 { id: 名.to_string(), kind: 种, manifest: Some(单), files: None, error: None, 挡下的: 挡 })
+            }
+            Err(e) => Some(一个包::读不成(名, 种, format!("{}{}", 清单读不成那句, e))),
+        };
+    }
+    /* zip 那一支：先按 <包名>.zip 读到字节（原件读不到回 null，不是报错） */
     match 压包里的清单(&节) {
         Ok(mut 单) => {
             let 挡 = crate::fd_core::perm_rule::挡下该挡的(&mut 单);
@@ -301,7 +325,7 @@ fn 扫一遍(格: &str) -> 一次扫描 {
         };
         名册.push((名, 相));
     }
-    let (文件夹那一批, 压包那一批) = 分成两趟(&名册);
+    let (文件夹那一批, 压包那一批, 容器那一批) = 分成三趟(&名册);
     let mut 列: Vec<一个包> = vec![];
     let mut 扫到: Vec<String> = vec![];
     for 名 in &文件夹那一批 {
@@ -310,12 +334,23 @@ fn 扫一遍(格: &str) -> 一次扫描 {
             扫到.push(名.clone());
         }
     }
+    /* 两趟运输形状：zip 先、容器后（同一格里两种都放着时，谁先露面谁占名 —— 与原件那条「文件夹赢」同一把尺，
+       赢的永远是那一格，不是谁先露面；这一趟只列名，装载那头两种运输形状都不当运行形状使） */
     for 包名 in &压包那一批 {
         /* 文件夹赢同名 zip（原件 if(seen.has(id)) continue）；seen 只记真列进这一列的那几家 */
         if 同名那格已占(&扫到, 包名) {
             continue;
         }
         if let Some(包) = 摊开一家(格, 包名, 压包那种) {
+            列.push(包);
+            扫到.push(包名.clone());
+        }
+    }
+    for 包名 in &容器那一批 {
+        if 同名那格已占(&扫到, 包名) {
+            continue;
+        }
+        if let Some(包) = 摊开一家(格, 包名, 容器那种) {
             列.push(包);
             扫到.push(包名.clone());
         }
@@ -575,6 +610,10 @@ pub fn pack_import(payload: Option<Value>) -> 一份导入 {
     }
     /* 原件 2003~2043 行那一大段 try：两种形状各自干活，任何一手抛了都落最后那一句「导入失败：」 */
     if 相.is_file() {
+        /* 自有容器另走一只手（插件分离第 3 批 3.4）：它先过整包检查，不过检一个字节都不落 */
+        if 是容器那份(&那串) {
+            return 落一份容器(&格, &那串);
+        }
         return 落一份压包(&格, &那串);
     }
     if 相.is_dir() {
@@ -602,8 +641,10 @@ fn 落一份压包(格: &str, 那串: &str) -> 一份导入 {
     if !包名干净(&包名) {
         return 一份导入::不成(format!("{}{}", 包名不干净那句, 包名));
     }
-    /* 原件 2012 行：文件夹与同名 zip 两种都算「这里已经有一份」，一个字节都不碰 */
-    if 盘上有(&并路(格, &包名)) || 盘上有(&并路(格, &format!("{}{}", 包名, 压包后缀))) {
+    /* 原件 2012 行：文件夹与同名 zip 两种都算「这里已经有一份」，一个字节都不碰；
+       第 3 批 3.4 起自有容器也算那第三种（一种包在路径里只许有一行） */
+    if 盘上有(&并路(格, &包名)) || 盘上有(&并路(格, &format!("{}{}", 包名, 压包后缀)))
+        || 盘上有(&并路(格, &format!("{}{}", 包名, crate::fd_core::pack_box::带点后缀))) {
         return 一份导入::不成(已占那句(&包名));
     }
     let 数 = match 摊成一家(格, &字节, &目, &包名) {
@@ -614,6 +655,91 @@ fn 落一份压包(格: &str, 那串: &str) -> 一份导入 {
             return 一份导入::不成(那句);
         }
     };
+    一份导入::成了(&包名, 数, 清单上的名字(&单, &包名))
+}
+
+/// 挑的是自有容器那一支（插件分离第 3 批 3.4）：先整包检查，不过检一个字节都不落（报不动手）；
+/// 成了才两步落地 —— ① 容器本身拷进路径（<包名>.fdpkg，这一份就是这一家的凭据：管理页那一行、
+/// 开机后台自检、加载那一下读的都是它的信息段），② 照信息段摊出运行用的那一格（运行那一头吃的还是
+/// 文件夹，与收 zip 同一手）。
+/// 一条要说清的位置：**带加密块的容器这一版不摊**（明文不许写盘那条硬规矩在 docs\插件容器格式.md 第一节
+/// 与 规划第七节；等能解它的那一手进来，装载改走内存，不在这儿先写盘再补收回）。
+fn 落一份容器(格: &str, 那串: &str) -> 一份导入 {
+    let 字节 = match fs::read(那串) {
+        Ok(v) => v,
+        Err(e) => return 一份导入::不成(format!("{}{}", 导入失败那句, 说错(e))),
+    };
+    let 出 = 整包检查(&字节, &crate::version(), 钥匙表);
+    /* 那七句各是各的原话，一句都不合并、不改写：装不动的就是这一句 */
+    if !出.ok {
+        return 一份导入::不成(出.头一句());
+    }
+    let 信 = match &出.信息 {
+        Some(v) => v.clone(),
+        None => return 一份导入::不成(出.头一句()),
+    };
+    if 信.files.iter().any(|份| 份.加密) {
+        return 一份导入::不成(crate::fd_core::pack_box::块加密那句.to_string());
+    }
+    let 清单 = match 取一块(&字节, 清单那份) {
+        Some(v) => v,
+        None => return 一份导入::不成(没带清单那句.to_string()),
+    };
+    let 单 = match serde_json::from_slice::<Value>(&清单) {
+        Ok(v) => v,
+        Err(e) => return 一份导入::不成(format!("{}{}", 清单读不成那句, e)),
+    };
+    /* 包名只认信息段那一栏（规格那张表：目录名与它必须一样），门牌末段不再当兜底 */
+    let 包名 = 信.id.trim().to_string();
+    if !包名干净(&包名) {
+        return 一份导入::不成(format!("{}{}", 包名不干净那句, 包名));
+    }
+    let 到 = 并路(格, &包名);
+    let 压包位 = format!("{}{}", 到, 压包后缀);
+    let 容器位 = format!("{}{}", 到, crate::fd_core::pack_box::带点后缀);
+    if 盘上有(&到) || 盘上有(&压包位) || 盘上有(&容器位) {
+        return 一份导入::不成(已占那句(&包名));
+    }
+    /* 一、容器那份先放进来（放不进就什么都还没摊，不必收摊） */
+    if let Err(e) = fs::copy(那串, &容器位) {
+        return 一份导入::不成(format!("{}{}", 导入失败那句, 说错(e)));
+    }
+    /* 二、按信息段那张表一份一份摊开；任何一份落不动就整格连容器那份一起抹掉（不留半截包） */
+    let mut 数 = 0u64;
+    for (位, 份) in 出.块.iter().zip(信.files.iter()) {
+        let 文 = match 字节.get(位.数据起点..位.数据起点.saturating_add(位.长度)) {
+            Some(v) => v,
+            None => {
+                抹掉半截(&到);
+                let _ = fs::remove_file(&容器位);
+                return 一份导入::不成(crate::fd_core::pack_box::块短了那句.to_string());
+            }
+        };
+        let mut 落 = 到.clone();
+        for 一 in 拆成段(&份.路径) {
+            落 = 并路(&落, 一);
+        }
+        if 落 != 到 && !落.starts_with(&format!("{}\\", 到)) {
+            抹掉半截(&到);
+            let _ = fs::remove_file(&容器位);
+            return 一份导入::不成(脏路径那句(&份.路径));
+        }
+        if let Some(父) = Path::new(&落).parent() {
+            if !父.as_os_str().is_empty() {
+                if let Err(e) = fs::create_dir_all(父) {
+                    抹掉半截(&到);
+                    let _ = fs::remove_file(&容器位);
+                    return 一份导入::不成(format!("{}{}", 落不成那句, 说错(e)));
+                }
+            }
+        }
+        if let Err(e) = fs::write(&落, 文) {
+            抹掉半截(&到);
+            let _ = fs::remove_file(&容器位);
+            return 一份导入::不成(format!("{}{}", 落不成那句, 说错(e)));
+        }
+        数 += 1;
+    }
     一份导入::成了(&包名, 数, 清单上的名字(&单, &包名))
 }
 
@@ -637,7 +763,8 @@ fn 落一棵文件夹(格: &str, 那串: &str) -> 一份导入 {
         return 一份导入::不成(format!("{}{}", 包名不干净那句, 包名));
     }
     let 到 = 并路(格, &包名);
-    if 盘上有(&到) || 盘上有(&format!("{}{}", 到, 压包后缀)) {
+    if 盘上有(&到) || 盘上有(&format!("{}{}", 到, 压包后缀))
+        || 盘上有(&format!("{}{}", 到, crate::fd_core::pack_box::带点后缀)) {
         return 一份导入::不成(已占那句(&包名));
     }
     let mut 列: Vec<String> = vec![];
@@ -744,3 +871,86 @@ pub fn pack_wipe(files: Option<Value>, shared: Option<Value>) -> 一份清理 {
    清那两处该留哪几格、24MB 那道闸 —— 全在 fd_core::pack_rule；解包那一颗用的是共用的 fd_core::zip_pack，
    「装没装音乐遥控器」那一问朝 media_cmds 借 —— 这一本里一个字都没重写。
    这一层五颗都不抛给页面（返回的类型都不是 Result），跟 comp_cmds 那一摊同一口径。 */
+
+#[cfg(test)]
+mod 临时落盘验 {
+    use super::*;
+    fn 字节() -> Vec<u8> {
+        include_str!("../../../tools/probes/件-容器.hex").trim().as_bytes()
+            .chunks(2).map(|双| u8::from_str_radix(std::str::from_utf8(双).unwrap(), 16).unwrap()).collect()
+    }
+    fn 沙盒(名: &str) -> std::path::PathBuf {
+        /* 每颗自己一格：cargo 是多线程跑的，同一进程号撞在同一格上会互相删来删去 */
+        let 到 = std::env::temp_dir().join(format!("fd-包沙盒-{}-{}", 名, std::process::id()));
+        let _ = fs::remove_dir_all(&到);
+        fs::create_dir_all(&到).unwrap();
+        到
+    }
+    #[test]
+    fn 装一份容器进沙盒_成了再装就让开() {
+        let 沙 = 沙盒("成");
+        let 源名 = format!("从别处挑的.{}", crate::fd_core::pack_box::扩展名);
+        let 源 = 沙.join(源名);
+        fs::write(&源, 字节()).unwrap();
+        let 沙串 = 沙.to_string_lossy().to_string();
+        let 回 = serde_json::to_value(落一份容器(&沙串, &源.to_string_lossy())).unwrap();
+        assert_eq!(回["ok"], true, "{:?}", 回);
+        assert_eq!(回["id"], "notes");
+        assert_eq!(回["files"], 3);
+        for 份 in ["main.js", "manifest.json", "box-kernel.js"] {
+            assert!(沙.join("notes").join(份).exists(), "摊开那一格里少了 {}", 份);
+        }
+        assert!(沙.join(format!("notes.{}", crate::fd_core::pack_box::扩展名)).exists(), "容器本身没跟着进路径");
+        /* 同一颗再走一遍：那一格与那份容器都算「已经有一套」，一个字节都不许多动 */
+        let 前 = fs::read(沙.join("notes").join("main.js")).unwrap();
+        let 回2 = serde_json::to_value(落一份容器(&沙串, &源.to_string_lossy())).unwrap();
+        assert_eq!(回2["ok"], false, "{:?}", 回2);
+        assert_eq!(fs::read(沙.join("notes").join("main.js")).unwrap(), 前, "已占那一句不许先动了再拒");
+        /* 扫一遍：文件夹赢同名容器，notes 只列一行，且那一行是 dir 那一支 */
+        let 扫 = serde_json::to_value(扫一遍(&沙串)).unwrap();
+        let 行: Vec<&str> = 扫["packs"].as_array().unwrap().iter()
+            .filter(|p| p["id"] == "notes").map(|p| p["kind"].as_str().unwrap()).collect();
+        assert_eq!(行, vec!["dir"], "{:?}", 扫["packs"]);
+        let _ = fs::remove_dir_all(&沙);  /* 清不干净不算这一颗失败：Windows 上刚写的文件可能被索引器短暂占着 */
+    }
+
+    #[test]
+    fn 坏一个字节就报不动手_路径里什么都没多() {
+        let 沙 = 沙盒("坏");
+        let 字 = 字节();
+        let mut 坏 = 字.clone();
+        let 数据起 = 12 + u32::from_be_bytes([字[8], 字[9], 字[10], 字[11]]) as usize + 6;
+        坏[数据起] ^= 0xff;
+        let 源 = 沙.join(format!("坏了一份.{}", crate::fd_core::pack_box::扩展名));
+        fs::write(&源, &坏).unwrap();
+        let 回 = serde_json::to_value(落一份容器(&沙.to_string_lossy(), &源.to_string_lossy())).unwrap();
+        assert_eq!(回["ok"], false);
+        assert!(回["msg"].as_str().unwrap().contains("对不上号"), "{:?}", 回);
+        assert!(!沙.join("notes").exists(), "不过检的那一份不许摊出格来");
+        assert!(!沙.join(format!("notes.{}", crate::fd_core::pack_box::扩展名)).exists(), "不过检的那一份不许进路径");
+        let _ = fs::remove_dir_all(&沙);  /* 清不干净不算这一颗失败：Windows 上刚写的文件可能被索引器短暂占着 */
+    }
+
+    #[test]
+    fn 要求的主程序比这台高也是报不动手() {
+        let 沙 = 沙盒("高");
+        let 字 = 字节();
+        let 信长 = u32::from_be_bytes([字[8], 字[9], 字[10], 字[11]]) as usize;
+        let 文 = String::from_utf8(字[12..12 + 信长].to_vec()).unwrap();
+        let 换 = 文.replace("\"min_shell\":\"1.0.0\"", "\"min_shell\":\"99.0.0\"");
+        /* 信息段换了字就换了长度，文件头那四枚要跟着改 —— 不改就是造一份坏包，不是造一份要求高的包 */
+        let 头 = (换.len() as u32).to_be_bytes();
+        let mut 一 = Vec::new();
+        一.extend_from_slice(&字[0..8]);
+        一.extend_from_slice(&头);
+        一.extend_from_slice(换.as_bytes());
+        一.extend_from_slice(&字[12 + 信长..]);
+        let 源 = 沙.join(format!("要得高.{}", crate::fd_core::pack_box::扩展名));
+        fs::write(&源, &一).unwrap();
+        let 回 = serde_json::to_value(落一份容器(&沙.to_string_lossy(), &源.to_string_lossy())).unwrap();
+        assert_eq!(回["ok"], false);
+        assert!(回["msg"].as_str().unwrap().contains("先更新主程序再加载它"), "{:?}", 回);
+        assert!(!沙.join("notes").exists());
+        let _ = fs::remove_dir_all(&沙);  /* 清不干净不算这一颗失败：Windows 上刚写的文件可能被索引器短暂占着 */
+    }
+}

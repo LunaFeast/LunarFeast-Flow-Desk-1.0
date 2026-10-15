@@ -45,8 +45,8 @@ const 壳那份 = [...(板.match(/^\s{4}"([^"]+)",$/gm) || [])].map(x => x.repla
 台.判('core/mod.rs 登记了 app_deny', /^pub mod app_deny;$/m.test(单));
 台.判('core/mod.rs 登记了 perm_rule', /^pub mod perm_rule;$/m.test(单));
 台.判('判断那一格只认生成的名单，不抄第二份', 判.includes('use super::app_deny::硬地板;') && !/pub const 硬地板/.test(判));
-台.判('文件夹那种与 zip 那种两种形状都过这一道',
-  (动.match(/perm_rule::挡下该挡的\(&mut 单\)/g) || []).length === 2,
+台.判('文件夹、zip、自有容器三种形状都过这一道（第 3 批 3.4 加第三种时这一颗当场把话改全）',
+  (动.match(/perm_rule::挡下该挡的\(&mut 单\)/g) || []).length === 3,
   (动.match(/perm_rule::挡下该挡的/g) || []).length);
 台.判('摘下来的那几颗原样回报在 deniedChannels 上', 动.includes('#[serde(rename = "deniedChannels"'));
 台.判('一颗也没挡的时候那一格不出现（回执形状不许多长东西）',
