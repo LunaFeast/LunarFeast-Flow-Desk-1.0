@@ -1155,7 +1155,7 @@ const Desk = {
         body.appendChild(h('div', { class:'wnw-pick-h' }, g.name));
         const row = h('div', { class:'wnw-pick-row' });
         for(const it of live){
-          const R = (typeof Gen !== 'undefined') ? Gen.get(it.kind) : null;
+          const R = (typeof GenReg !== 'undefined') ? GenReg.内容(it.kind) : null;
           const isHid = hid.has(it.kind);
           /* 这个功能是哪一家的包带的：注册名有时候带 tool- 前缀，插件清单里是光板 id，两边都认 */
           const pid = Packs.has(it.kind) ? it.kind
@@ -1236,8 +1236,9 @@ const Desk = {
         oninput:ev => { kw = ev.target.value; draw(); } }),
       h('label', { class:'wnw-switch' }, [h('input', { type:'checkbox', onchange:ev => { showHidden = ev.target.checked; draw(); } }),
         h('span', {}, '显示已隐藏')]),
-      typeof Gen !== 'undefined' ? h('button', { class:'wnw-btn mini', title:'把别处导出的配方 JSON 装回来',
-        onclick:() => genImportAsk(draw) }, '导入配方') : null,
+      /* 「导入配方」那颗也走登记处挂上来的手（4.3 同一条口径：为写不认推演定制那一家的顶层名字） */
+      (typeof GenReg !== 'undefined' && GenReg.有导入()) ? h('button', { class:'wnw-btn mini', title:'把别处导出的配方 JSON 装回来',
+        onclick:() => GenReg.开导入(draw) }, '导入配方') : null,
       /* 整个包的入口和 FD 那一侧是同一把尺：收进 data\plugins\，装完先不加载，要用了再按那一颗「加载」 */
       PackOps.installButton()
     ]));
@@ -1310,16 +1311,27 @@ const Settings = {
       cb.addEventListener('change', () => State.set('tool-' + id, cb.checked));
       box.appendChild(h('label', { class:'wnw-switch' }, [cb, h('span', {}, t.name), h('span', { class:'wnw-hint', style:'margin-left:6px' }, t.desc || '')]));
     }
-    /* 这块空白给生成器：向导在这儿开，建出来的组件和其他功能一样能停靠 */
-    if(typeof GenWizard !== 'undefined'){
-      const gen = (typeof Gen !== 'undefined') ? Gen.list() : [];
-      box.appendChild(h('button', { class:'wnw-btn mini w-txt', style:'justify-self:start;margin-top:10px',
-        onclick:() => GenWizard.open(''), html:icoMarkup('plus') + '用推演组件定制做一个插件' }));
-      for(const R of gen)
-        box.appendChild(h('div', { class:'wnw-ci', title:'改「' + R.name + '」的配方', onclick:() => GenWizard.open(R.id) }, [
-          h('span', { class:'nm' }, R.name), h('span', { style:'flex:1' }),
-          h('span', { class:'wnw-hint' }, R.id),
-          h('button', { class:'wnw-btn mini', onclick:ev => { ev.stopPropagation(); GenWizard.open(R.id); } }, '改')]));
+    /* 这块空白给生成器：向导在这儿开，建出来的组件和其他功能一样能停靠。
+       名单向主程序那一份登记处要（插件分离第 4 批 4.3 · #35）—— 为写不再读推演定制那一家的顶层名字；
+       整块只在登记处挂着「开向导」那颗手时才摆：定制那一趟没加载，这一屏就没有这一块，不弹一句"缺失"。 */
+    if(typeof GenReg !== 'undefined' && GenReg.有向导()){
+      const 画这一版 = 容器 => {
+        容器.innerHTML = '';
+        容器.appendChild(h('button', { class:'wnw-btn mini w-txt', style:'justify-self:start;margin-top:10px',
+          onclick:() => GenReg.开向导(''), html:icoMarkup('plus') + '用推演组件定制做一个插件' }));
+        for(const R of GenReg.名单())
+          容器.appendChild(h('div', { class:'wnw-ci', title:'改「' + R.name + '」的配方', onclick:() => GenReg.开向导(R.id) }, [
+            h('span', { class:'nm' }, R.name), h('span', { style:'flex:1' }),
+            h('span', { class:'wnw-hint' }, R.id),
+            h('button', { class:'wnw-btn mini', onclick:ev => { ev.stopPropagation(); GenReg.开向导(R.id); } }, '改')]));
+        /* 手动刷新缓存那颗钮（#35 点名的那一条）：吃登记者自己那颗「重扫」，报的是重报之后的张数 */
+        容器.appendChild(h('button', { class:'wnw-btn mini', style:'justify-self:start;margin-top:6px',
+          onclick:async () => { const 张 = await GenReg.刷新(); 画这一版(容器); toast('推演名单重报了一遍：现在 ' + 张 + ' 张'); } },
+          '重新读一遍推演名单'));
+      };
+      const 那一格 = h('div', { style:'display:grid;gap:2px' });
+      画这一版(那一格);
+      box.appendChild(那一格);
     }
     return box;
   },

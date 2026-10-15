@@ -1590,6 +1590,15 @@ const Gen = {
   def(R){
     if(!R || !R.id || !R.name){ console.warn('配方少了 id 或 name，跳过'); return null; }
     GEN_DEFS.set(R.id, R);
+    /* 顺手报一份给主程序那一份登记处（插件分离第 4 批 4.3 · #35）：为写那一屏和推演记录面板读的都是这一份，
+       不再伸手摸这一家的顶层名字。开机加载器一家家 import 就是「每次启动登记一次」，
+       向导存新配方、完全删除也走这两颗，所以「有变动自动更新」是这一处的副作用，不另设轮询。
+       两颗手（替别人把向导打开、整户重报一遍）也在这里挂 —— 挂重不挂漏，主程序那边覆盖的是同一格。 */
+    if(typeof GenReg !== 'undefined'){
+      GenReg.登(R, 'wnw-custom');
+      /* 三颗手的名字用英文（wizard / rescan / importer）：那是两家之间的协议名，不是给人看的句子 */
+      GenReg.挂手({ wizard:id => GenWizard.open(id), rescan:genRescan, importer:重画 => genImportAsk(重画) }, 'wnw-custom');
+    }
     const ready = Banks.loadReg().then(() => Promise.all(GEN_BANKS(R).map(n => genBind(n).load().catch(() => null))));
     const info = [R.desc || '按配方生成', genMeta(R)].filter(Boolean).join(' · ');
     registerTool({
@@ -1632,6 +1641,7 @@ const Gen = {
     if(cur && cur.includes(id)) await PackOps.write(cur.filter(x => x !== id));
     GEN_DEFS.delete(id);
     if(typeof A.unregister === 'function') A.unregister(id);
+    if(typeof GenReg !== 'undefined') GenReg.撤(id, 'wnw-custom');   /* 主程序那一份缓存里也跟着撤掉 */
     return { ok:!err.length, msg:err.join('；'), files:files, wrote:!!(g && g.ok) || !!(app && app.compDelete) };
   }
 };

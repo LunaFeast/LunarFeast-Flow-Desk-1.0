@@ -242,7 +242,7 @@ const SH_CN = { 'sh-bank-ui':'词库界面', 'sh-banks':'词库', 'sh-code':'插
   'sh-doc':'文档', 'sh-font':'字体', 'sh-gen':'生成器', 'sh-ico':'图标', 'sh-icode':'代码编辑器',
   'sh-log':'生成记录', 'sh-packs':'插件装卸', 'sh-look':'外观这一层', 'sh-mus':'播放进度那一条桥',
   'sh-style':'样式', 'sh-wizard':'配方向导', 'sh-rand':'零碎帮手', 'sh-store':'数据库助手',
-  'sh-load':'插件加载接线' };
+  'sh-gens':'推演登记处', 'sh-load':'插件加载接线' };
 const FD_CN = { 'fd2-store.js':'存储', 'fd3-lib.js':'三份库文件（色卡 / 外观方案 / 图片库）',
   'fd3-shell.js':'主界面', 'fd4-builtin.js':'内置组件',
   'fd5-load.js':'插件加载接线', 'fd6-boot.js':'启动', 'fd11-cards.js':'色卡',

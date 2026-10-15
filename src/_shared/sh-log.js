@@ -80,7 +80,7 @@ const GenLog = {
 /* ---------- 记录面板：对话框形态，两个宿主都用各自的 dlg ---------- */
 class GenLogSheet{
   constructor(id){ this.id = id; this.shown = 0; this.boot(); }
-  name(){ return (typeof Gen !== 'undefined' && Gen.get(this.id)) ? Gen.get(this.id).name : this.id; }
+  name(){ const R = (typeof GenReg !== 'undefined') ? GenReg.内容(this.id) : null; return (R && R.name) ? R.name : this.id; }
   async boot(){
     await GenLog.load(this.id);
     this.st = await GenLog.keep(this.id);
@@ -157,7 +157,7 @@ class GenLogRail{
     if(ctx && ctx.on) ctx.on('genlog', () => this.draw());
   }
   async draw(){
-    const list = (typeof Gen !== 'undefined') ? Gen.list() : [];
+    const list = (typeof GenReg !== 'undefined') ? GenReg.名单() : [];
     for(const R of list) await GenLog.load(R.id);
     this.host.innerHTML = '';
     const { body } = panelShell(this.host, '推演记录', []);

@@ -1199,3 +1199,13 @@ const GenLocal = {
     return ids.length;
   }
 };
+
+/* ---------- 整户重报一遍（插件分离第 4 批 4.3 · 主程序那颗手动刷新钮吃的就是这一颗）----------
+   先把 kv 镜像里那几张捞回这一家的注册表（写不了插件那一格时存的那一份兜底），
+   再把主程序登记处里这一家登着的那些整户换成注册表的现值 —— 换的是自己那一家的条目，别家的不动。
+   回的是重报之后这一家登着几张，界面上那句「现在几张」就是它。 */
+async function genRescan(){
+  await GenLocal.warm();
+  const 全 = Gen.list();
+  return (typeof GenReg !== 'undefined') ? GenReg.整批换(全, 'wnw-custom') : 全.length;
+}

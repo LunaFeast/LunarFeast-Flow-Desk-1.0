@@ -43,7 +43,7 @@ if(!assertClean(path.join(TREE.data, 'plugins'), '生成 Flow-Desk 页面')) pro
    注释写在里面会被它当成一份文件去读，那一台就当"缺数据"哑掉了（2026-10-16 栽过一次）。 */
 const parts = ['../_shared/sh-rand.js','../_shared/sh-store.js','../_shared/sh-packs.js','../_shared/sh-load.js','../_shared/sh-color.js','../_shared/sh-ico.js','../_shared/sh-font.js','fd2-store.js','fd3-shell.js','fd3-lib.js','fd11-cards.js','fd12-rime-colors.js','fd13-colour-v1.js','fd9-title.js','fd4-builtin.js','fd8-tools.js','fd5-load.js',
   '../_shared/sh-style.js','../_shared/sh-look.js','../_shared/sh-doc.js',
-  '../_shared/sh-mus.js',
+  '../_shared/sh-mus.js','../_shared/sh-gens.js',
   '../_shared/sh-icode.js',
   '../_shared/sh-banks.js','../_shared/sh-bank-ui.js','../_shared/sh-log.js'];
 

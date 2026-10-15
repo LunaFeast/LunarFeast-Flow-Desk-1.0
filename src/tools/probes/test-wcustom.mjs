@@ -56,13 +56,15 @@ const 该有 = ['GenWizard', 'Gen', 'PackCode'];
 const 壳 = rd('src/_fd/src/fd3-shell.js');
 const 答卷 = rd('src/_fd/src/fd5-load.js');
 const 为写 = rd('src/_wnw/src/w3-shell.js');
-const 判法 = s => (s.match(/typeof (?:GenWizard|Gen|toolBankWhich)\s*[!=]==?\s*(?:'function'|'undefined')/g) || []).length;
+const 判法 = s => (s.match(/typeof (?:GenWizard|Gen|GenReg|toolBankWhich)\s*[!=]==?\s*(?:'function'|'undefined')/g) || []).length;
 /* 插件分离第 2 批撤了两处：那颗「改代码」（codeEntry）与「插件管理」那一屏上按 Gen / GenWizard 摆的
    两颗导入配方、那张加号卡 —— 外壳里这种「名字在不在」的判法因此从 fd3-shell 挪到了
-   宿主交上去的那份答卷（ctx.wcustom 认的就是 GenWizard 在不在）和为写那一屏（导入配方那条还留着）。 */
+   宿主交上去的那份答卷（ctx.wcustom 认的就是 GenWizard 在不在）和为写那一屏（导入配方那条还留着）。
+   第 4 批 4.3 又挪一步：为写那一屏不再认这一家的顶层名字，改认主程序那份登记处（GenReg）在不在。 */
 台.数('三本里那种「名字在不在」的判法', [壳, 答卷, 为写].map(判法).join(' + ') + ' 处');
-台.判('判法还在，只是搬了地方：宿主那份答卷认 GenWizard 在不在、为写那一屏认 Gen 在不在（不带内核那一版才不会当场抛）',
-  /typeof GenWizard !== 'undefined'/.test(答卷) && /typeof Gen !== 'undefined'/.test(为写), 'fd5-load / w3-shell');
+台.判('判法还在，只是搬了地方：宿主那份答卷认 GenWizard 在不在、为写那一屏认登记处 GenReg 在不在（不带内核那一版才不会当场抛）',
+  /typeof GenWizard !== 'undefined'/.test(答卷) && /typeof GenReg !== 'undefined'/.test(为写)
+  && !/typeof Gen !== 'undefined'/.test(为写), 'fd5-load / w3-shell');
 /* 插件分离第 2 批 2.5：「改代码」那枚铅笔、为写停靠上那颗「改代码」、那只编辑对话框一起撤了。
    钉这里是因为这三处都在推演组件定制那一棵的射程里 —— 撤干净没有，界面上会不会又长出一颗。
    判的是"那颗口没人点、那三个字不进界面上的句子"（注释里交代历史不算，所以认带引号的那一种）。 */
