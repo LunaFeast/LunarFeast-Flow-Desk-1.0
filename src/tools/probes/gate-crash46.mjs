@@ -196,9 +196,12 @@ await 等(30);
 台.题('九、反向对照（判据不是空闸）');
 /* 拆掉"排成一队写"就只剩直接写盘那一条路：拿这一颗函数的身体验 —— 队列必须在写之前，且只写一处 */
 const 身 = (载.match(/崩一笔\(id, 哪一面, 原话\)\s*\{[\s\S]{0,900}?\n  \},/) || [''])[0];
-台.判('崩一笔这一颗里：先排到崩队后面，再写盘，且只写这一处',
-  身.length > 0 && 身.indexOf('this.崩队 = this.崩队.then') >= 0 && 身.indexOf('this.崩队 = this.崩队.then') < 身.indexOf('A.dataWrite(') &&
-  (身.match(/A\.dataWrite\(/g) || []).length === 1, 身.length + ' 字');
+/* 2026-10-16 第 3 批 3.4：写盘那一手抽成 落一行（崩溃那一本与包检查那一本共用一条队），判据跟着落在 落一行 身上 */
+const 队 = (载.match(/落一行\(档, 行\)\s*\{[\s\S]{0,900}?\n  \},/) || [''])[0];
+台.判('崩一笔只写一处、并且排在崩队后面（抽手之后：崩一笔交给 落一行，队列与写盘都在 落一行 里，一处不许多）',
+  身.includes("this.落一行('logs/崩溃.txt'") && 队.length > 0
+  && 队.indexOf('this.崩队 = this.崩队.then') >= 0 && 队.indexOf('this.崩队 = this.崩队.then') < 队.indexOf('A.dataWrite(')
+  && (队.match(/A\.dataWrite\(/g) || []).length === 1, 身.length + ' 字 ‖ 落一行 ' + 队.length + ' 字');
 const 不归零 = 载.replace(/self\.崩清零\(id\);/g, '/* 拆掉了 */');
 台.判('把"回来一次就归零"拆掉，第四条那一条就红', (不归零.match(/崩清零/g) || []).length < (载.match(/崩清零/g) || []).length);
 const 不停 = 载.replace(/self\.判停\(id, self\.崩一笔\(id, 哪一颗, 卡住句\(\)\)\);/, 'self.崩一笔(id, 哪一颗, 卡住句());');

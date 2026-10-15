@@ -2029,11 +2029,18 @@ const Shell = {
         const 件名 = 'tool-' + id;
         const 占卡 = Registry.has(id) || Registry.has(件名);
         const 名号 = 占卡 && !桌上.has(id) && !桌上.has(件名) ? ' · 桌上还没它那张卡' : '';
+        /* 开机后台那一趟核过的才在这张表里（没那份容器的一家不在表上，界面上也不提它）：
+           没签名的那一份标「用户插件」，与包对不上的那一行标一句短话，原话放 title 里给详情 */
+        const 核 = (typeof PackLoader !== 'undefined' && PackLoader.包账) ? PackLoader.包账.get(id) : null;
+        const 记 = !核 ? [] : [
+          核.note ? h('span', { class:'fd-addtag', title:'这一份包没带签名 · 照样能装能用' }, 核.note) : null,
+          核.ok ? null : h('span', { class:'fd-addtag bad', title:核.msg || '' }, '与包对不上')
+        ].filter(Boolean);
         grid.appendChild(h('div', { class:'fd-additem' + (上了 ? ' off' : '') }, [
           h('button', { class:'fd-addpick', disabled:上了, title:(m.desc || '') + (上了 ? ' · 已经在用页上了' : ' · 请进使用页') + 名号,
             onclick:async () => { await PackOps.load(id); } },
             [h('span', { class:'w-mk', html:icoFor(id, m.icon || 'card') }),
-             h('span', {}, 名), h('span', { class:'fd-addtag' }, 上了 ? '已加载' : '没加载')]),
+             h('span', {}, 名), h('span', { class:'fd-addtag' }, 上了 ? '已加载' : '没加载'), ...记]),
           h('div', { class:'fd-addops' }, [
             上了 ? PackOps.unloadButton(id, draw) : PackOps.loadButton(id),
             PackOps.removeButton(id, draw)].filter(Boolean))
@@ -2269,6 +2276,7 @@ body.dragging{user-select:none;cursor:grabbing;}
 .fd-addpick:not(:disabled):hover{color:var(--accent-text,var(--accent));}
 /* 格脚那一行状态字（已加载 / 没加载）：淡一档，不描边不占高 —— 动作在钮上，这一行只报现状 */
 .fd-addtag{font-size:.72em;opacity:.62;}
+.fd-addtag.bad{color:var(--bad,#c0453a);opacity:1;}
 .fd-addops{display:flex;gap:4px;justify-content:center;flex:0 0 auto;}
 .fd-addops .wnw-btn{padding:1px 7px;font-size:.72em;}
 /* 配色下拉：一行里摆「方案名 + 一排色点」，点开是浮着的第二层菜单（原生 select 摆不出色点）。

@@ -112,6 +112,8 @@ const PackLoader = {
     }
     this.loaded = true;
     try{ Bus.emit('packs:loaded'); }catch(e){}
+    /* 后台那一趟自检：不 await —— 核包不许拦住开机，也不许把这一趟的成败算进任何一家的崩溃次数 */
+    Promise.resolve().then(() => this.后台核包()).catch(() => {});
     return this;
   },
   /* ---------- 新建 / 刚导入的那一家：先从盘上把插件清单读进表里 ----------
@@ -275,21 +277,53 @@ const PackLoader = {
     const 次 = (this.崩次.get(id) || 0) + 1;
     this.崩次.set(id, 次);
     const nm = (PACK_META[id] && PACK_META[id].name) || id;
-    const 行 = this.崩时间() + ' ' + nm + ' · ' + 哪一面 + ' · ' + String(原话).replace(/[\r\n]+/g, ' ');
-    const A = window.FD_APP;
-    if(A && typeof A.dataRead === 'function' && typeof A.dataWrite === 'function'){
-      const 档 = 'logs/崩溃.txt';
-      this.崩队 = this.崩队.then(async () => {
-        try{
-          const 旧 = await A.dataRead(档);
-          await A.dataWrite(档, (typeof 旧 === 'string' && 旧 ? 旧 : '') + 行 + '\n');
-        }catch(e){ /* 写不成就算没写 */ }
-      });
-    }
+    this.落一行('logs/崩溃.txt', this.一行(nm, 哪一面, 原话));
     return 次;
+  },
+  /* 那一行怎么写：时间 · 哪家 · 哪一面 · 一句原话（换行压成空格，一行就是一笔） */
+  一行(名, 哪一面, 原话){
+    return this.崩时间() + ' ' + 名 + ' · ' + 哪一面 + ' · ' + String(原话).replace(/[\r\n]+/g, ' ');
+  },
+  /* 往 logs 底下那一本接一行（读回来、拼上、写回去）：走的是页面上本来就有的那两颗通道，
+     不为此新添通道、不动那张权限表。开发那台服务器上没这两颗 —— 就当没写，绝不因为记日志把程序带倒。
+     排成一队写：同一瞬间两家一起出事，后一笔不许把前一笔盖掉。 */
+  落一行(档, 行){
+    const A = window.FD_APP;
+    if(!A || typeof A.dataRead !== 'function' || typeof A.dataWrite !== 'function') return;
+    this.崩队 = this.崩队.then(async () => {
+      try{
+        const 旧 = await A.dataRead(档);
+        await A.dataWrite(档, (typeof 旧 === 'string' && 旧 ? 旧 : '') + 行 + '\n');
+      }catch(e){ /* 写不成就算没写 */ }
+    });
   },
   /* 顺利回来一次，连崩的账就归零 —— 钉的是"连续"两次字 */
   崩清零(id){ this.崩次.set(id, 0); },
+  /* ---------- 开机后台那一趟自检（#32 那三种时机里的第一种 · 插件分离第 3 批 3.4）----------
+     路径里每一家都拿它自己那份容器对一遍活着的那一格：对不上的写进 logs\包检查.txt
+     （崩溃记录旁边那一本，明细一句一行），界面上只在插件管理那一行摆一枚标记。
+     这一趟不打扰：不弹窗、不拦开机、也不替哪一家"补"东西；核不动（没壳、没那颗通道）就当没这趟。
+     没有容器的那一家（文件夹或旧 zip 进来的）= 没得核，账上不留、一句都不记 —— #30 那条：一律不做缺失提示。 */
+  包账:new Map(),            /* id → { ok, note, msg, 几处 }；只有真核过的才进这张表 */
+  核得动(){ const A = window.FD_APP; return !!(A && typeof A.boxVerify === 'function'); },
+  async 后台核包(){
+    if(!this.核得动()) return this.包账;
+    const A = window.FD_APP;
+    const d = await this.disk(); if(!d) return this.包账;
+    for(const p of (d.packs || [])){
+      const id = String(p.id || ''); if(!id) continue;
+      let r = null;
+      try{ r = await A.boxVerify(id); }catch(e){ continue; }
+      if(!r || r.packPresent === false) continue;      /* 没那份容器：不记、不摆、不当问题 */
+      const 话 = (r.issues || []).map(x => x.msg).filter(Boolean);
+      this.包账.set(id, { ok:!!r.ok, note:r.note || '', msg:r.msg || '', 几处:话.length });
+      if(r.ok) continue;
+      const nm = (PACK_META[id] && PACK_META[id].name) || (p.manifest && p.manifest.name) || id;
+      const 明细 = (话.length ? 话 : [r.msg || '']).join(' ｜ ');
+      this.落一行('logs/包检查.txt', this.一行(nm, '包检查', 明细));
+    }
+    return this.包账;
+  },
   停了(id){ return this.停.indexOf(id) >= 0; },
   /* 到数了：把它从"再叫它"里摘出来，界面上给一句能在设置里处理的话 */
   判停(id, 次){
@@ -424,7 +458,7 @@ const PackLoader = {
    ============================================================ */
 const APP_DENY = ['packList', 'packSet', 'packFile', 'packImport', 'packWipe', 'rebuild',
   'onRebuildDone', 'onRebuildStep',
-  'compRead', 'compWrite', 'compDelete', 'boxInspect',
+  'compRead', 'compWrite', 'compDelete', 'boxInspect', 'boxVerify',
   'readPageFile', 'writePageFile', 'writePageBytes', 'appendPageFile', 'pageFileExists',
   'delPageFile', 'pagePath', 'pathOf',
   'dataRead', 'dataWrite', 'dataList', 'dataWipe', 'aboutInfo',

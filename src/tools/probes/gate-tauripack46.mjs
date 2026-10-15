@@ -617,10 +617,10 @@ const 缺 = 对名单(这批, 桥, 壳注册单());
 台.判('main.rs 的注册单上这三颗排在 ⑪ 那一段后面（一格一段，不是散着塞的）',
   壳.indexOf('⑪ 插件那一列剩下那三颗') < 壳.indexOf('pack_cmds::pack_set')
   && 壳.includes('tauri_bind::pack_cmds::pack_import') && 壳.includes('tauri_bind::pack_cmds::pack_wipe'));
-台.判('跑测试那一道此刻是全绿 257 颗零警告（212 → 219 运行日志那 7 颗 → 220 本地协议类型表那 1 颗 → 233 批九网格吸附那 13 颗 → 234 议题 16 补 MusicBee 那一行明文那 1 颗 → 235 议题 17、18 闪退那一处：中文目录名不许按字节切 → 233 插件分离第 2 批 2.5：撤掉 comp:list / comp:restore / comp:factory 那三颗，它们那两道测试一起没了 → 232 第 2 批 2.6：data\\plugins-factory\\ 那一格整格撤，那道判断与它那道测试一起没了 → 252 第 3 批 3.2 与 3.3 乙：自有容器那一格 pack_box.rs 添的 20 颗 → 257 第 3 批 3.4 第一步：取一块那两处、扩展名那两枚、包名那一列多认一种运输形状那三道）；那一格 257 颗，加上动手那一格 box_cmds.rs 回话那 3 颗与 pack_cmds.rs 落盘那 3 颗，build.mjs --测 此刻 263 颗零警告），与本道数的字数同一现场',
-  全测试数() === 257);
+台.判('跑测试那一道此刻是全绿 260 颗零警告（212 → 219 运行日志那 7 颗 → 220 本地协议类型表那 1 颗 → 233 批九网格吸附那 13 颗 → 234 议题 16 补 MusicBee 那一行明文那 1 颗 → 235 议题 17、18 闪退那一处：中文目录名不许按字节切 → 233 插件分离第 2 批 2.5：撤掉 comp:list / comp:restore / comp:factory 那三颗，它们那两道测试一起没了 → 232 第 2 批 2.6：data\\plugins-factory\\ 那一格整格撤，那道判断与它那道测试一起没了 → 252 第 3 批 3.2 与 3.3 乙：自有容器那一格 pack_box.rs 添的 20 颗 → 257 第 3 批 3.4 第一步：取一块那两处、扩展名那两枚、包名那一列多认一种运输形状那三道 → 260 第 3 批 3.4 第二步：核活着的那一格那三道）；那一格 260 颗，加上动手那一格 box_cmds.rs 的 6 颗与 pack_cmds.rs 落盘那 3 颗，build.mjs --测 此刻 269 颗零警告），与本道数的字数同一现场',
+  全测试数() === 260);
 台.判('媒体那一道闸数的字数与本道同一现场（两道闸数的是同一棵树，不许各说各话）',
-  rd('src/tools/probes/gate-taurimedia46.mjs').includes('全测试.length === 257'));
+  rd('src/tools/probes/gate-taurimedia46.mjs').includes('全测试.length === 260'));
 function 全测试数() {
   return fs.readdirSync(path.join(ROOT, 'src', '_tauri', 'src', 'core')).filter(f => f.endsWith('.rs'))
     .map(f => fs.readFileSync(path.join(ROOT, 'src', '_tauri', 'src', 'core', f), 'utf8'))

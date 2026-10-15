@@ -317,9 +317,10 @@ const 主删支 = [...那一颗('remove').matchAll(/return (\{[^}]*\})/g)].map(m
   && 主删支.some(x => JSON.stringify(x) === JSON.stringify(['ok', 'msg']))
   && 主删支.some(x => JSON.stringify(x).includes('removed'))
   && 动.includes('一份删除 { ok: false, removed: None, msg: Some(本来不在那句.to_string()) }'));
-台.判('抹着的两样东西：那一格目录与那颗同名 zip，两处都算进 removed（写法也照原件：<包名>/ 与 <包名>.zip）',
+台.判('抹着的三样东西：那一格目录、那颗同名 zip 与那份自有容器，三处都算进 removed（写法：<包名>/ · <包名>.zip · <包名>.fdpkg）',
   那一颗('remove').includes("gone.push(L.id + '/')") && 那一颗('remove').includes("gone.push(L.id + '.zip')")
-  && 动.includes('format!("{}/", 落.包名)') && 动.includes('format!("{}.zip", 落.包名)'));
+  && 动.includes('format!("{}/", 落.包名)') && 动.includes('format!("{}.zip", 落.包名)')
+  && 动.includes('落.落, crate::fd_core::pack_box::带点后缀') && 动.includes('落.包名, crate::fd_core::pack_box::带点后缀'));
 台.判('comp:read 出错是回一格给页面（不成 / 没有 那两支），不是把错抛到页面上',
   /pub fn comp_read\(id: String, rel: Option<String>\) -> 一份原文/.test(动)
   && 动.includes('一份原文::不成(那句)') && !/pub fn comp_read[\s\S]{0,80}-> Result/.test(动));

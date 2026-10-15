@@ -6,7 +6,9 @@
    二、那一格不碰磁盘、不认识壳；SHA-256 走依赖图里已经带着的那颗件，不在壳里自己写第二份；
    三、动手那一颗只认插件路径以内那一份字节，落点与大小两道闸都借现成那把尺，扩展名全仓只有一枚常量；
    四、桥、硬地板、壳的注册单三头一致 —— 这一颗页面请得到、插件请不到；
-   五、界面上还没有一处调用点（管理页与三种时机的接线归 3.4），不留半成品；本批几本文本里没有本机路径。
+   五、页面上真喊这两颗的地方只有该喊的那两处（装载那一趟与装卸那一本），别处一处都不许多；本批几本文本里没有本机路径；
+   六、核一家那一颗与界面上的两种时机：加载那一下先核后放（报不动手）、开机后台那一趟不弹窗不拦开机只写包检查那一本，
+       没那份容器就一句都不提（#30 那条：一律不做缺失提示），管理页那一行只认真核过的两家摆标记。
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,6 +24,17 @@ const 动手 = 动.slice(0, 动.indexOf('#[cfg(test)]'));  /* 这一层的测试
 const 壳 = rd('src/_tauri/src/main.rs');
 const 规格 = rd('docs/插件容器格式.md');
 const 桥 = 桥原文();
+const 载 = rd('src/_shared/sh-load.js');
+const 装 = rd('src/_shared/sh-packs.js');
+const 壳页 = rd('src/_fd/src/fd3-shell.js');
+
+台.题('零、这一台自己不是哑闸（判据要是读不到东西，整台就不算跑过）');
+台.判('纯判断那一格读到了（' + 判断.length.toLocaleString('en-US') + ' 字，四段那几个数都在这一段里）', 判断.length > 6000);
+台.判('动手那一格读到了（' + 动手.length.toLocaleString('en-US') + ' 字）', 动手.length > 3000);
+台.判('页面那三本读到了（装载 ' + 载.length.toLocaleString('en-US') + ' 字 · 装卸 ' + 装.length.toLocaleString('en-US') + ' 字 · 插件管理那一屏 ' + 壳页.length.toLocaleString('en-US') + ' 字）',
+  载.length > 20000 && 装.length > 10000 && 壳页.length > 60000);
+台.判('两颗命令的声明都在动手那一格里（inspect 与 verify 一颗都不许缺）',
+  /fn box_inspect\(/.test(动) && /fn box_verify\(/.test(动));
 const 壳单 = 壳注册单();
 
 台.题('一、四段那几个数：代码与规格那一页同一本账');
@@ -37,15 +50,15 @@ const 账 = 规格.split('### 5.1')[1] || '';      /* 那一小节就是改账�
   规格.includes('固定 72 字节') && 规格.includes('### 1.4 签名段（72 字节，文件结尾）')
   && !/88/.test(规格.split('### 5.1')[0]) && 账.includes('88'),
   规格.split('### 5.1')[0].match(/.{0,12}88.{0,12}/g) || []);
-台.判('那七句报话一句不缺（读不了格式 / 字段不齐 / 哈希不对 / 版本不够 / 签名读不了 / 块短了 / 块加密）',
-  ['读不了格式那句', '字段不齐那句', '哈希不对那句', '版本不够那句', '签名读不了那句', '块短了那句', '块加密那句']
+台.判('那八句报话一句不缺（读不了格式 / 字段不齐 / 哈希不对 / 版本不够 / 签名读不了 / 块短了 / 块加密 / 少一份）',
+  ['读不了格式那句', '字段不齐那句', '哈希不对那句', '版本不够那句', '签名读不了那句', '块短了那句', '块加密那句', '少一份那句']
     .every(名 => new RegExp('pub const ' + 名 + ': &str').test(判断)));
-台.判('规格第三节那张表也是这七种（一页一码不许各说各话）', (规格.match(/^\| .+ \| .+ \|$/gm) || []).length >= 7 && 规格.includes('分七种'));
+台.判('规格第三节那张表也是这八种（一页一码不许各说各话）', (规格.match(/^\| .+ \| .+ \|$/gm) || []).length >= 8 && 规格.includes('分八种'));
 台.判('未签名不当问题：那一句是「用户插件」，装与加载都不挡', /pub const 用户插件那句: &str = "用户插件";/.test(判断) && 规格.includes('**未签名的包允许装、允许加载'));
-台.判('那七句各是各的措辞，一句都不许合并成「出错了」，也不许出现「缺失」「没装」那一类话（#30 与 2.7 同一口径）',
-  new Set(['读不了格式那句', '字段不齐那句', '哈希不对那句', '版本不够那句', '签名读不了那句', '块短了那句', '块加密那句']
-    .map(名 => (判断.match(new RegExp('pub const ' + 名 + ': &str = "([^"]*)"')) || ['', ''])[1])).size === 7
-  && !['出错了', '缺失', '没装'].some(字 => ['读不了格式那句', '字段不齐那句', '哈希不对那句', '版本不够那句', '签名读不了那句', '块短了那句', '块加密那句']
+台.判('那八句各是各的措辞，一句都不许合并成「出错了」，也不许出现「缺失」「没装」那一类话（#30 与 2.7 同一口径）',
+  new Set(['读不了格式那句', '字段不齐那句', '哈希不对那句', '版本不够那句', '签名读不了那句', '块短了那句', '块加密那句', '少一份那句']
+    .map(名 => (判断.match(new RegExp('pub const ' + 名 + ': &str = "([^"]*)"')) || ['', ''])[1])).size === 8
+  && !['出错了', '缺失', '没装'].some(字 => ['读不了格式那句', '字段不齐那句', '哈希不对那句', '版本不够那句', '签名读不了那句', '块短了那句', '块加密那句', '少一份那句']
     .map(名 => (判断.match(new RegExp('pub const ' + 名 + ': &str = "([^"]*)"')) || ['', ''])[1]).some(句 => 句.includes(字))));
 
 台.题('二、那一格只算字节；哈希不自己写第二份');
@@ -107,8 +120,9 @@ const 页外 = 数那一处(/\.(js|cjs|mjs)$/, ['gate-tauribox46']);
   && ['path:', 'index:', 'start:', 'len:', 'state:'].every(k => 动.includes(k)));
 台.判('管理页那一行那一枚标记的字借 pack_box 那一句，产品那一段里不另写第二串「用户插件」',
   动手.includes('出.标记()') && !动手.includes('"用户插件"'));
-台.判('回给页面那一格有三道测试钉着（好包十栏、坏一块报的是哪一块、读不到只回两栏）',
-  动.includes('mod 验回话') && (动.slice(动.indexOf('#[cfg(test)]')).match(/#\[test\]/g) || []).length === 3);
+台.判('回给页面那一格有六道测试钉着（回话那三道 + 沙盒里核一家那三道）',
+  动.includes('mod 验回话') && 动.includes('mod 验核一家')
+  && (动.slice(动.indexOf('#[cfg(test)]')).match(/#\[test\]/g) || []).length === 6);
 const 搭包手 = fs.readdirSync(path.join(ROOT, 'src'), { recursive: true })
   .filter(f => String(f).endsWith('.rs'))
   .filter(f => rd('src/' + String(f).replace(/\\/g, '/')).includes('fn 拼一份('));
@@ -125,8 +139,9 @@ const 表 = JSON.parse((桥.match(/const 参表 = (\{[\s\S]*?\});/) || [])[1] ||
   /async boxInspect\(id\)\{[^}]*invoke\('box:inspect'/.test(桥) && 桥请壳(桥).includes('box:inspect'));
 台.判('硬地板收了这一颗：插件清单点名也不给（读包这件事是宿主自己的事）',
   /const APP_DENY = \[[\s\S]*?'boxInspect'/.test(rd('src/_shared/sh-load.js')));
-台.判('壳里那份生成物跟着更新了（名单 54 颗，且顶上那句数的也是 54）',
-  rd('src/_tauri/src/core/app_deny.rs').includes('"boxInspect"') && /名单 54 颗/.test(rd('src/_tauri/src/core/app_deny.rs')));
+台.判('壳里那份生成物跟着更新了（名单 55 颗，且顶上那句数的也是 55）',
+  rd('src/_tauri/src/core/app_deny.rs').includes('"boxInspect"') && rd('src/_tauri/src/core/app_deny.rs').includes('"boxVerify"')
+  && /名单 55 颗/.test(rd('src/_tauri/src/core/app_deny.rs')));
 const 跑 = (() => { try { execFileSync(process.execPath, [path.join(ROOT, 'src', '_tauri', 'bridge.mjs'), '--验'], { encoding: 'utf8' }); return 0; }
   catch(e) { return e.status || 1; } })();
 台.判('那份名单拿 --验 重跑一趟：盘上这一份没过期（退出码 ' + 跑 + '）', 跑 === 0);
@@ -143,11 +158,40 @@ const 页面层 = ['src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'data/p
   走(全);
   return 收;
 });
-const 喊过 = 页面层.filter(p => /boxInspect|box:inspect/.test(fs.readFileSync(p, 'utf8')) && !p.includes('sh-load.js'));
-台.数('页面上真喊这一颗的几处', 喊过.length + ' 处' + (喊过.length ? '：' + 喊过.join(' ') : '（管理页与三种时机归 3.4）'));
-台.判('界面上还没有半成品：除了硬地板那一份名单，页面源码里一处都不喊这一颗', 喊过.length === 0);
+const 喊过 = 页面层.filter(p => /boxVerify|box:verify|boxInspect|box:inspect/.test(fs.readFileSync(p, 'utf8')));
+台.数('页面上提到这两颗的文件几份', 喊过.length + ' 份：' + 喊过.map(p => p.replace(ROOT, '')).join(' '));
+台.判('提到这两颗的只有该提的那两份（装载那一趟与装卸那一本；硬地板那份名单也在第一份里），别处一处都不许多',
+  喊过.length === 2 && 喊过.every(p => p.endsWith('sh-load.js') || p.endsWith('sh-packs.js')), 喊过.map(p => p.replace(ROOT, '')));
+/* 真喊的那一手：开机后台那一趟一次、加载那一下一次 —— 多一处就是有人在别的地方又插了一道闸 */
+const 真喊 = 喊过.reduce((n, p) => n + (fs.readFileSync(p, 'utf8').match(/A\.boxVerify\(/g) || []).length, 0);
+台.数('页面上真请 boxVerify 的几处', 真喊 + ' 处');
+台.判('真请的就两处：装载那一趟的 后台核包 与 加载那一下的 核一下', 真喊 === 2, 真喊);
 台.判('这一批那几本文本里一个字节都没写这台机器的盘符、帐户名、私人目录名',
   !/(^|[^A-Za-z0-9])[A-Za-z]:[\\/]/.test(动 + 判断 + 壳 + 规格),
   (动 + 判断 + 壳 + 规格).match(/.{0,20}[A-Za-z]:[\\/].{0,20}/g) || []);
+
+台.题('六、核一家那一颗与界面上的两种时机（3.4）');
+台.判('壳的注册单上有 box_verify，桥的参表记的那一栏与壳里声明同字同序（一颗 id）',
+  壳单.includes('box_verify') && JSON.stringify(表.box_verify) === JSON.stringify(['id']), JSON.stringify(表.box_verify));
+台.判('桥上两颗都挂出来了：boxInspect 请 box:inspect、boxVerify 请 box:verify',
+  /async boxVerify\(id\)\{[^}]*invoke\('box:verify'/.test(桥) && 桥请壳(桥).includes('box:verify'));
+台.判('硬地板把两颗一起收了（读包与核包都是宿主自己的事，插件清单点名也不给）',
+  /const APP_DENY = \[[\s\S]*?'boxInspect', 'boxVerify'/.test(载));
+台.判('加载那一下先核后放：核不过就不改名单，摆的是壳里那一句原话（报不动手）',
+  /async load\(id\)\{[\s\S]*?const 核 = await this\.核一下\(id\);[\s\S]*?if\(!核\.ok\)\{[\s\S]*?return false;[\s\S]*?return this\.apply\(cur\.concat/.test(装));
+台.判('没那份容器 = 没得核：照旧放行，界面上不摆一句"没得核"（#30 那条）',
+  装.includes("if(!A || typeof A.boxVerify !== 'function') return { ok:true };")
+  && 装.includes('r.packPresent === false') && 装.includes('(r || { ok:true })'));
+台.判('开机后台那一趟不 await、不拦开机：装载这一趟先收尾，自检排在后面（这一颗抛了也不算开不了机）',
+  载.includes("Promise.resolve().then(() => this.后台核包()).catch(() => {})") && !/await this\.后台核包\(\)/.test(载));
+const 检查 = (载.match(/async 后台核包\(\)\{[\s\S]{0,2000}?\n  \},/) || [''])[0];
+台.判('那一趟只写自己那一本（logs/包检查.txt），不给任何一家加崩次数、也不弹窗',
+  检查.includes("this.落一行('logs/包检查.txt'") && !/崩一笔|toast\(/.test(检查), 检查.length + ' 字');
+台.判('没得核的那一家连账都不记（包账里不留"没得核"那种条目，界面上也就没得摆）',
+  检查.includes('if(!r || r.packPresent === false) continue;'));
+台.判('管理页那一行的两枚标记只认真核过的：那一句短话写在页面上，「用户插件」那一枚借壳里那一句（页面不再抄第二串）',
+  壳页.includes('PackLoader.包账') && 壳页.includes("'与包对不上'") && 壳页.includes('核.note') && !壳页.includes("'用户插件'"));
+台.判('运输形状不当运行形状使：装载那一只挑 kind 是 dir 的（zip 与 box 两种都跳过，也不弹一句）',
+  /if\(p\.kind === 'zip' \|\| p\.kind === 'box'\)\{[\s\S]{0,200}?continue;/.test(载) && !/console\.log/.test((载.match(/if\(p\.kind === 'zip' \|\| p\.kind === 'box'\)\{[\s\S]{0,260}/) || [''])[0]));
 
 台.收尾();

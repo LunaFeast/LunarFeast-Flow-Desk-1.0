@@ -314,10 +314,24 @@ const PackOps = {
      删除 = 把包从路径里彻底清掉（文件一起没，界面上不再有这一行）
      四个动作各管一段，谁也不越到谁那儿：改名单的不碰盘，碰盘的先把名单摘干净。 */
   /* 加载一个：名单里加上它，然后刷新这一页（加载器下一轮就 import 它） */
+  /* 加载那一下先核一遍（#32 那三种时机里的第二种）：拿这一家自己那份容器对一遍活着的那一格。
+     对不上就不请它进使用页，把壳里那一句原话摆出来 —— 报不动手：不改包、不抹文件、不"顺手修好"。
+     没那份容器（文件夹或旧 zip 进来的）= 没得核，照旧放行；本地开发那台服务器没这颗通道，也照旧放行。 */
+  async 核一下(id){
+    const A = this.host();
+    if(!A || typeof A.boxVerify !== 'function') return { ok:true };
+    const r = await A.boxVerify(String(id));
+    return (r && r.packPresent === false) ? { ok:true } : (r || { ok:true });
+  },
   async load(id){
     const cur = await this.ids();
     if(!cur){ toast('插件名单读不到 · 这台机器上还没有放进路径的插件'); return false; }
     if(cur.includes(String(id))) return true;         /* 已经加载着，不用再走一趟 */
+    const 核 = await this.核一下(id);
+    if(!核.ok){
+      toast('这一家与它那份包对不上 · 先不加载：' + (核.msg || ''), true);
+      return false;
+    }
     return this.apply(cur.concat([id]), '加载「' + Packs.name(id) + '」· 改名单…');
   },
   /* 卸载一个：名单里去掉它，顺手（按勾选项）清数据，然后刷新这一页 */
@@ -438,7 +452,8 @@ const PackOps = {
     const cb = h('input', { type:'checkbox' });
     const box = h('div', { class:'wnw-col' });
     box.appendChild(h('div', { class:'wnw-hint' },
-      '「' + nm + '」这一格要从插件路径里清掉：data\\plugins\\' + id + '\\ 整个抹掉，压好的那颗 ' + id + '.zip 也在这一颗的范围里。'));
+      '「' + nm + '」这一格要从插件路径里清掉：data\\plugins\\' + id + '\\ 整个抹掉，压好的那两份（'
+      + id + '.zip 与 ' + id + 容器后缀 + '）也在这一颗的范围里。'));
     box.appendChild(h('div', { class:'wnw-hint' },
       '这一步不给自己留退路 —— 想再看它一眼，得重新「安装」一次（手里那份包再放进来）。'));
     if(all.length) box.appendChild(h('label', { class:'wnw-switch' },

@@ -18,7 +18,7 @@ use serde::Serialize;
 use std::fs;
 
 use crate::fd_core::comp_rule::{定落点, 没这份那句, 读不到那句};
-use crate::fd_core::pack_box::{一条报, 一份检查, 整包检查, 扩展名, 钥匙表};
+use crate::fd_core::pack_box::{一条报, 一份检查, 整包检查, 核那一格, 扩展名, 钥匙表};
 use crate::fd_core::pack_rule::{封顶字节, 太大那句};
 use crate::tauri_bind::comp_cmds::活的那一格;
 
@@ -187,6 +187,79 @@ pub fn box_inspect(id: String) -> 一份检验 {
     一份检验::照回执(&整包检查(&全, &crate::version(), 钥匙表))
 }
 
+/* 三种时机里"开机后台那一趟"与"加载那一下"吃的就是这一颗：拿路径里那一份容器核活着的那一格。 */
+
+/// box:verify 那一格
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct 一份核验 {
+    /// 对得上没有。这一家没有可核的那一份包时也算 true（没得核不是问题，#30 那条：不许当一句缺失提示摆出来）
+    ok: bool,
+    /// 路径里有没有那一份容器（false = 这一家是解开的文件夹或旧的 zip 进来的，没得核）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pack_present: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    msg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    note: Option<String>,
+    issues: Vec<一条话>,
+}
+
+impl 一份核验 {
+    fn 没得核() -> 一份核验 {
+        一份核验 { ok: true, pack_present: Some(false), msg: None, note: None, issues: vec![] }
+    }
+    fn 读不到(那句: String) -> 一份核验 {
+        一份核验 { ok: false, pack_present: None, msg: Some(那句), note: None, issues: vec![] }
+    }
+}
+
+/// 拿那一份容器核 <格>\<包名>\ 里的每份文件。包本身先整个查一遍（那七句），过了才逐份对。
+#[tauri::command]
+pub fn box_verify(id: String) -> 一份核验 {
+    核一家(&活的那一格(), &id.trim().to_string())
+}
+
+/// 活的手（只吃一个格与一个包名）：沙盒里量得到，不必起壳、也不必往真那一格里放东西
+fn 核一家(格: &str, 包: &str) -> 一份核验 {
+    let 家 = match 定落点(格, 包, None) {
+        Ok(v) => v,
+        Err(那句) => return 一份核验::读不到(那句),
+    };
+    let 字节 = match fs::read(format!("{}.{}", 家.落, 扩展名)) {
+        Ok(v) => v,
+        /* 这一家不是从容器进来的：没得核，一句都不报 */
+        Err(_) => return 一份核验::没得核(),
+    };
+    let 出 = 整包检查(&字节, &crate::version(), 钥匙表);
+    if !出.ok {
+        return 一份核验 {
+            ok: false,
+            pack_present: Some(true),
+            msg: Some(出.头一句()),
+            note: 出.标记().map(|字| 字.to_string()),
+            issues: 出.报.iter().map(一条话::照).collect(),
+        };
+    }
+    let 信 = match &出.信息 {
+        Some(v) => v.clone(),
+        None => return 一份核验::读不到(出.头一句()),
+    };
+    /* 每份文件的落点还是过 定落点 那一把尺（与 comp:read 同一张嘴）：包上写的路径想往外跑，读不着就算少一份 */
+    let 读 = |路: &str| -> Option<Vec<u8>> {
+        let 到 = 定落点(格, 包, Some(路)).ok()?;
+        fs::read(到.落).ok()
+    };
+    let 报 = 核那一格(&信, &读, &crate::version());
+    一份核验 {
+        ok: 报.is_empty(),
+        pack_present: Some(true),
+        msg: 报.first().map(|x| x.句.clone()),
+        note: 出.标记().map(|字| 字.to_string()),
+        issues: 报.iter().map(一条话::照).collect(),
+    }
+}
+
 /* ================= 回给页面那一格：栏名与形状（cargo test 直接验，不起壳、不碰磁盘） =================
    为什么要钉这一格：判断那一格改字段名，这一层靠 serde 换算成页面上那十个栏 —— 换算错了界面上只是
    一行摆不出来，cargo 与闸都不报，要等接线那一屏才发现。测试用的那两把搭包手借纯判断那一格的，
@@ -243,5 +316,98 @@ mod 验回话 {
         }
         assert!(格["blocks"].as_array().unwrap().is_empty());
         assert!(格["issues"].as_array().unwrap().is_empty());
+    }
+}
+
+/* ================= 核一家：沙盒里量（这一颗真摸盘，所以起壳之前就得验得到） =================
+   这批那句"怎么算完"量的就是这里：故意改一个字节、故意少一份文件、故意把要求的版本写高 ——
+   三种报的是三句不同的话。沙盒落在系统临时那一格，不碰 data\plugins\ 里任何一家。 */
+#[cfg(test)]
+mod 验核一家 {
+    use super::*;
+    use crate::fd_core::pack_box::{取一块, 扩展名};
+
+    fn 包字节() -> Vec<u8> {
+        include_str!("../../../tools/probes/件-容器.hex").trim().as_bytes()
+            .chunks(2).map(|双| u8::from_str_radix(std::str::from_utf8(双).unwrap(), 16).unwrap()).collect()
+    }
+    fn 沙(名: &str) -> std::path::PathBuf {
+        let 到 = std::env::temp_dir().join(format!("fd-核一家-{}-{}", 名, std::process::id()));
+        let _ = fs::remove_dir_all(&到);
+        fs::create_dir_all(&到).unwrap();
+        到
+    }
+    /* 摆一家：容器进路径 + 按包上那张表摊开那一格；抽掉的那份与改过的那份由调用方点 */
+    fn 摆(到: &std::path::Path, 字节: &[u8], 抽掉: Option<&str>, 改动: Option<&str>) {
+        fs::write(到.join(format!("notes.{}", 扩展名)), 字节).unwrap();
+        let 出 = 整包检查(字节, "1.0.0", 钥匙表);
+        let 信 = 出.信息.clone().unwrap();
+        let 格 = 到.join("notes");
+        fs::create_dir_all(&格).unwrap();
+        for 份 in 信.files.iter() {
+            if Some(份.路径.as_str()) == 抽掉 { continue; }
+            let 全 = 到.join("notes").join(&份.路径);
+            if let Some(父) = 全.parent() { let _ = fs::create_dir_all(父); }
+            let mut 字 = 取一块(字节, &份.路径).unwrap();
+            if Some(份.路径.as_str()) == 改动 { if !字.is_empty() { 字[0] ^= 0xff; } }
+            fs::write(&全, &字).unwrap();
+        }
+    }
+    fn 句(回: &一份核验) -> String { serde_json::to_string(&回).unwrap() }
+
+    #[test]
+    fn 对得上就一句不报并且认成用户插件() {
+        let 到 = 沙("好");
+        摆(&到, &包字节(), None, None);
+        let 回 = serde_json::to_value(核一家(&到.to_string_lossy(), "notes")).unwrap();
+        assert_eq!(回["ok"], true, "{}", 句(&核一家(&到.to_string_lossy(), "notes")));
+        assert_eq!(回["packPresent"], true);
+        assert_eq!(回["note"], "用户插件", "没签名的包：管理页那一行标这一句，不挡加载");
+        assert!(回["issues"].as_array().unwrap().is_empty());
+        let _ = fs::remove_dir_all(&到);
+    }
+
+    #[test]
+    fn 改一个字节与少一份文件与要求版本高_报的是三句不同的话() {
+        let 字 = 包字节();
+        let 甲 = 沙("改"); 摆(&甲, &字, None, Some("main.js"));
+        let 乙 = 沙("少"); 摆(&乙, &字, Some("box-kernel.js"), None);
+        /* 第三家：把信息段里那句 min_shell 写高（头那四枚跟着改长度，不然就成了坏包而不是要求高） */
+        let 信长 = u32::from_be_bytes([字[8], 字[9], 字[10], 字[11]]) as usize;
+        let 文 = String::from_utf8(字[12..12 + 信长].to_vec()).unwrap()
+            .replace("\"min_shell\":\"1.0.0\"", "\"min_shell\":\"99.0.0\"");
+        let mut 高 = Vec::new();
+        高.extend_from_slice(&字[0..8]);
+        高.extend_from_slice(&(文.len() as u32).to_be_bytes());
+        高.extend_from_slice(文.as_bytes());
+        高.extend_from_slice(&字[12 + 信长..]);
+        let 丙 = 沙("高"); 摆(&丙, &高, None, None);
+
+        let 三句 = [
+            核一家(&甲.to_string_lossy(), "notes"),
+            核一家(&乙.to_string_lossy(), "notes"),
+            核一家(&丙.to_string_lossy(), "notes"),
+        ].map(|回| serde_json::to_value(回).unwrap()["issues"][0]["kind"].as_str().unwrap().to_string());
+        for (序, 句) in 三句.iter().enumerate() {
+            assert!(!句.is_empty(), "第 {} 种坏包一句都没报", 序);
+            assert!(!句.contains("出错了"), "报话不许合并：{}", 句);
+        }
+        let 独: std::collections::HashSet<&str> = 三句.iter().map(|x| x.as_str()).collect();
+        assert_eq!(独.len(), 3, "三种坏包报的是同一种话：{:?}", 三句);
+        assert!(三句[0].contains("对不上号") && 三句[1].contains("少了一份文件") && 三句[2].contains("先更新主程序"), "{:?}", 三句);
+        for 到 in [&甲, &乙, &丙] { let _ = fs::remove_dir_all(到); }
+    }
+
+    #[test]
+    fn 没有那一份容器就当没得核_不编一句缺失话() {
+        let 到 = 沙("无包");
+        fs::create_dir_all(到.join("notes")).unwrap();
+        fs::write(到.join("notes").join("main.js"), "x").unwrap();
+        let 回 = serde_json::to_value(核一家(&到.to_string_lossy(), "notes")).unwrap();
+        assert_eq!(回["ok"], true, "没得核不是问题：这一家照样能加载");
+        assert_eq!(回["packPresent"], false);
+        assert!(回["issues"].as_array().unwrap().is_empty());
+        assert!(回.get("msg").is_none() || 回["msg"].as_str().unwrap().is_empty(), "不许编出一句话来：{}", 回);
+        let _ = fs::remove_dir_all(&到);
     }
 }

@@ -193,6 +193,13 @@ pub fn comp_delete(id: String) -> 一份删除 {
             fs::remove_file(&压缩包)?;
             抹了.push(format!("{}.zip", 落.包名));
         }
+        /* 自有容器那一份也算这一家的（插件分离第 3 批 3.4）：抹掉那一格却把凭据留在路径里，
+           下一趟开机它会自己冒成一行"没加载的运输形状"，删除那一手就不算删干净 */
+        let 容器 = format!("{}{}", 落.落, crate::fd_core::pack_box::带点后缀);
+        if 是不是份(&容器) {
+            fs::remove_file(&容器)?;
+            抹了.push(format!("{}{}", 落.包名, crate::fd_core::pack_box::带点后缀));
+        }
         Ok(())
     })();
     if let Err(e) = 手 {
