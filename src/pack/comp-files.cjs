@@ -2,13 +2,13 @@
    插件文件层 · 主进程和开发探针共用的同一把尺
    ----------
    插件的代码和自带文件都住在 data\plugins\<id>\ 这一格里：
-   「改代码」改的就是这一格里的 main.js，存了就是新的，刷新这一页立刻生效 ——
-   不再有「写一份覆盖副本、等重新生成页面才嵌进去」那一趟。
+   推演定制存一个新组件写的就是这一格里的 main.js + recipe.json + manifest.json，
+   存了就是新的，重载这一家立刻生效 —— 不再有「写一份覆盖副本、等重新生成页面才嵌进去」那一趟。
+   「改代码」那颗钮和它的编辑对话框，连同伴着它长的「列这一格有哪几份文本」那一颗，
+   随插件分离第 2 批 2.5 一起撤了：页面上没有入口，这条通道也就没人请。
    原版在 data\plugins-factory\<id>\：导入那一下顺手真复制一份进去（程序自带的那一份从前住
 外43 从那一层搬走了 —— 那一层每次更新都被整个换掉，用户的底放进去等于交给更新撤走（插件现在跟着本体进发布物的 data\plugins\）；
    那一层又每次更新都被整个换掉，用户的底放进去等于交给更新撤走）。
-   「恢复出厂」就是从原版那一格把这一格的文件拷回来（真复制，不用硬链接：
-   链接会让活文件和底变成同一份，改了活的等于改了底，恢复出厂就成了空话）。
    ----------
    三道闸（谁都绕不过去，包括页面里递上来的路径）：
      1 包名只认干净字符（字母数字点横线下划线），别的一律不落地；
@@ -19,8 +19,6 @@ const fs = require('fs');
 const path = require('path');
 
 const ID_OK = /^[A-Za-z0-9._-]+$/;
-/* 认作「可以打开来改」的文本后缀（清单只列这些；图片、随行 exe/dll/脚本不摆进编辑器） */
-const TEXT_EXT = ['.js', '.mjs', '.cjs', '.json', '.md', '.txt', '.css', '.html', '.yaml', '.yml'];
 /* 一份文件走这条道的上限：代码、插件清单、随行小文件都在这个数以内；
    真要搬大东西（几 MB 的词库底本）走的是包导入那条道，不经过这里。 */
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -73,24 +71,12 @@ module.exports = function make(opt){
     if(f !== base && !f.startsWith(base + path.sep)) return { msg:'路径跑出了这一格：' + String(rel) };
     return { id:nm, file:f, root };
   }
-  /* 原版那一格里对应的位置（恢复出厂用） */
-  function factFile(id, rel){
-    const root = FACT();
-    if(!root || !isDir(root)) return '';
-    const seg = segsOf(rel);
-    if(!seg || !ID_OK.test(String(id))) return '';
-    const base = path.join(root, String(id));
-    const f = path.join(base, ...seg);
-    if(!f.startsWith(base + path.sep)) return '';
-    return isFile(f) ? f : '';
-  }
-
   return {
     MAX_BYTES,
     liveDir:LIVE, factoryDir:FACT,
     hasFactory(id){ return isDir(path.join(FACT() || '\0', String(id))); },
 
-    /* ---------- 读这一格里的一份文件（改代码打开的就是它） ----------
+    /* ---------- 读这一格里的一份文件 ----------
        rel 没给（null / 空串 / undefined 三种都算，主进程那条通道传的是 null）：按入口那份 main.js 办 */
     read(id, rel){
       const what = (rel === undefined || rel === null || String(rel).trim() === '') ? 'main.js' : rel;
@@ -102,8 +88,7 @@ module.exports = function make(opt){
       if(st.size > MAX_BYTES) return { ok:false, msg:'这份文件 ' + Math.round(st.size / 1048576) + 'MB，太大不走这条路' };
       let text = '';
       try{ text = fs.readFileSync(L.file, 'utf8'); }catch(e){ return { ok:false, msg:'读不出文本：' + (e && e.code || e) }; }
-      return { ok:true, text, size:st.size, mtime:Math.floor(st.mtimeMs),
-        factory:!!factFile(L.id, segsOf(what)) };
+      return { ok:true, text, size:st.size, mtime:Math.floor(st.mtimeMs) };
     },
     /* ---------- 写这一格里的一份文件：存了就是新的 ---------- */
     write(id, rel, text){
@@ -129,57 +114,6 @@ module.exports = function make(opt){
         if(!gone.length) return { ok:false, msg:'这一格本来就不在' };
         return { ok:true, removed:gone };
       }catch(e){ return { ok:false, msg:'删不掉：' + (e && e.code || e), removed:gone }; }
-    },
-    /* ---------- 这一格里有哪几份能改的文本文件 ----------
-       「改代码」顶上那个挑文件的下拉吃这个：入口那份排最前，插件清单跟着，剩下的按名字排。
-       图片、dll、ps1 这些不进清单 —— 编辑器只认文本，把二进制摆上去只会让人改坏文件。 */
-    list(id){
-      const L = locate(id);
-      if(L.msg) return { ok:false, msg:L.msg };
-      if(!isDir(L.file)) return { ok:true, files:[] };
-      const out = [];
-      const walk = rel => {
-        for(const e of fs.readdirSync(path.join(L.file, rel), { withFileTypes:true })){
-          if(e.name.startsWith('.')) continue;
-          const r = rel ? rel + '/' + e.name : e.name;
-          if(e.isDirectory()){ walk(r); continue; }
-          if(!e.isFile() || !TEXT_EXT.includes(path.extname(e.name).toLowerCase())) continue;
-          try{ if(fs.statSync(path.join(L.file, r)).size > MAX_BYTES) continue; }catch(err){ continue; }
-          out.push(r);
-        }
-      };
-      try{ walk(''); }catch(e){ return { ok:false, msg:'列不出来：' + (e && e.code || e) }; }
-      const head = ['main.js', 'manifest.json', 'recipe.json'];
-      const rank = f => { const i = head.indexOf(f); return i < 0 ? head.length : i; };
-      out.sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : a > b ? 1 : 0));
-      return { ok:true, files:out };
-    },
-
-    /* ---------- 恢复出厂：从原版那一格把这一份原样拷回来 ---------- */
-    restore(id, rel){
-      const r = String(rel || 'main.js');
-      const L = locate(id, r);
-      if(L.msg) return { ok:false, msg:L.msg };
-      const from = factFile(L.id, segsOf(r));
-      if(!from) return { ok:false, msg:'原版那一格里没有这一家（' + L.id + '）的这一份 · 导入那一下才会留底，留了底才恢复得了' };
-      try{ return { ok:true, size:copyFile(from, L.file) }; }
-      catch(e){ return { ok:false, msg:'拷不回来：' + (e && e.code || e) }; }
-    },
-    /* 这一家有哪几份原版（信息页与「恢复出厂」的说明用得上） */
-    factoryFiles(id){
-      const base = path.join(FACT() || '\0', String(id));
-      if(!ID_OK.test(String(id)) || !isDir(base)) return [];
-      const out = [];
-      const walk = (rel) => {
-        for(const e of fs.readdirSync(path.join(base, rel), { withFileTypes:true })){
-          if(e.name.startsWith('.')) continue;
-          const r = rel ? rel + '/' + e.name : e.name;
-          if(e.isDirectory()) walk(r);
-          else out.push(r);
-        }
-      };
-      try{ walk(''); }catch(e){ return []; }
-      return out;
     },
     /* ---------- 导入那一下顺手留底：把活的那一格原样复制进原版那一格 ----------
        真复制、不用链接（链接会让活文件和底变成同一份，「改代码」存一下就改了底，恢复出厂成空话）。

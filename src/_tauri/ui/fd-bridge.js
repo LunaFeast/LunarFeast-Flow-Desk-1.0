@@ -3,7 +3,7 @@
    撤掉 Electron 那一步把它转成源码 —— 转之前量过，盘上这一份与生成器产出的一字不差。
    里面那张「哪颗命令收哪几栏」的表（下面的 参表）由每一趟自检对着壳里的声明量：
    判据在 src\tools\probes\gate-bridge46.mjs，它自己独立读 Rust 那一头，不抄这里的写法。
-   壳里已搬通的命令：65 颗 · 桥里请壳的地方：69 处 */
+   壳里已搬通的命令：62 颗 · 桥里请壳的地方：66 处 */
 'use strict';
 /* ============================================================
    Electron 里没有 File System Access API，而 FD/WNW 的"选文件、选目录、写明文"
@@ -26,7 +26,7 @@ function 拿壳(){
 const 请壳 = (n, 包) => 拿壳().core.invoke(n, 包);
 const 听壳 = (n, 手) => { const 壳 = window.__TAURI__;
   return (壳 && 壳.event) ? 壳.event.listen(n, 手) : Promise.reject(new Error('壳没给事件那一层')); };
-const 参表 = {"backup_roots":[],"backup_run":["cfg"],"backup_last":["dest"],"backup_check":["cfg"],"cfg_close_get":[],"cfg_close_set":["mode"],"cfg_rime_get":[],"cfg_rime_set":["p"],"code_cat_rename":["from","to"],"comp_read":["id","rel"],"comp_list":["id"],"comp_write":["id","rel","text"],"comp_delete":["id"],"comp_restore":["id","rel"],"comp_factory":["id"],"data_dir":[],"data_read":["rel"],"data_write":["rel","text"],"data_list":[],"data_wipe":[],"lib_read":["name"],"lib_write":["name","text"],"fs_read":["p"],"fs_read_range":["p","start","length"],"fs_stat":["p"],"fs_write":["p","data","mkdir"],"fs_append":["p","text"],"fs_mkdir":["p"],"fs_unlink":["p","recursive"],"fs_list":["p"],"fs_tree":["p","exts"],"fs_read_text":["p"],"fs_resolve":["p"],"img_peek":["p","maxw"],"img_open":["p"],"icons_list":[],"font_list":["force"],"about_info":[],"ming_system":[],"ocr_swatch":["p"],"media_state":[],"media_hold":[],"media_release":[],"media_cmd":["msg"],"media_players":[],"media_pin":["target"],"media_dir_pick":[],"media_dir_set":["p"],"media_flag":["k","v"],"media_bridge":[],"pack_list":[],"pack_file":["id","rel"],"pack_set":["ids"],"pack_import":["payload"],"pack_wipe":["files","shared"],"fsa_pick_files":["opts"],"fsa_pick_dir":["opts"],"sys_rebuild":[],"vol_get":[],"vol_set":["v"],"vol_mute":["mode"],"web_title":["url"],"win_ctl":["act"],"app_restart":[],"win_close_answer":["action"]};
+const 参表 = {"backup_roots":[],"backup_run":["cfg"],"backup_last":["dest"],"backup_check":["cfg"],"cfg_close_get":[],"cfg_close_set":["mode"],"cfg_rime_get":[],"cfg_rime_set":["p"],"code_cat_rename":["from","to"],"comp_read":["id","rel"],"comp_write":["id","rel","text"],"comp_delete":["id"],"data_dir":[],"data_read":["rel"],"data_write":["rel","text"],"data_list":[],"data_wipe":[],"lib_read":["name"],"lib_write":["name","text"],"fs_read":["p"],"fs_read_range":["p","start","length"],"fs_stat":["p"],"fs_write":["p","data","mkdir"],"fs_append":["p","text"],"fs_mkdir":["p"],"fs_unlink":["p","recursive"],"fs_list":["p"],"fs_tree":["p","exts"],"fs_read_text":["p"],"fs_resolve":["p"],"img_peek":["p","maxw"],"img_open":["p"],"icons_list":[],"font_list":["force"],"about_info":[],"ming_system":[],"ocr_swatch":["p"],"media_state":[],"media_hold":[],"media_release":[],"media_cmd":["msg"],"media_players":[],"media_pin":["target"],"media_dir_pick":[],"media_dir_set":["p"],"media_flag":["k","v"],"media_bridge":[],"pack_list":[],"pack_file":["id","rel"],"pack_set":["ids"],"pack_import":["payload"],"pack_wipe":["files","shared"],"fsa_pick_files":["opts"],"fsa_pick_dir":["opts"],"sys_rebuild":[],"vol_get":[],"vol_set":["v"],"vol_mute":["mode"],"web_title":["url"],"win_ctl":["act"],"app_restart":[],"win_close_answer":["action"]};
 const 名换算 = n => n.replace(/:/g, '_').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 const 对不上 = (n, 有, 递) => {
   if(递 <= 有) return true;
@@ -451,17 +451,10 @@ window.FD_APP = {
      跑出 data\plugins\ 的一律写不进去。页面上那颗「改代码」和它的编辑对话框已经撤了（插件分离第 2 批）。 */
   async compRead(id, rel){ try{ return await ipcRenderer.invoke('comp:read', String(id || ''), rel === undefined ? null : String(rel)); }
     catch(e){ return { ok:false, msg:'插件文件读不到：' + ((e && e.message) || e) }; } },
-  /* 这一格里有哪几份文本文件（从前是「改代码」顶上那个挑文件的下拉吃这一颗） */
-  async compList(id){ try{ return await ipcRenderer.invoke('comp:list', String(id || '')); }
-    catch(e){ return { ok:false, msg:'这一格里列不出文件：' + ((e && e.message) || e) }; } },
   async compWrite(id, rel, text){ try{ return await ipcRenderer.invoke('comp:write', String(id || ''), String(rel || ''), String(text == null ? '' : text)); }
     catch(e){ return { ok:false, msg:'插件文件写不进去：' + ((e && e.message) || e) }; } },
   async compDelete(id){ try{ return await ipcRenderer.invoke('comp:delete', String(id || '')); }
     catch(e){ return { ok:false, msg:'这一格删不掉：' + ((e && e.message) || e) }; } },
-  async compRestore(id, rel){ try{ return await ipcRenderer.invoke('comp:restore', String(id || ''), rel === undefined ? null : String(rel)); }
-    catch(e){ return { ok:false, msg:'恢复出厂没接上：' + ((e && e.message) || e) }; } },
-  async compFactory(id){ try{ return await ipcRenderer.invoke('comp:factory', String(id || '')); }
-    catch(e){ return { ok:false, files:[], has:false, msg:'原版那一格问不到：' + ((e && e.message) || e) }; } },
   /* 生成页面进度：主进程每开一步、构建脚本每出一行都推一句过来（页面上那条进度条吃这个） */
   onRebuildStep(fn){
     const wrap = (e, s) => { try{ fn(s); }catch(err){} };

@@ -175,7 +175,7 @@ const 必须挡 = ['dataWipe', 'dataRead', 'dataWrite', 'dataList', 'dataDir', '
   'backupRun', 'backupCheck', 'backupLast', 'backupPick', 'backupRoots',
   'libRead', 'libWrite', 'codeCatRename', 'webTitle',
   'packList', 'packSet', 'packFile', 'packImport', 'packWipe', 'rebuild',
-  'compRead', 'compWrite', 'compDelete', 'compRestore', 'compFactory', 'compList',
+  'compRead', 'compWrite', 'compDelete',
   'winCtl', 'winState', 'restartApp', 'closeChoice', 'setCloseChoice', 'systemMing',
   'aboutInfo', 'iconsList', 'fontList', 'ocrSwatch', 'imgPeek', 'imgOpen'];
 const 漏 = 必须挡.filter(名 => !地板.includes(名));

@@ -2,12 +2,12 @@
    必须用它打开 FD：File System Access（授权真实数据目录）只在 http://127.0.0.1 或 https 下可用，file:// 不行。
    用法：node fd-serve.mjs   然后浏览器访问 http://127.0.0.1:8791/
    可选环境变量：PORT、FD_DIR（FD 产物目录）、FD_ICONS（图标那一层，挂到 /icons/）、
-     FD_FACTORY_COMPONENTS（「恢复出厂」取的那一层出厂原文，默认指 resources\app\data\plugins）
-   除了发文件，还挂三条写通道：/_comp 是「改代码」和装卸用的那三道闸（就是主进程那一把尺 src\pack\comp-files.cjs），
+     FD_FACTORY_COMPONENTS（导入那一下留的原版那一格，默认指 resources\app\data\plugins）
+   除了发文件，还挂三条写通道：/_comp 是插件那一格的读写和装卸用的那三道闸（就是主进程那一把尺 src\pack\comp-files.cjs），
    /_lib 存的是 #291 色卡、#292 外观方案、外29 丁组 图片库那三份 YAML，/_img 收导入的那一张图的字节。
    还挂一条读的：/_icons 把 icons\ 和 data\images\ 两层扫成一张「名字 → 地址」的表（主进程那层桥在这台没有），
    每个页面末尾垫一小段接线把它交给 Ico —— 卡片上那些平铺纹理才铺得上；程序里吃的是主进程那份，不认这一段。
-   开发浏览器里改的、装的、恢复出厂的都是真文件 —— 不出现「浏览器那份是草稿、程序那份才作数」两套真相。 */
+   开发浏览器里改的、装的都是真文件 —— 不出现「浏览器那份是草稿、程序那份才作数」两套真相。 */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -187,17 +187,14 @@ function compReq(req, res){
     let p = null;
     try{ p = JSON.parse(body || '{}'); }catch(e){ return send(res, 400, JSON.stringify({ ok:false, msg:'这份请求读不懂 JSON' })); }
     const id = String(p.id || '');
-    /* rel 没给 = null：读和恢复出厂都按入口那份 main.js 办（和主进程那条通道同一个口径） */
+    /* rel 没给 = null：读那一路按入口那份 main.js 办（和主进程那条通道同一个口径） */
     const rel = (p.rel === undefined || p.rel === null || p.rel === '') ? null : String(p.rel);
     let out = { ok:false, msg:'没有这一条操作：' + String(p.op) };
     try{
       switch(String(p.op)){
         case 'read':    out = COMP.read(id, rel === null ? undefined : rel); break;
-        case 'list':    out = COMP.list(id); break;
         case 'write':   out = COMP.write(id, rel, p.text); break;
         case 'delete':  out = COMP.remove(id); break;
-        case 'restore': out = COMP.restore(id, rel === null ? undefined : rel); break;
-        case 'factory': out = { ok:true, files:COMP.factoryFiles(id), has:COMP.hasFactory(id) }; break;
         case 'installed': out = !('set' in p) ? { ok:true, off:readOff() } : writeOff(p.set); break;
         case 'dirs':      out = packList(); break;
         default: break;

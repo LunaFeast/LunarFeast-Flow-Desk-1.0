@@ -1,20 +1,21 @@
-/* 四层里的第一层 · 「改组件代码」那一摊的同一把尺（外46 三 批三 · 搬 src\pack\comp-files.cjs 的判断那一半）
+/* 四层里的第一层 · 插件那一格文件读写的同一把尺（外46 三 批三 · 搬 src\pack\comp-files.cjs 的判断那一半）
    ------------------------------------------------------------
-   原件在 src\pack\comp-files.cjs：主进程那六颗（comp:read / list / write / delete / restore / factory）
-   和本地开发那台 http 服务器的 /_comp 都 require 同一颗，所以「哪一家允许读 / 改 / 删哪几份」只有一把尺。
-   壳这一头链不着 Node，那份里「只看字符串就能定」的那几手全挪到这一格，剩下的（走树、读字节、抄回来、抹掉）
-   在第三层动手。
+   原件在 src\pack\comp-files.cjs：主进程那三颗（comp:read / write / delete）
+   和本地开发那台 http 服务器的 /_comp 都吃同一把尺，所以「哪一家允许读 / 改 / 删哪几份」只有一把。
+   壳这一头链不着 Node，那份里「只看字符串就能定」的那几手全挪到这一格，剩下的（读字节、抹掉）在第三层动手。
+   从前这一摊还有「列这一格有哪几份文本」「从原厂那一格拷回那一份」「原厂那一格里有哪几份」三颗，
+   页面上那颗「改代码」与那颗「恢复出厂」随插件分离第 2 批 2.5 撤了，这三颗跟着撤 ——
+   这一格里只剩读 / 写 / 删要用的那几道判断和那几句原话。
    这一格管这么几件事：
      · 名字 —— 包名只认干净字符；相对那一串拆成段，段里不许 . 与 .. ，不许空段；
      · 落点 —— 算完必须落在 plugins\<那一家>\ 里面，跑出去就是不许（原件 locate 第三道闸）；
-     · 原厂 —— 出厂原文那一格（data\plugins-factory\<那一家>\）里对应的那一份在哪、这一家有没有底；
-     · 默认 —— 「读」rel 没给按入口那份 main.js 办，「恢复出厂」rel 没给也按 main.js 办，
-       「写」rel 没给就是不许（三种口径各是原件那一行的口径，一处都不许多统一、也不许少统一）；
-     · 后缀与顺序 —— 只把那十种文本后缀摆进挑文件的下拉（图片、随行 exe/dll/脚本不摆），
-       入口那份排最前、插件清单跟着、配方再跟着，剩下的按名字排；
+     · 原厂 —— 出厂原文那一格（data\plugins-factory\<那一家>\）的位置：包导入那一步留底和
+       media:bridge 那一份兜底还认它（那一整格归第 2 批 2.6 撤）；
+     · 默认 —— 「读」rel 没给按入口那份 main.js 办，「写」rel 没给就是不许（两种口径各是原件那一行的口径，
+       一处都不许多统一、也不许少统一）；
      · 句子 —— 每一道拒回来那句原话（页面上读的就是这一串，一个字都不许改）。
    两张表由哪道闸钉住一致：src\tools\probes\gate-tauricomp46.mjs 现场读 comp-files.cjs 的
-   ID_OK / TEXT_EXT / MAX_BYTES 与那几句错话，跟这一格里的常量一颗颗对 —— 不是抄第二份会漂移的表，
+   ID_OK / MAX_BYTES 与那几句错话，跟这一格里的常量一颗颗对 —— 不是抄第二份会漂移的表，
    是对面那一份的字面值在这儿有个 Rust 形状的落点，动那边不动这边当场红。
    ------------------------------------------------------------
    两处比原件紧一档，都写在这儿（不是发明新形状，是把原件「折回本家那一格」的两手在门口就拒掉）：
@@ -127,27 +128,6 @@ pub fn 原厂那一家(原厂那格: &str, 包名: &str) -> Option<String> {
     Some(拼路(原厂那格, &[包名]))
 }
 
-/// 出厂那一格里对应的那一份（原件 factFile 的字符串那一半）：给不出就是「原版那一格里没有这一份」。
-/// 「在不在盘上、是不是份文件」由第三层问（原件那两颗 isDir / isFile 也是它问的）。
-/// 递进来的包名是 定落点 算好的那一颗（原件也是拿 locate 算完的 L.id 交给 factFile），两种空白写法都不吃亏。
-pub fn 出厂落点(原厂那格: &str, 包名: &str, 相对: &str) -> Option<String> {
-    if 原厂那格.is_empty() {
-        return None;
-    }
-    let 包 = 包名.trim();
-    if !包名干净(包) {
-        return None;
-    }
-    let 段 = 拆段(相对)?;
-    let 家 = 拼路(原厂那格, &[包]);
-    let 借: Vec<&str> = 段.iter().map(|s| s.as_str()).collect();
-    let 落 = 拼路(&家, &借);
-    if !落.starts_with(&format!("{}\\", 家)) {
-        return None;
-    }
-    Some(落)
-}
-
 /// 「读」认的那一份：rel 没给、空串、只剩空白都按入口那份办（原件 read 第一行用的是 trim 判空）
 pub fn 读的那份(相对: Option<&str>) -> String {
     match 相对 {
@@ -157,54 +137,9 @@ pub fn 读的那份(相对: Option<&str>) -> String {
     }
 }
 
-/// 「恢复出厂」认的那一份：只挡 null 与空串，不 trim（原件 restore 写的是 String(rel || 'main.js')，
-/// 一个空格那种写法就按空格那串办 —— 与「读」那一颗不是一口径，照原样留着，别自己统一）
-pub fn 恢复的那份(相对: Option<&str>) -> String {
-    match 相对 {
-        None => 入口那份.to_string(),
-        Some("") => 入口那份.to_string(),
-        Some(x) => x.to_string(),
-    }
-}
-
 /// 「写」认不认这个 rel：空串与只剩空白都不认（原件 write 第一行）
 pub fn 写认这份(相对: &str) -> bool {
     !相对.trim().is_empty()
-}
-
-/// 可以打开来改的十种文本后缀（原件 TEXT_EXT，小写带点）：图片、随行 exe/dll/脚本不进清单
-pub const 可改后缀: [&str; 10] = [
-    ".js", ".mjs", ".cjs", ".json", ".md", ".txt", ".css", ".html", ".yaml", ".yml",
-];
-
-/// 一颗名字的后缀（Node 的 path.extname 那一手：取最后一个点往后，名字打头那个点不算 ——
-/// 所以 ".npmrc" 的后缀是空串，不会被当成 "npmrc" 那一档认下来），比的时候先折成小写
-pub fn 后缀(名: &str) -> String {
-    let 字: Vec<char> = 名.chars().collect();
-    let 起 = match 字.iter().rposition(|c| *c == '.') {
-        Some(i) if i > 0 => i,
-        _ => return String::new(),
-    };
-    字[起..].iter().collect::<String>().to_lowercase()
-}
-
-/// 这一份摆不摆进挑文件的下拉
-pub fn 可改(名: &str) -> bool {
-    可改后缀.contains(&后缀(名).as_str())
-}
-
-/// 排前那三份（原件 list 里的 head）：入口那份最前、插件清单跟着、配方再跟着
-pub const 排前那三份: [&str; 3] = ["main.js", "manifest.json", "recipe.json"];
-
-/// 挑文件的下拉那一张表排序（原件 list 尾巴那一手：先按排前那三份的名次，再按名字）
-pub fn 清单排序(列: &mut [String]) {
-    let 名次 = |f: &str| match 排前那三份.iter().position(|h| *h == f) {
-        Some(i) => i,
-        None => 排前那三份.len(),
-    };
-    /* 原件是 out.sort((a,b) => rank(a)-rank(b) || (a<b?-1:a>b?1:0))：
-       比较的是 UTF-16 码元，这里比 UTF-8 字节 —— 平面内的字两种顺序一致，中文名字也不受影响 */
-    列.sort_by(|a, b| 名次(a).cmp(&名次(b)).then_with(|| a.cmp(b)));
 }
 
 /// 一份文件走这条道的上限（原件 MAX_BYTES = 8 * 1024 * 1024）：几 MB 的词库底本走包导入那条道
@@ -223,14 +158,6 @@ pub fn 读太大那句(字节: u64) -> String {
 /// 写的那一颗嫌太大那一句（原件这一句省了「文件」两个字：「这份 NMB，太大不走这条路」）
 pub fn 写太大那句(字节: u64) -> String {
     format!("这份 {}MB，太大不走这条路", 折成兆(字节))
-}
-
-/// 「恢复出厂」取不到出厂原文那一句（原件 restore 里带包名那一句，页面上「没原文」的说明读的就是它）
-pub fn 原厂没这一家那句(包名: &str) -> String {
-    format!(
-        "原版那一格里没有这一家（{}）的这一份 · 导入那一下才会留底，留了底才恢复得了",
-        包名
-    )
 }
 
 /* ---------- 那几句拒回来的原话：措辞与 comp-files.cjs 一字不差（闸逐句对） ---------- */
@@ -255,13 +182,9 @@ pub const 读不到那句: &str = "读不到：";
 pub const 读不出文本那句: &str = "读不出文本：";
 /// writeFileSync 那一段抛的前缀（原件 write）
 pub const 写不进去那句: &str = "写不进去：";
-/// 走树那一步抛的前缀（原件 list）
-pub const 列不出来那句: &str = "列不出来：";
 /// 抹掉那一步抛的前缀（原件 remove，这一格还多带一格 removed）
 pub const 删不掉那句: &str = "删不掉：";
-/// 从出厂那一格拷回来抛的前缀（原件 restore）
-pub const 拷不回来那句: &str = "拷不回来：";
-/// 入口那一份（原件里三处写死的 'main.js'：read 与 restore 的默认、list 排最前那一颗）
+/// 入口那一份（原件 read 的默认与列清单排最前那一颗都用它）
 pub const 入口那份: &str = "main.js";
 
 #[cfg(test)]
@@ -324,8 +247,6 @@ mod 验判断 {
             assert!(拆段(脏).is_none(), "绝对写法居然拆出了段：{}", 脏);
             let 拒 = 定落点(活格, "demo-scene", Some(脏)).err().unwrap();
             assert!(拒.starts_with(路径不干净那句), "{} 回的不是那一句：{}", 脏, 拒);
-            /* 落点算都没算出来，谈不上落盘 */
-            assert!(出厂落点(原厂格, "demo-scene", 脏).is_none());
         }
         /* 名字中间带冒号（同一份文件里的备用数据流那种绕法）也不给进这一格 */
         assert!(拆段("那一 份.js:旁流").is_none());
@@ -343,8 +264,8 @@ mod 验判断 {
     }
 
     #[test]
-    fn 写这一颗不认空rel读与恢复按入口那份() {
-        /* 三种口径各照原件，不许被谁统一掉 */
+    fn 写这一颗不认空rel读那一份按入口() {
+        /* 两种口径各照原件，不许被谁统一掉 */
         assert!(!写认这份(""));
         assert!(!写认这份("   "));
         assert!(写认这份("main.js"));
@@ -352,9 +273,6 @@ mod 验判断 {
         assert_eq!(读的那份(Some("")), 入口那份);
         assert_eq!(读的那份(Some("   ")), 入口那份); /* 原件 read 判的是 trim() === '' */
         assert_eq!(读的那份(Some("recipe.json")), "recipe.json");
-        assert_eq!(恢复的那份(None), 入口那份);
-        assert_eq!(恢复的那份(Some("")), 入口那份);
-        assert_eq!(恢复的那份(Some(" ")), " "); /* 原件 restore 不 trim，一个空格就按那一串办 */
     }
 
     #[test]
@@ -371,9 +289,8 @@ mod 验判断 {
         assert!(!包名干净(".."));
         assert!(!包名干净("."));
         assert!(!包名干净(""));
-        /* 出厂那一格也一样：指到 .. 就取不到别家的底 */
+        /* 原厂那一格也一样：指到 .. 就取不到别家的底 */
         assert_eq!(原厂那一家(原厂格, ".."), None);
-        assert_eq!(出厂落点(原厂格, "..", "x.js"), None);
         assert_eq!(原厂那一家(原厂格, "demo-scene").unwrap(), "某处\\一棵树\\data\\plugins-factory\\demo-scene");
     }
 
@@ -392,61 +309,11 @@ mod 验判断 {
     }
 
     #[test]
-    fn 出厂落点取的是原厂那一格() {
-        assert_eq!(
-            出厂落点(原厂格, "demo-scene", "main.js").unwrap(),
-            "某处\\一棵树\\data\\plugins-factory\\demo-scene\\main.js"
-        );
-        assert_eq!(
-            出厂落点(原厂格, "demo-scene", "sub/那一份.json").unwrap(),
-            "某处\\一棵树\\data\\plugins-factory\\demo-scene\\sub\\那一份.json"
-        );
-        /* 原厂格没定下来（原件 dir('factory') 给空值时回 '\0' 那一手）：一份都取不到 */
-        assert_eq!(出厂落点("", "demo-scene", "main.js"), None);
+    fn 原厂那一格认的是干净包名() {
+        /* 原厂格没定下来（原件 dir('factory') 给空值时回 '\0' 那一手）：一家都取不到 */
         assert_eq!(原厂那一家("", "demo-scene"), None);
-        /* 段不干净也取不到，且不是「跑出去」而是「不给」 */
-        assert_eq!(出厂落点(原厂格, "demo-scene", "../demo-scene/main.js"), None);
-    }
-
-    #[test]
-    fn 十种可改后缀一种不落一种不许多() {
-        assert_eq!(可改后缀.len(), 10);
-        for 名 in [
-            "a.js", "a.mjs", "a.cjs", "a.json", "a.md", "a.txt", "a.css", "a.html", "a.yaml", "a.yml",
-        ] {
-            assert!(可改(名), "这份该摆进下拉：{}", 名);
-        }
-        /* 图片、随行 exe / dll / 脚本、没后缀 —— 编辑器只认文本（原件注释就是这么写的） */
-        for 名 in ["icon.svg", "photo.png", "那一份.exe", "那一份.dll", "跑一下.ps1", "没后缀", "a.JSX", "字.docx"] {
-            assert!(!可改(名), "这份不该摆进下拉：{}", 名);
-        }
-        /* 大小写换个写法照旧认（原件 extname(...).toLowerCase()） */
-        assert!(可改("那一份.MD"));
-        assert!(可改("那一份.YmL"));
-        /* 打头那个点不算后缀：'.npmrc' 的后缀是空串（Node 的 path.extname 就这一手） */
-        assert_eq!(后缀(".npmrc"), "");
-        assert_eq!(后缀("a.b.c"), ".c");
-        assert_eq!(后缀("没后缀"), "");
-    }
-
-    #[test]
-    fn 清单排序入口那份排最前() {
-        let mut 列: Vec<String> = [
-            "z.md", "recipe.json", "images/icon.svg", "manifest.json", "main.js", "a.js",
-        ]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-        /* 图片那种本来进不了这张表，这里只验排序那一手，故照收 */
-        清单排序(&mut 列);
-        assert_eq!(列[0], "main.js");
-        assert_eq!(列[1], "manifest.json");
-        assert_eq!(列[2], "recipe.json");
-        assert_eq!(&列[3..], &["a.js".to_string(), "images/icon.svg".to_string(), "z.md".to_string()]);
-        /* 子层里那份不认名次，跟着大流按名字排（原件 rank 给的是 head.length） */
-        let mut 又: Vec<String> = ["b.js", "a.js"].iter().map(|s| s.to_string()).collect();
-        清单排序(&mut 又);
-        assert_eq!(又, vec!["a.js".to_string(), "b.js".to_string()]);
+        assert_eq!(原厂那一家(原厂格, ""), None);
+        assert_eq!(原厂那一家(原厂格, "带 空格"), None);
     }
 
     #[test]
@@ -472,15 +339,8 @@ mod 验判断 {
         assert_eq!(读不到那句, "读不到：");
         assert_eq!(读不出文本那句, "读不出文本：");
         assert_eq!(写不进去那句, "写不进去：");
-        assert_eq!(列不出来那句, "列不出来：");
         assert_eq!(删不掉那句, "删不掉：");
-        assert_eq!(拷不回来那句, "拷不回来：");
         assert_eq!(入口那份, "main.js");
-        /* 恢复出厂取不到底那一句带包名，标点（全角括号 + 那个中点）照原件 */
-        assert_eq!(
-            原厂没这一家那句("demo-scene"),
-            "原版那一格里没有这一家（demo-scene）的这一份 · 导入那一下才会留底，留了底才恢复得了"
-        );
         /* 活的那一格没定下来：回的是那一句，不是「包名不干净」 */
         assert_eq!(定落点("", "demo-scene", Some("main.js")).err().unwrap(), 目录没定那句);
     }

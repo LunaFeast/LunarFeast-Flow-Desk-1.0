@@ -1,18 +1,21 @@
 /* ============================================================
-   gate-tauricomp46.mjs · 外46 三 批三：「改组件代码」那一摊七颗搬进壳
+   gate-tauricomp46.mjs · 外46 三 批三 + 插件分离第 2 批 2.5：插件那一格的文件读写搬进壳
    ------------------------------------------------------------
      node src/tools/probes/gate-tauricomp46.mjs
+   这一摊原来是七颗（comp:read / list / write / delete / restore / factory 加 code:catRename）。
+   页面上那颗「改代码」和那颗「恢复出厂」随第 2 批 2.5 撤了，配套的 comp:list / comp:restore /
+   comp:factory 三颗一起撤 —— 剩下读 / 写 / 抹掉一整格三颗，是推演定制写它做出来的组件要用的。
    钉的是这么几件事，一条都不许放宽：
-     一、这一批 7 颗（comp:read / list / write / delete / restore / factory 加 code:catRename）
-        每一颗在壳里都有对应的一颗命令，而且都上了 main.rs 的注册单 —— 没上单等于不存在；
-     二、桥里这 7 颗不再是「这颗通道还没搬进壳」：参表里有名、栏名与顺序对得上桥里递的实参个数，
-        参数名里一个下划线都没有；
+     一、剩下这一批 4 颗（comp:read / write / delete 加 code:catRename）每一颗在壳里都有对应的一颗命令，
+        而且都上了 main.rs 的注册单 —— 没上单等于不存在；撤掉那三颗之后两本里也不许多出没点名的通道；
+     二、桥里这 4 颗不再是「这颗通道还没搬进壳」：参表里有名、栏名与顺序对得上桥里递的实参个数，
+        参数名里一个下划线都没有；comp_list / comp_restore / comp_factory 这三颗名桥里一处不留；
      三、「哪一家允许读 / 改 / 删哪几份」那把尺（原件 src\pack\comp-files.cjs）整个住在纯判断那一格：
-        包名白名单、可改后缀那张表、8MB 那道顶、排前那三份、那十几句拒回来的原话 ——
-        字面值两头逐条对，动手那一层一个字都没重写（重写就是第二份真身，迟早漂移）；
+        包名白名单、8MB 那道顶、那几句拒回来的原话 —— 字面值两头逐条对，
+        动手那一层一个字都没重写（重写就是第二份真身，迟早漂移）；
      四、越界那道判断带测试，且钉住这五条硬样本：本家那几份放行、.. 拒、绝对路径拒、空串拒、改到别人家那一格拒；
-     五、comp:restore 与 comp:factory 取的是原厂那一格（<树根>\data\plugins-factory），
-        不是活的那一格 —— 从前那句旧话写的是 resources\app\data\plugins（外43 就搬走了），闸认代码不认旧话；
+     五、原厂那一格（<数据层>\plugins-factory）还归包导入那一步留底与 media 那一份兜底用，
+        comp 这一摊不再叫它 —— 那两把格都从同一颗数据层格出，不另起第二份口径；
      六、comp:write 被挡时回的形状与 Electron 那颗一致：只有 ok + msg 那两格，一句都不许多；
         成了那一支只有 ok + size；
      七、code:catRename 那三种写法、两张后缀表与两个深度、回执那七栏，两头同一份；
@@ -30,6 +33,7 @@ const 动 = rd('src/_tauri/src/tauri_bind/comp_cmds.rs');
 const 改 = rd('src/_tauri/src/tauri_bind/code_cmds.rs');
 const 纯 = rd('src/_tauri/src/core/comp_rule.rs');
 const 名 = rd('src/_tauri/src/core/cat_rename.rs');
+const 包 = rd('src/_tauri/src/tauri_bind/pack_cmds.rs');   /* 留一份原版那一步住这本（原厂那一格现在的用户） */
 const 那两格 = 纯 + '\n' + 名;
 const 那两层 = 动 + '\n' + 改;
 
@@ -38,11 +42,8 @@ const 换 = n => n.replace(/:/g, '_').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toL
 /* 每一颗：通道名、壳里的命令名、落在哪一本、页面上该递几栏（栏名照声明顺序） */
 const 批 = [
   ['comp:read', 'comp_read', 'comp_cmds', ['id', 'rel']],
-  ['comp:list', 'comp_list', 'comp_cmds', ['id']],
   ['comp:write', 'comp_write', 'comp_cmds', ['id', 'rel', 'text']],
   ['comp:delete', 'comp_delete', 'comp_cmds', ['id']],
-  ['comp:restore', 'comp_restore', 'comp_cmds', ['id', 'rel']],
-  ['comp:factory', 'comp_factory', 'comp_cmds', ['id']],
   ['code:catRename', 'code_cat_rename', 'code_cmds', ['from', 'to']],
 ];
 const 那本 = 名 => (名 === 'comp_cmds' ? 动 : 改);
@@ -110,9 +111,9 @@ function 算式(串) {
   return Function('"use strict";return (' + 净 + ')')();
 }
 
-台.题('一、这一批 7 颗：页面请的每一颗，壳里都有一座，且都上了注册单');
+台.题('一、剩下这一批 4 颗：页面请的每一颗，壳里都有一座，且都上了注册单');
 台.数('这一批点名的通道', 批.length + ' 颗 · ' + 批.map(x => x[0]).join(' '));
-台.判('点的就是 7 颗，不多不少', 批.length === 7);
+台.判('点的就是 4 颗，不多不少', 批.length === 4);
 for (const [通道, 名, 本] of 批) {
   台.判(通道 + ' 的通道名换算过去就是 ' + 名, 换(通道) === 名);
   台.判(通道 + ' 在壳里有对应的一颗（' + 本 + '.rs 里有 pub fn ' + 名 + '）',
@@ -120,8 +121,15 @@ for (const [通道, 名, 本] of 批) {
   台.判(通道 + ' → ' + 名 + ' 在 main.rs 的注册单上', 壳.includes(本 + '::' + 名));
 }
 台.数('这两本各有几颗命令标记', [动, 改].map(s => (s.match(/#\[[^\]]*tauri::command/g) || []).length).join(' + '));
-台.判('两本合起来正好 7 颗（多一颗就是往这两本里塞了没点名的通道）',
-  ([动, 改].reduce((a, s) => a + (s.match(/#\[[^\]]*tauri::command/g) || []).length, 0)) === 7);
+台.判('两本合起来正好 4 颗（多一颗就是往这两本里塞了没点名的通道）',
+  ([动, 改].reduce((a, s) => a + (s.match(/#\[[^\]]*tauri::command/g) || []).length, 0)) === 4);
+/* 撤掉的那三颗要一处不留：壳里、桥里、那把尺里、注册单上都搜得到名字才算真撤。
+   认的是代码不是话 —— 那几本顶上交代历史的注释里写得到这些名，不该算漏撤（去注 那颗就是为这个）。 */
+const 那四处 = [动, 桥, 尺, 壳].map(去注);
+for (const 颗 of ['comp_list', 'comp_restore', 'comp_factory', 'compList', 'compRestore', 'compFactory', 'comp:list', 'comp:restore', 'comp:factory']) {
+  台.判('撤掉的「' + 颗 + '」在壳、桥、那把尺、注册单四处一处不剩',
+    那四处.every(文 => !文.includes(颗)), 颗);
+}
 const 声明 = rd('src/_tauri/src/tauri_bind/mod.rs');
 for (const 本 of ['comp_cmds', 'code_cmds'])
   台.判('模块声明在这本上（tauri_bind/mod.rs 认 ' + 本 + '）', new RegExp('pub mod ' + 本 + ';').test(声明));
@@ -145,18 +153,17 @@ const 栏名们 = 批.flatMap(x => 表[x[1]] || []);
 台.判('参数名里一个下划线都没有（Tauri 那头按驼峰认名）', 栏名们.every(n => !n.includes('_')));
 台.判('参数名没有拿 app / 手 / 窗口 / 状态 / 事件 打头的（那种会被当成不是给页面的）',
   栏名们.every(n => !/^(app|手|窗口|状态|事件)/.test(n)));
-台.判('这一批七颗都不收 AppHandle（这一摊的七颗都不朝窗口喊话，刷新名单是页面自己那一手）',
+台.判('这一批四颗都不收 AppHandle（这一摊的四颗都不朝窗口喊话，刷新名单是页面自己那一手）',
   ![动, 改].some(s => /app: AppHandle/.test(s)));
-台.判('read 与 restore 那两颗收的是可空的 rel（桥里递的是 rel === undefined ? null : String(rel)）',
+台.判('read 那一颗收的是可空的 rel（桥里递的是 rel === undefined ? null : String(rel)）',
   /pub fn comp_read\(id: String, rel: Option<String>\)/.test(动)
-  && /pub fn comp_restore\(id: String, rel: Option<String>\)/.test(动)
   && 桥.includes("invoke('comp:read', String(id || ''), rel === undefined ? null : String(rel))"));
 台.判('write 那一颗三栏全收字串（桥里把 rel 与 text 都拼成了字串，空的那两栏也是字串）',
   /pub fn comp_write\(id: String, rel: String, text: String\)/.test(动));
 
 台.题('三、那把尺整个住在纯判断那一格，字面值两头逐条对（动手那一层一个字都没重写）');
 const 纯串 = Rust串(纯);
-const 那十几句 = [
+const 那几句 = [
   ['包名不干净那句', '包名不干净，不敢动手：'],
   ['目录没定那句', '插件目录还没定下来'],
   ['路径不干净那句', '路径不干净，不敢动手：'],
@@ -167,26 +174,16 @@ const 那十几句 = [
   ['读不到那句', '读不到：'],
   ['读不出文本那句', '读不出文本：'],
   ['写不进去那句', '写不进去：'],
-  ['列不出来那句', '列不出来：'],
   ['删不掉那句', '删不掉：'],
-  ['拷不回来那句', '拷不回来：'],
   ['入口那份', 'main.js'],
 ];
-for (const [颗, 期望] of 那十几句) {
+for (const [颗, 期望] of 那几句) {
   台.判('纯判断那一格里 ' + 颗 + ' = 「' + 期望 + '」', 纯串[颗] === 期望);
   台.判('那一句在主进程那把尺里逐字有（不是壳自己新造的话）', 尺.includes("'" + 期望 + "'") || 尺.includes(期望));
 }
-台.判('恢复出厂取不到底那一句两头同字（带包名的那一句：全角括号与那个中点都算）',
-  尺.includes("原版那一格里没有这一家（' + L.id + '）的这一份 · 导入那一下才会留底，留了底才恢复得了'")
-  && 纯.includes('原版那一格里没有这一家（{}）的这一份 · 导入那一下才会留底，留了底才恢复得了'));
-/* 后缀那张表 */
-const JS后缀 = [...切(尺, 'TEXT_EXT').matchAll(/'(\.[^']+)'/g)].map(m => m[1]);
-const Rust后缀m = 纯.match(/pub const 可改后缀: \[&str; (\d+)\] = \[([\s\S]*?)\];/);
-const Rust后缀 = Rust后缀m ? [...Rust后缀m[2].matchAll(/"([^"]+)"/g)].map(m => m[1]) : [];
-台.数('那张后缀表两头各有几项', JS后缀.length + ' / ' + Rust后缀.length);
-台.判('可改后缀那十种一种不落一种不许多、顺序也照原件', JSON.stringify(Rust后缀) === JSON.stringify(JS后缀));
-台.判('后缀那张表在纯判断那一格里（动手那一层没有第二份：那两层代码里搜不到 .mjs 那种字面）',
-  !那两层码.includes('.mjs') && !那两层码.includes('"yaml"'));
+/* 撤掉那三颗时一起没的那几句：两头都不许再留着（留一句就是那句拒话还有个主人） */
+for (const 句 of ['列不出来那句', '拷不回来那句', '原厂没这一家那句'])
+  台.判('撤掉的那颗留下的那句「' + 句 + '」两头一处不剩', !纯.includes(句) && !尺.includes(句.slice(0, 4)), 句);
 /* 上限 */
 const JS上限 = 算式((切(尺, 'MAX_BYTES').match(/=\s*([^;]+);/) || [])[1]);
 const Rust上限 = 算式((纯.match(/pub const 上限字节: u64 = ([^;]+);/) || [])[1]);
@@ -200,18 +197,14 @@ const ID式 = 切(尺, 'ID_OK');
 台.判('原件 ID_OK 认整串是 .. 的那种包名（这一手会折到上一格），壳里当场不认 —— 两处都钉住，别哪天默默改齐了',
   (() => { const 式 = ID式.match(/=\s*\/([\s\S]*)\/;/)[1]; return new RegExp(式).test('..') === true && new RegExp(式).test('a/b') === false; })()
   && 纯.includes('名 != "." && 名 != ".."'));
-/* 排前那三份 */
-const JS头 = [...那一颗('list').matchAll(/const head = \[([^\]]+)\]/g)].flatMap(m => [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]));
-const Rust头m = 纯.match(/pub const 排前那三份: \[&str; (\d+)\] = \[([^\]]+)\];/);
-const Rust头 = Rust头m ? [...Rust头m[2].matchAll(/"([^"]+)"/g)].map(m => m[1]) : [];
-台.数('排前那三份两头各是什么', JS头.join(' ') + ' | ' + Rust头.join(' '));
-台.判('入口那份排最前、插件清单跟着、配方再跟着，两头同一串同一序', JSON.stringify(Rust头) === JSON.stringify(JS头));
 /* 动手那一层只叫判断，不自己判 */
-台.判('越界那道闸（定落点）在动手那一层被叫到五处（读 / 列 / 写 / 删 / 恢复各一处）',
-  (动.match(/定落点\(&活的那一格\(\)/g) || []).length === 5);
-台.判('出厂那一格那道闸（出厂落点 / 原厂那一家）也在纯判断那一格里，动手层只叫它',
-  /pub fn 出厂落点\(/.test(纯) && /pub fn 原厂那一家\(/.test(纯)
-  && 动.includes('出厂落点(&原厂') && 动.includes('原厂那一家(&原厂'));
+台.判('越界那道闸（定落点）在动手那一层被叫到三处（读 / 写 / 删各一处）',
+  (动.match(/定落点\(&活的那一格\(\)/g) || []).length === 3);
+台.判('原厂那一格那道判断（原厂那一家）还在纯判断那一格里，但 comp 这一摊不再叫它 —— 认它的是包导入留底和 media 那一份兜底',
+  /pub fn 原厂那一家\(/.test(纯) && !动.includes('原厂那一家')
+  && rd('src/_tauri/src/tauri_bind/pack_cmds.rs').includes('原厂那一家(&原厂'));
+台.判('从前那张「可改后缀」表与「排前那三份」跟着列文件那颗一起撤了（两头一处不剩）',
+  !纯.includes('可改后缀') && !纯.includes('排前那三份') && !尺.includes('TEXT_EXT'));
 台.判('动手那两层里没重写那几句拒话（一句都不许多，全靠 core 的常量）',
   !那两层.includes('不敢动手') && !那两层.includes('跑出了这一格') && !那两层.includes('太大不走这条路'));
 台.判('动手那两层里没自己写包名白名单与后缀表（正则字符类与 .mjs 那种都不许有）',
@@ -232,50 +225,46 @@ function 一颗测试(名) {
   && 一颗测试('本家那几份放行').includes('Ok(一个落点'));
 台.判('钉住了「.. 回退写法拒」（拆不出段 + 回的是那句原话）',
   一颗测试('回退写法一律拒').includes('拆段(脏).is_none()') && 一颗测试('回退写法一律拒').includes('路径不干净那句'));
-台.判('钉住了「绝对路径拒」（盘符 / 冒号 / UNC / 斜杠打头当场拒，连出厂那一格都领不到）',
-  一颗测试('绝对写法当场拒').includes('拆段(脏).is_none()')
-  && 一颗测试('绝对写法当场拒').includes('出厂落点(原厂格') && 一颗测试('绝对写法当场拒').includes('is_none()'));
-台.判('钉住了「空串拒」（空串拆不出段；写那一颗不认空 rel；读与恢复各按入口那份）',
+台.判('钉住了「绝对路径拒」（盘符 / 冒号 / UNC / 斜杠打头当场拒）',
+  一颗测试('绝对写法当场拒').includes('拆段(脏).is_none()') && 一颗测试('绝对写法当场拒').includes('路径不干净那句'));
+台.判('钉住了「空串拒」（空串拆不出段；写那一颗不认空 rel；读那一份按入口）',
   一颗测试('空串与只剩空白拆不出段').includes('拆段("")') && 一颗测试('空串与只剩空白拆不出段').includes('None')
-  && 一颗测试('写这一颗不认空rel读与恢复按入口那份').includes('!写认这份("")'));
+  && 一颗测试('写这一颗不认空rel读那一份按入口').includes('!写认这份("")'));
 台.判('钉住了「改到别人家那一格拒」（借 .. 爬过去、点名别家、包名整串是 . 或 ..）',
   一颗测试('改到别人家那一格拒').includes('"../别的家/main.js"')
   && 一颗测试('改到别人家那一格拒').includes('定落点(活格, ".."') && 一颗测试('改到别人家那一格拒').includes('包名不干净那句'));
 台.判('纯判断那两格各带一颗 mod 验判断', (那两格.match(/mod 验判断/g) || []).length === 2);
 const 新增测试 = [纯, 名].reduce((a, s) => a + ((s.match(/#\[cfg\(test\)\][\s\S]*$/) || [''])[0].match(/#\[test\]/g) || []).length, 0);
-台.数('这一批纯判断那一格新增几颗测试', 新增测试 + ' 颗');
-台.判('新增不少于二十六颗', 新增测试 >= 26);
+台.数('这一批纯判断那一格有几颗测试', 新增测试 + ' 颗');
+/* 撤掉列 / 恢复 / 有没有原版那三颗时，它们自己的两道测试（十种可改后缀、清单排序）一起没了：
+   原来是 26 颗，现在 24 颗。往下钉住 24 —— 少一道就是有人把还在用的判断连测试一起删了。 */
+台.判('不少于二十四颗（撤掉那三颗带走两道，其余一颗不许少）', 新增测试 >= 24);
 const 全测试 = fs.readdirSync(path.join(ROOT, 'src', '_tauri', 'src', 'core')).filter(f => f.endsWith('.rs'))
   .map(f => fs.readFileSync(path.join(ROOT, 'src', '_tauri', 'src', 'core', f), 'utf8'))
   .join('').match(/#\[test\]/g) || [];
 台.数('全仓纯判断那一格的测试总数', 全测试.length + ' 颗');
 台.判('总数比上一批的 81 颗多了（不许多加不减，也不许把旧的撤掉）', 全测试.length > 81);
 
-台.题('五、comp:restore 与 comp:factory 取的是原厂那一格（<数据层>\\plugins-factory）');
+台.题('五、原厂那一格（<数据层>\\plugins-factory）现在只剩两处认它：包导入留底和 media 那一份兜底');
 台.判('壳里那两把格：活的那一格 = 数据层\\plugins、原厂那一格 = 数据层\\plugins-factory',
   /fn 活的那一格\(\) -> String \{[\s\S]*?\.join\("plugins"\)/.test(动) && /fn 原厂那一格\(\) -> String \{[\s\S]*?\.join\("plugins-factory"\)/.test(动));
 台.判('数据层那一格与 data_cmds 共用一颗（不另起第二份口径，备份那一摊也用它）',
   动.includes('crate::tauri_bind::data_cmds::数据层格()')
   && /pub\(crate\) fn 数据层格\(\) -> PathBuf \{ crate::tree_root\(\)\.join\("data"\) \}/.test(rd('src/_tauri/src/tauri_bind/data_cmds.rs')));
-台.判('那一颗 restore 取的是出厂那一格（原件走 factFile，壳走 出厂落点），不是活的那一格',
-  那一颗('restore').includes('factFile(L.id, segsOf(r))') && 动.includes('出厂落点(&原厂, &落.包名, &要恢复)'));
-台.判('那一颗 factory 报的是出厂那一格里这一家（原件 factoryFiles / hasFactory 都从原厂那一格取，壳里是 原厂那一家）',
-  那一颗('factoryFiles').includes('FACT()') && 那一颗('hasFactory').includes('FACT()')
-  && 动.includes('原厂那一家(&原厂, &id)'));
-台.判('原厂这一格不写 resources 那层那句旧话（壳里两本与纯判断那一格都不认那一层）',
-  !那两层码.includes('resources') && !纯.includes('resources'));
-/* 壳里那一颗 restore 的原文（这一颗自己的那一段，到顶格的 } 为止）—— 只看它自己用没用链接 */
-const 壳恢复颗 = (() => {
-  const 起 = 动.indexOf('pub fn comp_restore');
-  const 止 = 动.indexOf('\n}', 起);
-  return 起 < 0 ? '' : 动.slice(起, 止 < 0 ? 动.length : 止);
-})();
-台.判('恢复出厂是真复制一份（不硬链接：链接会让活文件与底变成同一份），壳用的也是复制那颗',
-  那一颗('restore').includes('copyFile(from, L.file)') && 切(尺, 'copyFile').includes('fs.copyFileSync')
-  && !切(尺, 'copyFile').includes('link') && 动.includes('fs::copy(&取, &落.落)') && !/symlink|hard_link|rename/.test(壳恢复颗));
-台.判('restore 的 rel 口径与 read 不同一处都不许被统一：read 判 trim、restore 只挡空串',
-  那一颗('read').includes("String(rel).trim() === ''") && 那一颗('restore').includes("String(rel || 'main.js')")
-  && 纯.includes('Some(x) if x.trim().is_empty()') && 纯.includes('Some("") => 入口那份.to_string()'));
+/* 读 / 写 / 删这三颗只碰活的那一格：原厂那一格这一本里只剩"它在哪儿"那一颗，没人叫它 */
+台.判('comp 这一摊不再从原厂那一格取任何东西（那一格的名字只出现在"这一格在哪"那一句里）',
+  !动.includes('出厂落点') && !动.includes('原厂那一家(')
+  && (动.match(/原厂那一格\(\)/g) || []).length === 1, 'comp_cmds.rs 里 原厂那一格() 被叫的次数');
+台.判('认它的是包导入留底那一步（活的抄进原厂）与 media 那一份兜底',
+  包.includes('原厂那一家(&原厂') && 包.includes('留一份原版') && rd('src/_tauri/src/tauri_bind/media_cmds.rs').includes('原厂那一格'));
+台.判('原厂这一格不写 resources 那层那句旧话（壳里三本与纯判断那一格都不认那一层）',
+  !那两层码.includes('resources') && !纯.includes('resources') && !包.includes('resources'));
+台.判('留底是真复制一份（不硬链接：链接会让活文件与底变成同一份），那一把尺用的也是复制那颗',
+  切(尺, 'copyFile').includes('fs.copyFileSync') && !切(尺, 'copyFile').includes('link')
+  && 包.includes('fs::copy(') && !/symlink|hard_link/.test(包));
+台.判('read 的 rel 口径与 write 不同一处都不许被统一：read 判 trim、write 空串与只剩空白都不认',
+  那一颗('read').includes("String(rel).trim() === ''") && 那一颗('write').includes("String(rel).trim() === ''")
+  && 纯.includes('Some(x) if x.trim().is_empty()') && 纯.includes('!相对.trim().is_empty()'));
 
 台.题('六、comp:write 被挡时回的形状与 Electron 那颗一致');
 const 主写 = 那一颗('write');
@@ -284,9 +273,9 @@ const 主写 = 那一颗('write');
 台.判('那一头成了那一支是 ok + size 两格', 主写.includes('return { ok:true, size:buf.length }'));
 const 壳写 = 壳字段(动, '一个回执');
 台.数('壳里那一格有哪几栏', 壳写.join(' '));
-台.判('壳里的 一个回执 就三栏 ok / size / msg，且 size 与 msg 都是「没有就不出现」',
+台.判('壳里的 一个回执 就三栏 ok / size / msg，且 size 与 msg 都是「没有就不出现」（三颗合起来这样的栏有九处）',
   JSON.stringify(壳写) === JSON.stringify(['ok', 'size', 'msg'])
-  && (动.match(/skip_serializing_if = "Option::is_none"/g) || []).length >= 12);
+  && (动.match(/skip_serializing_if = "Option::is_none"/g) || []).length === 9);
 台.判('comp_write 那一颗只回这一格，不借别本的形状',
   /pub fn comp_write\(id: String, rel: String, text: String\) -> 一个回执/.test(动));
 台.判('空 rel 那一句两头同字：得说要写这一格里的哪份文件',
@@ -298,28 +287,23 @@ const 壳写 = 壳字段(动, '一个回执');
   && 纯.includes('format!("这份文件 {}MB，太大不走这条路"') && 纯.includes('format!("这份 {}MB，太大不走这条路"'));
 台.判('写下去报的 size 是字节数（buf.length 那一手），不是字符数',
   动.includes('let 节 = text.as_bytes();') && 动.includes('一个回执::成了(节.len() as u64)'));
-台.判('壳里那三颗（write / delete / restore）成了之后不再叫任何重扫（两本 Rust 里都没有 refreshLists 这一手），这一层顶上也不挂「已知缺口」那一段',
+台.判('壳里那两颗（write / delete）成了之后不再叫任何重扫（两本 Rust 里都没有 refreshLists 这一手），这一层顶上也不挂「已知缺口」那一段',
   !/refreshLists/.test(动 + 改) && !动.includes('已知缺口'));
-台.判('那一层任何一步都不抛给页面（六颗返回的类型都不是 Result）',
+台.判('那一层任何一步都不抛给页面（三颗返回的类型都不是 Result）',
   !/pub fn comp_\w+\([^)]*\) -> Result/.test(动));
 
-台.题('七、六颗各自的回执字段，对着 comp-files.cjs 的 return 一格一格数');
+台.题('七、三颗各自的回执字段，对着 comp-files.cjs 的 return 一格一格数');
 const 主读支 = [...那一颗('read').matchAll(/return (\{[^}]*\})/g)].map(m => 取键(m[1]));
 台.数('那把尺 read 回的三种款式', 主读支.map(x => x.join('+')).join(' / '));
 const 壳读 = 壳字段(动, '一份原文');
 台.数('壳里 一份原文 有哪几栏', 壳读.join(' '));
-台.判('读那六栏同一串（ok text size mtime factory msg path，多一格少一格都算发明形状）',
-  JSON.stringify(壳读) === JSON.stringify(['ok', 'text', 'size', 'mtime', 'factory', 'msg', 'path']));
+/* 从前这里还有一栏 factory（这一份有没有出厂原文），吃它的是「恢复出厂」那颗按钮 —— 那颗撤了，这一栏跟着没 */
+台.判('读那六栏同一串（ok text size mtime msg path，多一格少一格都算发明形状）',
+  JSON.stringify(壳读) === JSON.stringify(['ok', 'text', 'size', 'mtime', 'msg', 'path']));
 台.判('读不成那一支不多带 text / size / mtime（全是有才有）',
   主读支.some(x => JSON.stringify(x) === JSON.stringify(['ok', 'msg']))
   && 主读支.some(x => JSON.stringify(x) === JSON.stringify(['ok', 'msg', 'path'])));
-台.判('成了那一支的五格两头同串', 那一颗('read').includes('{ ok:true, text, size:st.size, mtime:Math.floor(st.mtimeMs)')
-  && 动.includes('factory: Some(有底)'));
-const 主列支 = [...那一颗('list').matchAll(/return (\{[^}]*\})/g)].map(m => 取键(m[1]));
-台.判('列那两格（ok files msg）同串，且这一格不在时回的是 ok:true + 空的 files',
-  JSON.stringify([...new Set(主列支.flatMap(x => x))].sort()) === JSON.stringify(['files', 'msg', 'ok'])
-  && 那一颗('list').includes("if(!isDir(L.file)) return { ok:true, files:[] }")
-  && 动.includes('files: Some(vec![])'));
+台.判('成了那一支的四格两头同串', 那一颗('read').includes('{ ok:true, text, size:st.size, mtime:Math.floor(st.mtimeMs)'));
 const 主删支 = [...那一颗('remove').matchAll(/return (\{[^}]*\})/g)].map(m => 取键(m[1]));
 台.数('那把尺 remove 回的几种款式', 主删支.map(x => x.join('+')).join(' / '));
 台.判('抹掉一整格那两格（ok removed msg）同串，且「本来就不在」那一支不带 removed',
@@ -330,9 +314,6 @@ const 主删支 = [...那一颗('remove').matchAll(/return (\{[^}]*\})/g)].map(m
 台.判('抹着的两样东西：那一格目录与那颗同名 zip，两处都算进 removed（写法也照原件：<包名>/ 与 <包名>.zip）',
   那一颗('remove').includes("gone.push(L.id + '/')") && 那一颗('remove').includes("gone.push(L.id + '.zip')")
   && 动.includes('format!("{}/", 落.包名)') && 动.includes('format!("{}.zip", 落.包名)'));
-台.判('comp:factory 那一颗永远 ok:true 且带 files + has 两栏（不套 try，读不出来也回空的那一串）',
-  JSON.stringify(壳字段(动, '一份原厂')) === JSON.stringify(['ok', 'files', 'has'])
-  && 动.includes('pub fn comp_factory'));
 台.判('comp:read 出错是回一格给页面（不成 / 没有 那两支），不是把错抛到页面上',
   /pub fn comp_read\(id: String, rel: Option<String>\) -> 一份原文/.test(动)
   && 动.includes('一份原文::不成(那句)') && !/pub fn comp_read[\s\S]{0,80}-> Result/.test(动));
@@ -369,7 +350,7 @@ const 壳改 = 壳字段(改, '一份改名');
 台.判('源码格那一颗与 sys:rebuild 共用（认 FD_SRC，没指看树里那一格），不另起第二份认法',
   /pub\(crate\) fn 源码格\(树: &str\) -> Option<String>/.test(rd('src/_tauri/src/tauri_bind/sys_cmds.rs'))
   && 改码.includes('源码格(&树)') && !改码.includes('FD_SRC'));
-台.判('那两处扫的落点里，本家那一格与「改代码」那六颗同一颗（同一把尺同一处格）',
+台.判('那两处扫的落点里，本家那一格与 comp 这一摊三颗同一颗（同一把尺同一处格）',
   改.includes('活的那一格()') && 动.includes('pub(crate) fn 活的那一格()'));
 
 台.题('九、纯判断那两格不动磁盘、不认识壳');

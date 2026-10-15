@@ -1669,7 +1669,7 @@ async function genApply(id){
   }
   const r = await PackLoader.reload(id, { new:true });
   return r && r.ok ? { ok:true, msg:'已经按这一份重载，桌上那张卡跟着重画了' }
-    : { ok:true, msg:'文件存好了，可这一家没加载起来：' + ((r && r.msg) || '') + '（改坏了就再存一次，或点「恢复出厂」）' };
+    : { ok:true, msg:'文件存好了，可这一家没加载起来：' + ((r && r.msg) || '') + '（改坏了就再存一次，或者把自己手里那一份包重装）' };
 }
 /* 删除确认：带词库的问一句连不连，顺便报还有几家在用 */
 function genDeleteAsk(R, after){

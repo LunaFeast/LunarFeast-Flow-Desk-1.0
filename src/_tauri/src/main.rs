@@ -164,16 +164,14 @@ fn main() {
             tauri_bind::web_cmds::web_title,
             tauri_bind::img_cmds::img_peek,
             tauri_bind::img_cmds::img_open,
-            /* 批三 · 「改组件代码」那一摊七颗（6 + 1）：comp:read / list / write / delete / restore / factory
-               与 code:catRename。判断（哪一家能读改删哪几份、出厂那一格的对应位置、改名那三种写法）
-               在 fd_core::comp_rule 与 fd_core::cat_rename，动手在 tauri_bind::comp_cmds 与 code_cmds。
-               两把格照 main.cjs 49~53：活的那一格 = <树根>\data\plugins，原厂那一格 = <树根>\data\plugins-factory。 */
+            /* 批三 · 插件那一格的文件三颗 + 词库改名那颗：comp:read / write / delete 与 code:catRename。
+               从前这一摊是七颗（六颗 comp 的 + catRename），页面上那颗「改代码」与那颗「恢复出厂」
+               随插件分离第 2 批 2.5 撤了，配套的 comp:list / comp:restore / comp:factory 一起撤。
+               判断（哪一家能读改删哪几份、改名那三种写法）在 fd_core::comp_rule 与 fd_core::cat_rename，
+               动手在 tauri_bind::comp_cmds 与 code_cmds。活的那一格 = <树根>\data\plugins。 */
             tauri_bind::comp_cmds::comp_read,
-            tauri_bind::comp_cmds::comp_list,
             tauri_bind::comp_cmds::comp_write,
             tauri_bind::comp_cmds::comp_delete,
-            tauri_bind::comp_cmds::comp_restore,
-            tauri_bind::comp_cmds::comp_factory,
             tauri_bind::code_cmds::code_cat_rename,
             /* 批四 · 音乐遥控器那一摊的九颗（6 + 3）：media:state / hold / release / cmd / players / pin
                与 vol:get / set / mute。判断（值域、认哪些命令串、挑哪一家会话、那几句报给页面的话）

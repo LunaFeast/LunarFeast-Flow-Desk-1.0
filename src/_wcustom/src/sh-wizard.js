@@ -240,14 +240,13 @@ class GenSheet{
      左边那一栏留给界面结构和判断逻辑，不用再为这点事滚到底。 */
   outPane(out){
     out.appendChild(this.outCard());
-    const slot = h('span', { class:'wnw-row' });
+    /* 「恢复出厂」那颗钮随插件分离第 2 批撤了（原版那一格 data\plugins-factory\ 也跟着撤）：
+       要换回导入时那一份，把自己手里那一份包重装一次。 */
     out.appendChild(h('div', { class:'wnw-row', style:'align-items:center' }, [
       h('div', { class:'wnw-seg' }, [['prev', '预览'], ['src', '源码']].map(([k, nm]) => h('button', {
         class:(this.tab || 'prev') === k ? 'on' : '', onclick:() => { this.tab = k; this.draw(); } }, nm))),
-      h('span', { style:'flex:1' }),
-      slot
+      h('span', { style:'flex:1' })
     ]));
-    this.factSlot(slot);
     if(this.tab === 'src'){ out.appendChild(this.srcBox()); return; }
     /* 真视图挂在预览那一格，改一条就能点生成试，用的就是手里这张草稿 */
     const box = h('div', {});
@@ -274,31 +273,6 @@ class GenSheet{
       { toast('源码里得有 id、ui、out 三个字段'); return; }
     this.R = R;
     this.loadBank(R.bank).then(() => this.draw());
-  }
-  /* 「恢复出厂」这个按钮摆不摆，得先问一句原版那一格（data\plugins-factory\）有没有这一家的底：
-     新建那张还没落盘、没有底 —— 这种情况这一格就空着，不摆一个点了是空话的按钮。
-     外43 起导入那一下会顺手留底，所以正常导入进来的第三方包也摆得出这颗钮。 */
-  async factSlot(slot){
-    const id = this.editing;
-    if(!id || typeof PackCode === 'undefined' || !PackCode.can()) return;
-    let fact = [];
-    try{ fact = await PackCode.factory(id); }catch(e){}
-    if(!slot.isConnected || !fact.length) return;
-    slot.appendChild(this.btn('恢复出厂', () => this.restore(),
-      '恢复初始版本'));
-  }
-  /* 换回原版：点名那三份从 data\plugins-factory\<id>\ 拷回来，紧接着重载这一家。
-     自己后来往这一格里加的文件不在点名这几份里，那一次拷回不动它们。 */
-  async restore(){
-    const id = this.editing;
-    if(!id) return;
-    if(!confirm('要把「' + this.R.name + '」这一格里的代码和配方换成原版那一格里的版本（导入那一下留的底）· 你现在这份就被覆盖了，继续吗？')) return;
-    const r = await PackCode.restorePack(id, ['main.js', 'recipe.json', 'manifest.json']);
-    if(!r || !r.ok){ toast('没换成原版：' + ((r && r.msg) || '主进程没回话')); return; }
-    toast(r.msg || '已经换成导入时那一份原版');
-    /* 关掉这张草稿，再按重载回来的那一版重新开一张：手上这份已经被覆盖了，留着只会让人以为还没存 */
-    H().dlg.close();
-    if(Gen.get(id)) GenWizard.open(id);
   }
 
   baseCard(){
@@ -371,7 +345,7 @@ class GenSheet{
     const list = (GenPending.items || []).filter(x => x.kind === kind);
     const box = h('div', { class:'wnw-col', style:'gap:10px;min-width:min(820px,94vw);max-height:min(66vh,620px);overflow:auto' });
     if(!list.length) box.appendChild(h('div', { class:'wnw-hint' },
-      '清单还空着。导入插件、导入功能包、改代码存为插件的时候，要是那份组件用到了库里没有的类型，这里就会有。'));
+      '清单还空着。导入插件、导入功能包、把一张配方存成组件的时候，要是那份组件用到了库里没有的类型，这里就会有。'));
     for(const it of list){
       const has = libHas(it.kind, it.name);
       /* 三种状态各说一句实话：能不能跑、导没导进来，是两件事 */
