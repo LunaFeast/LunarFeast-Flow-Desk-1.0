@@ -67,6 +67,6 @@ PackCtx.parts({
   }
 });
 PackLoader.use({ host:'fd', base:DATA_PRE + 'plugins/' });
-/* 「改代码」存完只重载这一家（PackLoader.reload）：桌面整层重画一遍，
+/* 推演定制存完一个新组件只重载这一家（PackLoader.reload）：桌面整层重画一遍，
    这张卡重新挂的是刚落盘的那份新代码，别的卡各自从自己的明文文件重读，数据不动。 */
 Bus.on('pack:reload', () => { try{ Shell.render(); }catch(e){ console.warn('重载这一家之后重画桌面没走通：' + ((e && e.message) || e)); } });

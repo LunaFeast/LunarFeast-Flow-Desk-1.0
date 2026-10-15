@@ -138,13 +138,13 @@ const PackLoader = {
     PACK_META[id] = meta;
     return meta;
   },
-  /* ---------- 改代码存完：只把这一家重新 import 一遍 ----------
+  /* ---------- 推演定制存完一个新组件：只把这一家重新 import 一遍 ----------
      加载器的 URL 尾巴换成当前时刻，页面手里那份模块缓存跟着作废，拿到的就是刚落盘的文件；
-     注册那一格被新的定义顶掉（出厂基线 TOOL_DEFS / WIDGET_BASE 不吃第二次，还是第一份）。
+     注册那一格被新的定义顶掉（出厂基线 TOOL_DEFS 不吃第二次，还是第一份）。
      重 import 之后广播一句 pack:reload，宿主在那儿重画自己那部分（卡片、停靠面板都重新挂一遍），
-     所以「改代码 · 保存」之后不用刷新整页，也不用重新构建 Flow-Desk 页面。
+     所以向导存一次之后不用刷新整页，也不用重新生成 Flow-Desk 页面。
      opt.new = 这一家刚新建 / 刚导入、表里还没有插件清单：先补插件清单再 import。
-     没在名单里加载的（opt.new 没给）不动它 —— 免得把用户刚卸掉的包偷偷请回来。 */
+     没在名单里加载的（opt.new 没给）不动它 —— 免得把用户刚卸载掉的包偷偷请回来。 */
   async reload(id, opt){
     id = String(id);
     const o = opt || {};
@@ -244,7 +244,7 @@ const PackLoader = {
     return h('div', { class:'fd-empty' }, [
       h('div', {}, '「' + nm + '」' + 哪一句),
       h('div', { style:'font-size:.86em;opacity:.75;margin-top:4px' }, msg),
-      h('div', { style:'font-size:.86em;opacity:.6;margin-top:4px' }, '点这个卡上的「改代码」改它自己那份，存完刷新这一页就重试')
+      h('div', { style:'font-size:.86em;opacity:.6;margin-top:4px' }, '要撤它就去插件管理那一屏卸载，或者用自己手里那一份包重装')
     ]);
   },
   /* ---------- 崩溃记录与"同一家连崩三次就别再叫它"（外46 批十一）----------
@@ -350,7 +350,7 @@ const PackLoader = {
           const body = arguments && arguments[0];
           if(body && typeof body.appendChild === 'function'){
             body.innerHTML = '';
-            body.appendChild(self.errCard(id, '这一家连续出错，可以在设置里关掉，或点上面的「改代码」改它那份', '这个插件连续出错，已经不再叫它'));
+            body.appendChild(self.errCard(id, '这一家连续出错，可以在插件管理那一屏卸载它', '这个插件连续出错，已经不再叫它'));
           }
           return { unmount(){} };
         }

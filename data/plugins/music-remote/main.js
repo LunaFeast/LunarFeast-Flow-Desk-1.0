@@ -659,9 +659,9 @@ const Music = {
     const vis = () => { if(!document.hidden) this.ask(); };
     document.addEventListener('visibilitychange', vis);
     this.sub(() => document.removeEventListener('visibilitychange', vis));
-    /* 「改代码」存一次 = 重新 import 出一份全新的模块，它那份 booted 是全新的、够不着旧的那一份。
+    /* 重载一次（推演定制存完那一下、重装那一下）= 重新 import 出一份全新的模块，它那份 booted 是全新的、够不着旧的那一份。
        旧的那一份没人喊停就永远留在页面上：每 4 秒替播放器追问一次位置，问回来的还照样掰基准 ——
-       改几回代码，追问的份数越攒越多，进度被硬掰回去的次数也越多（外15 第 1 条：越放越窜）。
+       重载几回，追问的份数越攒越多，进度被硬掰回去的次数也越多（外15 第 1 条：越放越窜）。
        宿主重载某一家之前会广播一句 pack:reload 并带上那一家的编号，这一家自己听见就把自己
        那几条订阅当场退掉。走的是 ctx.bus，不往 window 上挂东西。 */
     const rid = K && K.pack ? K.pack.id : '';

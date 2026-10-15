@@ -4,11 +4,8 @@
    任何文档和功能都注册成一种 View，标签、分屏、停靠面板共用同一套渲染入口
    ============================================================ */
 const Tools = new Map();
-/* 出厂那一份另存一格：改代码重载会重新注册、顶掉 Tools 里的，改代码的预置要看的是前者 */
-const TOOL_BASE = new Map();
 function registerTool(t){
   Tools.set(t.id, t);
-  if(!TOOL_BASE.has(t.id)) TOOL_BASE.set(t.id, t);
   Views.reg(t.id, { name:t.name, icon:t.icon || 'log', desc:t.desc,
     title:() => t.name,
     render:(host, ref, ctx) => {
@@ -17,12 +14,6 @@ function registerTool(t){
       return t.mount(host, ctx || {});
     }
   });
-}
-function toolBase(id){ return TOOL_BASE.get(id); }
-/* 改代码要找的「内置那一份」：WNW 这边只有功能，左侧那几块面板（章节、设定…）不是组件 */
-function baseDef(id){
-  const t = TOOL_BASE.get(id);
-  return t ? { id:id, via:'tool', def:t } : null;
 }
 
 /* ---------- 视图注册表：标签 / 分屏 / 停靠面板都从这里出 ---------- */
@@ -229,10 +220,11 @@ const Desk = {
   /* 中栏底线：模式切换那个按钮（约 230）+ 书名（约 70）+ 正文一列（约 280）+ 批注栏（232）+ 缝和边距 */
   MID_MIN:680,
   /* 丙-1 停靠两栏：一栏窄到这儿就不许再摆两栏。300 是照现成尺寸加出来的，不是拍的 ——
-     一张停靠卡最宽的标题条（插件带的 改代码 + 设置 + 改词库 + 常驻 + 折叠 + ×）按 w0-skin
+     一张停靠卡最宽的标题条（插件带的 设置 + 改词库 + 常驻 + 折叠 + ×）按 w0-skin
      那几条量：停靠栏基准字 13px，.b/.x 都是 .8571em（≈11.1px），「常驻」两字 22 + padding 14 + 描边 2 ≈ 38，
-     「改代码 / 改词库」三字 ≈ 52，两个折叠叉 ≈ 22×2，图标 16，八道 gap 48，条子左右 padding 20 → 约 292。
-     栏宽低于这条就把这几个切掉一截，所以两栏各自都不许低于 300。 */
+     「改词库」三字 ≈ 52，「设置」两字 ≈ 38，两个折叠叉 ≈ 22×2，图标 16，gap 加条子左右 padding ≈ 48 → 约 234。
+     栏宽低于这条就把这几个切掉一截。原来这笔账里还算着「改代码」那颗（≈52，合计约 292），
+     插件分离第 2 批把那颗撤了；底线仍留在 300，这一趟不跟着往下调。 */
   DOCK_COL_MIN:300,
   /* dockCols 摆在全局这一层，和 leftW / rightW 同一个口径：几栏是这人怎么摆界面上的偏好，不跟着书走；
      哪一张卡在哪一栏（it.col）才跟着书，记在下面那份 dock 数组里 */
@@ -889,12 +881,12 @@ const Desk = {
     /* wnw-nosel：停靠这一整张（标题栏 + 里面那些列表、数字格）是我们自己画的界面，
        按住一拖就选出一片蓝底只会碍事；里头真打字的那几样由皮肤那句 .wnw-nosel 放回去 */
     const card = h('div', { class:'wnw-dock-card wnw-nosel' + (it.open ? '' : ' shut') });
-    /* 改代码 / 设置 / 改词库这几个钉在标题条上，和「常驻」并排：Flow-Desk 卡上有这几个，停靠不能缺。
-       设置这个只给插件清单点了 settings 的那几家（插件的设置回归插件自己，不在程序设置里另开一页）。 */
+    /* 设置 / 改词库这几个钉在标题条上，和「常驻」并排：Flow-Desk 卡上有这几个，停靠不能缺。
+       设置这个只给插件清单点了 settings 的那几家（插件的设置回归插件自己，不在程序设置里另开一页）。
+       「改代码」那颗跟着插件分离第 2 批撤了：装着的插件不在程序里开改代码的口。 */
     const which = (typeof toolBankWhich === 'function') ? toolBankWhich(it.kind) : '';
     const tdef = (typeof Tools !== 'undefined') ? Tools.get(it.kind) : null;
     const edits = [
-      (typeof codeEntry === 'function') ? codeEntry(it.kind, 'b', '改代码') : null,
       (PACK_META[it.kind] && PACK_META[it.kind].settings && tdef && typeof tdef.settings === 'function')
         ? h('button', { class:'b', title:'设置 · ' + (it.label || tdef.name || it.kind),
             onclick:() => tdef.settings(PackLoader.ctxOf(it.kind) || PackCtx.make(it.kind)) }, '设置') : null,

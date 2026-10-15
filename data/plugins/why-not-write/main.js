@@ -9,7 +9,7 @@ export default {
   mount(body, ctx){
     /* 内核不在这一家就不该被加载起来（加载器注内核失败会当场把这一家立成错误卡），
        所以这里不再摆一张"开不了"的卡 —— 空壳形态下界面上没有"缺失"这一说。 */
-    /* 内核那份容器在这一家 mount 里留一份引用：卡片被卸掉、被"改代码"重载的时候，
+    /* 内核那份容器在这一家 mount 里留一份引用：卡片被卸载、被重载的时候，
        封面还开着也要有人把内核拆干净（监听和落盘那条通道归它）。 */
     let host = null;
     const stop = () => { if(host && ctx.wnw.running){ ctx.wnw.stop(); host = null; } };
@@ -24,7 +24,7 @@ export default {
     return { unmount(){
       stop();
       /* 封面里挂着的正是这一家递进去的那副骨架时，跟着一起收 ——
-         不然卡已经不认它了，屏幕上还留着一格开着的空封面（改代码重载、卸载功能都会走到这条） */
+         不然卡已经不认它了，屏幕上还留着一格开着的空封面（重载、卸载都会走到这条） */
       const body = ctx.cover && ctx.cover.body && ctx.cover.body();
       if(body && body.querySelector('.wnw-root')) ctx.cover.close();
       if(face && face.unmount) face.unmount();

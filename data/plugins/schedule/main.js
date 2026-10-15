@@ -227,7 +227,7 @@ function calHeader(s, C){
   const h = C.el, ic = C.icon;
   const c = SCH.cursor;
   /* 「今天」「＋」跟着日期导航排在左边一组。
-     搁在右边正好压在卡片右上角那一排按钮（改代码 / 设置 / 换强调色 …）底下，
+     搁在右边正好压在卡片右上角那一排按钮（设置 / 换强调色 …）底下，
      鼠标一悬停就被它们盖住，点着的是上面那一排。 */
   return h('div', { class:'fd-row', style:'flex:0 0 auto;gap:2px' }, [
     h('button', { class:'fd-tool', 'data-nodrag':'1', title:'上一月', html:ic('prev'), onclick:() => { c.setMonth(c.getMonth() - 1); C.bus.emit('schedule'); } }),

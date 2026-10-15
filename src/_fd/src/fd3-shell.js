@@ -1497,17 +1497,13 @@ function fdAsk(q, yes){
 
 /* ---------- 组件注册表 ---------- */
 const Registry = new Map();
-/* 出厂那一份另存一格：改代码重载会重新注册、顶掉 Registry 里的，改代码的预置要看的是前者 */
-const WIDGET_BASE = new Map();
 function registerWidget(def){
   /* def: {id,name,noTitle,minW,minH,def:{w,h},expand(ctx),mount(el,ctx)} */
   if(!def.id || !def.mount) throw new Error('widget 定义不完整：' + def.id);
   def.def = def.def || { w:5, h:3 };
   def.minW = def.minW || 1; def.minH = def.minH || 1;
   Registry.set(def.id, def);
-  if(!WIDGET_BASE.has(def.id)) WIDGET_BASE.set(def.id, def);
 }
-function widgetBase(id){ return WIDGET_BASE.get(id); }
 
 const Bus = {
   map:{},
@@ -1797,14 +1793,12 @@ const Shell = {
       h('button', { class:'fd-tool', title:'换强调色', html:icoMarkup('slot'), onclick:() => { it.slot = ((it.slot || 0) + 1) % 5; this.save(); this.render(); } })
     ];
     if(def.expand && !expanded) tools.push(h('button', { class:'fd-tool', title:'放大', html:icoMarkup('expand'), onclick:() => def.expand(this.ctxFor(it)) }));
-    /* 每张卡顶上这几个编辑钮：改代码（铅笔图标，配方开「推演组件定制」，内置直接改这一家自己的 main.js）、
-       设置（齿轮图标，只有插件清单点了 settings 的那几家才有 —— 插件的设置回归插件自己，不再垫在「设置 · 组件」那一页）、
-       词库（牌堆图标，改这个功能用的词库）。WNW 停靠标题条上同名几个，两端对等。 */
+    /* 每张卡顶上这几个钮：设置（齿轮图标，只有插件清单点了 settings 的那几家才有 —— 插件的设置回归插件自己，
+       不再垫在「设置 · 组件」那一页）、词库（牌堆图标，改这个功能用的词库）。WNW 停靠标题条上同名几个，两端对等。
+       「改代码」那枚铅笔跟着插件分离第 2 批撤了：装着的插件不在程序里开改代码的口。 */
     const cid = String(def.id).startsWith('tool-') ? def.id.slice(5) : def.id;
     const setter = def.settings || (typeof TOOL_DEFS !== 'undefined' && TOOL_DEFS.get(cid) && TOOL_DEFS.get(cid).settings);
     const edits = [
-      (typeof codeEntry === 'function') ? codeEntry(cid, 'fd-tool', 'pencil', '改代码 · 「' + def.name + '」',
-        () => { if(typeof GenWizard !== 'undefined') GenWizard.onSaved = () => this.render(); }) : null,
       (PACK_META[cid] && PACK_META[cid].settings && typeof setter === 'function')
         ? h('button', { class:'fd-tool', title:'设置 · 「' + def.name + '」', html:icoMarkup('gear'),
             onclick:() => setter(PackLoader.ctxOf(cid) || PackCtx.make(cid)) }) : null,

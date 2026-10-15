@@ -238,7 +238,7 @@ function packNames(TREE){
   }
   return out;
 }
-const SH_CN = { 'sh-bank-ui':'词库界面', 'sh-banks':'词库', 'sh-code':'改代码', 'sh-color':'配色',
+const SH_CN = { 'sh-bank-ui':'词库界面', 'sh-banks':'词库', 'sh-code':'插件文件读写', 'sh-color':'配色',
   'sh-doc':'文档', 'sh-font':'字体', 'sh-gen':'生成器', 'sh-ico':'图标', 'sh-icode':'代码编辑器',
   'sh-log':'生成记录', 'sh-packs':'插件装卸', 'sh-look':'外观这一层', 'sh-mus':'播放进度那一条桥',
   'sh-ttml':'歌词时间尺（ttml / lrc）',
@@ -290,7 +290,7 @@ function pageOf(rel, fn, dyn, packs){
   if(f === 'src/pack/sfx.cs') return { prog:P_SFX, page:'首装那个窗口' };
   /* 这一份是「改代码 / 恢复出厂 / 完全删除」那几步在主进程里的落盘手：
      它回的那几句全摆在卡片上那几个钮点开的面板上，界面上看得见，所以给它一页名字 */
-  if(f === 'src/pack/comp-files.cjs') return { prog:P_FD, page:'功能卡 · 改代码与恢复出厂的提示' };
+  if(f === 'src/pack/comp-files.cjs') return { prog:P_FD, page:'功能卡 · 插件那一格文件读写的提示' };
   let m = f.match(/^src\/_fd\/template\.html$/); if(m) return { prog:P_FD, page:'页面骨架' };
   m = f.match(/^src\/_wnw\/template\.html$/); if(m) return { prog:P_WNW, page:'页面骨架' };
   m = f.match(/^src\/_build\/rp-base\.html$/); if(m) return { prog:P_RP, page:'页面骨架' };

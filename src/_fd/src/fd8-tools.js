@@ -102,8 +102,8 @@ async function pickBank(which){
 
 /* ---------- registerTool：工具定义 → 桌面组件 ---------- */
 const TOOL_W = 760;      /* 工具铺开时的设计宽度，卡片比它小就整体缩 */
-/* 开机第一份定义单独留一格：改代码之后重载会把 Registry 里那一格顶掉，这一格不动 ——
-   设置入口找兜底要看的是第一份，不是重载之后的那一份 */
+/* 开机第一份定义单独留一格：重载（推演定制存完那一下）会把 Registry 里那一格顶掉，这一格不动 ——
+   卡片标题条上那颗设置找兜底要看的是第一份，不是重载之后的那一份 */
 const TOOL_DEFS = new Map();
 /* 词库读到了给 null，读崩了才把错本身递下去 —— 光 catch 会把成功那一头的返回值也当成错 */
 function registerTool(def){
@@ -116,13 +116,6 @@ function registerTool(def){
     expand(){ openToolFull(def, ready); },
     async mount(body, ctx){ return mountToolCard(def, body, ready, ctx && ctx.expanded); }
   });
-}
-function toolBase(id){ return TOOL_DEFS.get(id); }
-/* 改代码要找的「内置那一份」：先认功能（_shared 那三件和配方），再认桌面组件（便签、日程这些） */
-function baseDef(id){
-  if(TOOL_DEFS.has(id)) return { id:id, via:'tool', def:TOOL_DEFS.get(id) };
-  const w = WIDGET_BASE.get(id);
-  return w ? { id:id, via:'widget', def:w } : null;
 }
 async function mountToolCard(def, body, ready, expanded){
   const box = h('div', { class:'sh-box' });

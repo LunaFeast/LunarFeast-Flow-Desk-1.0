@@ -150,7 +150,11 @@ await 等(30);
 台.判('停了之后三颗都不再进插件那一段（一次都不加）', 跑('账.length') === 3, JSON.stringify(跑('账')));
 const 位树 = 跑('(function(){ const b = { innerHTML:"", kids:[], appendChild(c){ this.kids.push(c); return c; } }; 丁.mount(b); return b.kids[0] || null; })()');
 const 位 = 拼(位树);
-台.判('位子不空着：那张卡上写的是能在设置里处理的那一句', String(位).includes('可以在设置里关掉') && String(位).includes('连续出错'), String(位));
+/* 「改代码」那颗入口和设置里的开关都随插件分离第 2 批撤了：这张卡只能指向现在还办得成的那两件事 ——
+   去插件管理那一屏卸载它，或者用自己手里那一份包重装。 */
+台.判('位子不空着：那张卡写的是现在办得成的那两件事（卸载它 · 重装那一份包）',
+  String(位).includes('插件管理') && String(位).includes('卸载') && String(位).includes('重装') && String(位).includes('连续出错')
+  && !String(位).includes('改代码') && !String(位).includes('在设置里'), String(位));
 
 /* ---------- 六、异步不回话那一档 ---------- */
 台.题('六、异步那颗几秒没回话：记一笔"没回话"，回来就把定时器撤了');

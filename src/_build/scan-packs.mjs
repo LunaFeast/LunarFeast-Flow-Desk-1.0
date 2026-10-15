@@ -40,7 +40,7 @@ export const FORBID = {
   Cover: 'ctx.cover', SetupTabs: '插件自己的齿轮对话框 settings(ctx)',
   Bus: 'ctx.bus', State: 'ctx.state', Banks: 'ctx.banks 或 ctx.bank(which)', mkBank: 'ctx.bank(which)',
   Theme: 'ctx.theme', Palette: 'ctx.theme', Shell: 'ctx.rerenderDesktop() / ctx.rerenderClock()',
-  Registry: '不开放（注册表归宿主）', WIDGET_BASE: '不开放', Tools: '不开放', TOOL_BASE: '不开放',
+  Registry: '不开放（注册表归宿主）', Tools: '不开放',
   TOOL_DEFS: '不开放', Views: '不开放', Desk: '不开放', Work: '不开放',
   Packs: 'ctx.pack', PackOps: '不开放（装卸归宿主）', PackLoader: '不开放', PackCtx: '不开放',
   PACK_META: 'ctx.pack', FD_PACKS: 'ctx.pack',

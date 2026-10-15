@@ -446,12 +446,12 @@ window.FD_APP = {
      当场删不干净。插件那一格（代码与名单）、日志、搬家账本留着。 */
   async dataWipe(){ try{ return await ipcRenderer.invoke('data:wipe'); }
     catch(e){ return { ok:false, msg:'清理没排下去：' + ((e && e.message) || e) }; } },
-  /* ---------- 插件自己那一格里的文件：「改代码」直接读写它（存了就是新的） ----------
+  /* ---------- 插件自己那一格里的文件：推演定制写它做出来的组件走这几颗（存了就是新的） ----------
      rel 是这一格里的相对路径（默认 main.js）；包名和路径由主进程那把尺查过才落地，
-     跑出 data\plugins\ 的一律写不进去。恢复出厂取的是 data\plugins-factory\ 里同名的那一份（导入那一下留的原版）。 */
+     跑出 data\plugins\ 的一律写不进去。页面上那颗「改代码」和它的编辑对话框已经撤了（插件分离第 2 批）。 */
   async compRead(id, rel){ try{ return await ipcRenderer.invoke('comp:read', String(id || ''), rel === undefined ? null : String(rel)); }
     catch(e){ return { ok:false, msg:'插件文件读不到：' + ((e && e.message) || e) }; } },
-  /* 这一格里有哪几份文本文件（「改代码」顶上那个挑文件的下拉吃这个） */
+  /* 这一格里有哪几份文本文件（从前是「改代码」顶上那个挑文件的下拉吃这一颗） */
   async compList(id){ try{ return await ipcRenderer.invoke('comp:list', String(id || '')); }
     catch(e){ return { ok:false, msg:'这一格里列不出文件：' + ((e && e.message) || e) }; } },
   async compWrite(id, rel, text){ try{ return await ipcRenderer.invoke('comp:write', String(id || ''), String(rel || ''), String(text == null ? '' : text)); }
