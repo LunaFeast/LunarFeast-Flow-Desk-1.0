@@ -118,26 +118,48 @@ pub fn 命令递的是名字吗(串: &str) -> bool {
    读不动那张表（改 JSON 改坏了）不算错到底：当成空表，命令照旧落回系统那一路，不把命令吞掉 ——
    与「明文写不过去就落回系统 Try*」是同一条规矩。表在编译期就跟着这一格烧进产物（include_str!），运行时不碰磁盘。 */
 
-/// 表里一格的形状（键名照那份 JSON 原文；递法那一张表就是 JSON 里「命令正文」那一格）
-#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+/// 表里一格的形状（键名照那份 JSON 原文；递法 = 「命令正文」那一格，话 = 「话」那一格里那四句）
+#[derive(Debug, Clone, PartialEq, Default, serde::Deserialize)]
 pub struct 一份适配 {
     pub 名: String,
     pub 认身份含: String,
     pub 命令件名: String,
     #[serde(rename = "命令正文")] pub 递法: std::collections::BTreeMap<String, String>,
+    /* 下面这几栏是「装监听插件」那一路要的（第二片搬过来的）：全给上默认值，
+       表里漏写一栏不会整张表读不动 —— 读不动就等于没有近路，命令照旧落回系统那一路。 */
+    #[serde(rename = "报件名", default)] pub 报件名: String,
+    #[serde(rename = "家件名", default)] pub 家件名: String,
+    #[serde(rename = "注册格", default)] pub 注册格: String,
+    #[serde(rename = "插件格名", default)] pub 插件格名: String,
+    #[serde(rename = "插件件名", default)] pub 插件件名: String,
+    #[serde(rename = "随行键名", default)] pub 随行键名: String,
+    #[serde(rename = "咬住错码", default)] pub 咬住错码: i32,
+    #[serde(rename = "盘上摆法", default)] pub 盘上摆法: Vec<String>,
+    #[serde(rename = "用户格摆法", default)] pub 用户格摆法: Vec<String>,
+    #[serde(rename = "话", default)] pub 话: std::collections::BTreeMap<String, String>,
+}
+
+#[derive(serde::Deserialize)]
+struct 一张表 {
+    #[serde(default)]
+    适配: Vec<一份适配>,
+    #[serde(default)]
+    话: std::collections::BTreeMap<String, String>,
+}
+
+fn 读原文() -> 一张表 {
+    serde_json::from_str::<一张表>(include_str!("media/players.json"))
+        .unwrap_or_else(|_| 一张表 { 适配: Vec::new(), 话: std::collections::BTreeMap::new() })
 }
 
 /// 整张表读一遍（只解字符串，不碰磁盘）
 pub fn 读表() -> Vec<一份适配> {
-    #[derive(serde::Deserialize)]
-    struct 一张表 {
-        #[serde(default)]
-        适配: Vec<一份适配>,
-    }
-    match serde_json::from_str::<一张表>(include_str!("media/players.json")) {
-        Ok(表) => 表.适配,
-        Err(_) => Vec::new(),
-    }
+    读原文().适配
+}
+
+/// 表级那几句话（表里两家以上、又认不出当前是哪一家时才用得上；现在只有一颗「没找着」）
+pub fn 表级话(哪一句: &str) -> Option<String> {
+    读原文().话.get(哪一句).cloned()
 }
 
 /// 会话的发布者是哪一家：名字里含「认身份含」那一段就算（大小写不论，各家写法不一）；
@@ -420,8 +442,8 @@ pub const 小抄格名: &str = "players";
 
 /// 钉住那一份的文件名
 pub const 钉住件名: &str = "pin.txt";
-/// MusicBee 桥插件报「现在在放哪个文件」那一份
-pub const 桥报件名: &str = "musicbee.txt";
+/* MusicBee 桥插件报「现在在放哪个文件」那一份的文件名不再写在这儿（第 4 批 4.5 第二片）：
+   那一名住在表里那一栏「报件名」，各家各一份，读的时候照表挨家问。 */
 /// 音乐文件夹那一份
 pub const 音乐目录件名: &str = "musicdir.txt";
 /// 音乐遥控器那几个开关那一份（一行一个 key=value）
@@ -535,47 +557,27 @@ pub fn 开关并入(表: &[(String, String)], 名: &str, 值: &str) -> String {
     出.iter().map(|(名在, 值在)| format!("{}={}", 名在, 值在)).collect::<Vec<String>>().join("\n")
 }
 
-/* ================= 十、给 MusicBee 装监听插件那一颗（media:bridge） ================= */
+/* ================= 十、装监听插件那一路（media:bridge）—— 全按那张明文表办事 ================= */
 
 /// 这一家没装回去那一句（原件 1369 行，一字不改）
 pub const 桥没装那句: &str = "音乐遥控器这一家还没加载，插件文件就在插件路径里。去「插件管理」按「加载」再按这个按钮。";
-/// 包里没带那一颗插件文件那一句（原件 1372 行）
-pub const 桥没件那句: &str = "音乐遥控器的包里没带插件文件（插件清单 assets.bridge 那个），这一份包不完整";
-/// 插件清单里那一栏住在哪一格里（原件 packAssetOf 读的是 manifest.assets）
+/// 包里没带那一颗插件文件那一句（原件 1372 行；那一栏叫什么由表里「随行键名」说，所以这句不再点名 assets.bridge）
+pub const 桥没件那句: &str = "音乐遥控器的包里没带插件文件（插件清单里点名的那一栏），这一份包不完整";
+/// 插件清单里那一栏住在哪一格里（原件 packAssetOf 读的是 manifest.assets —— 这一格各家共用，不是哪一家特有的）
 pub const 随行格里: &str = "assets";
-/// 同一格里点这一颗文件的那一栏名（原件 call 的是 landAsset('music-remote', 'bridge')）
-pub const 桥件键名: &str = "bridge";
-/// 这一家底下的插件文件夹（原件 path.join(dir, 'Plugins')）
-pub const 插件格名: &str = "Plugins";
-/// 落过去那一份文件的名 —— 原件把这一串钉死在 1378 行，不跟着插件清单里那一栏的名字走
-pub const 桥插件件名: &str = "mb_FlowDesk.dll";
-/// 认「这一格真是 MusicBee」用的那一颗可执行文件（只认到目录不算，免得撞见同名文件夹 —— 原件 1363 行）
-pub const 认家件名: &str = "MusicBee.exe";
-/// 注册表 App Paths 那一格（原件 reg.exe query 的那一串，/ve 读的是这一格的默认值；HKLM 那一头由第三层定）
-pub const 认家注册格: &str = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\MusicBee.exe";
-/// 每一格盘上那六种摆法（原件 mbGuesses 对每个盘根做的那六条 path.join，序也照它）
-pub const 那六摆: [&str; 6] = [
-    "MusicBee",
-    "Programs\\MusicBee",
-    "Program Files\\MusicBee",
-    "Program Files (x86)\\MusicBee",
-    "Apps\\MusicBee",
-    "Software\\MusicBee",
-];
-/// 用户数据那一格底下另两种摆法（原件最后补的那两条，顺序是 Programs\MusicBee 在前）
-pub const 另两摆: [&str; 2] = ["Programs\\MusicBee", "MusicBee"];
 
-/// 找 MusicBee 装在哪的候选清单（原件 mbGuesses 1319~1329 行）：先每格盘 × 那六摆，
-/// 再补用户数据那一格底下那两摆。哪一格真在盘上由第三层挨个问（认的是「这一格里有 MusicBee.exe」）。
+/// 找装在哪的候选清单（原件 mbGuesses 1319~1329 行那一条道，改成照表走）：先每一格盘 × 表里「盘上摆法」那几摆，
+/// 再补用户数据那一格底下「用户格摆法」那几摆，顺序照表里那一摞。
+/// 哪一格真在盘上由第三层挨个问（认的是「这一格里有表上那颗可执行文件」，只认到目录不算）；
 /// 盘根那一串也是第三层问出来的（原件 mbDriveRoots：A 到 Z 一格一格看存不存在）。
-pub fn 桥候选(盘根: &[String], 用户数据格: &str) -> Vec<String> {
+pub fn 候选(适: &一份适配, 盘根: &[String], 用户数据格: &str) -> Vec<String> {
     let mut 出 = Vec::new();
     for 根 in 盘根 {
-        for 摆 in 那六摆 {
+        for 摆 in &适.盘上摆法 {
             出.push(并一格(根, 摆));
         }
     }
-    for 摆 in 另两摆 {
+    for 摆 in &适.用户格摆法 {
         出.push(并一格(用户数据格, 摆));
     }
     出
@@ -590,16 +592,16 @@ fn 并一格(格: &str, 下: &str) -> String {
     format!("{}\\{}", 头, 下)
 }
 
-/// 盘上那句错码里「文件被别的程序咬住了」是哪一条（Windows 的 ERROR_SHARING_VIOLATION）。
-/// media:bridge 那一颗拿它认「MusicBee 正开着，dll 拷不过去」，成了 busy:true 那一支。
-pub const 咬住错码: i32 = 32;
+/* 盘上那句错码里「文件被别的程序咬住了」是哪一条，不再写死在这儿（第 4 批 4.5 第二片）：
+   各家给各家（Windows 的 ERROR_SHARING_VIOLATION 是 32，今天表里那一格就填 32），
+   media:bridge 那一颗拿它认「那一家正开着，dll 拷不过去」，成了 busy:true 那一支。 */
 
 /// 拆插件清单里 assets.<键> 那一栏（原件 packAssetOf + packRaw 头顶那三道闸）：
 /// 读不出 JSON、没 assets 那一格、那一栏不是字串都算没有；反斜杠当斜杠、去头里的斜杠，
 /// 某一段是空 / '.' / '..' 也算没有（不许它顺着往上爬出包外）。
 /// 比原件多挡一道：带冒号的那一段也挡 —— 原件走 Node 的 path.join（那种段就当普通名字贴上去了），
 /// Rust 的 join 碰到「X:」这种段会把整条路换掉，不挡就等于让它爬出包外。
-/// 回的是「相对包里那一格」的那一串，在不在盘上由第三层问。
+/// 回的是「相对包里那一格」的那一串，在不在盘上由第三层问。键名从表里那一栏「随行键名」来。
 pub fn 随行件名(清单正文: &str, 键: &str) -> Option<String> {
     let 文: serde_json::Value = serde_json::from_str(清单正文).ok()?;
     let 指 = 文.get(随行格里)?.get(键)?.as_str()?;
@@ -615,39 +617,30 @@ pub fn 算千字节(字节: u64) -> u64 {
     ((字节 as f64) / 1024.0).round() as u64
 }
 
-/// 注册表那一格读回来的那串算不算这一家：原件那句正则 /REG_SZ\s+(\S+musicbee\.exe)/i 认的就是
-/// 「结尾是 musicbee.exe」，大小写无所谓（它拿整串去 path.dirname，这一头同样只认结尾再取上一格）
-pub fn 那是这一家吗(串: &str) -> bool {
-    串.to_ascii_lowercase().ends_with(&认家件名.to_ascii_lowercase())
+/// 注册表那一格读回来的那串算不算这一家：认的是「结尾是表上那颗可执行文件」，大小写无所谓
+/// （原件那句正则 /REG_SZ\s+(\S+musicbee\.exe)/i 认的就是这一条；它拿整串去 path.dirname，
+/// 这一头同样只认结尾再取上一格）。表上那栏是空的算谁都不认 —— 不许把所有播放器都认下来。
+pub fn 那是这一家(适: &一份适配, 串: &str) -> bool {
+    !适.家件名.is_empty() && 串.to_ascii_lowercase().ends_with(&适.家件名.to_lowercase())
 }
 
-/// 「没检测到 MusicBee 装在哪」那一句（原件 1376 行：把源那一串与手动装的写法带上）
-pub fn 桥没找着句(从: &str) -> String {
-    format!(
-        "没检测到 MusicBee 装在哪。手动装一次也行：把 {} 拷到 <MusicBee>\\{}\\ 里（同名就覆盖），再开 MusicBee。",
-        从, 插件格名
-    )
+/// 把一句样子里的 {键} 换成参数表里那一项（占位写在哪由表说了算，代码不排次序）。
+/// 只给上面那颗「一句」用，不外开 —— 外面要说话就叫 一句，别绕过表直接拼。
+fn 填话(样: &str, 参数: &[(&str, &str)]) -> String {
+    let mut 出 = String::new();
+    出.push_str(样);
+    for (键, 值) in 参数 {
+        出 = 出.replace(format!("{{{}}}", 键).as_str(), 值);
+    }
+    出
 }
 
-/// 「被它咬住了」那一句（原件 1381 行，带目标位置）
-pub fn 桥咬住句(到: &str) -> String {
-    format!(
-        "MusicBee 正开着，插件文件被它咬住了。先在托盘里右键 MusicBee 选「退出」（不是关窗口），再点一次这个按钮。目标位置：{}",
-        到
-    )
-}
-
-/// 装成了那一句（原件 1392 行：目标 + 千字节 + 报上来的那一行明文住在哪一格）
-pub fn 桥装好句(到: &str, 千字节: u64) -> String {
-    format!(
-        "插件已装到 {}（{}KB）· 开 MusicBee 就能监到，正在放的歌会把文件路径写进 {}\\{}",
-        到, 千字节, 小抄格名, 桥报件名
-    )
-}
-
-/// 拷不过去那一句（原件 1394 行：盘上那句原话 + 源 + 目标那一格，手动补的路径给到那一格为止）
-pub fn 桥拷不动句(那句: &str, 从: &str, 插件格: &str) -> String {
-    format!("拷不过去（{}）：手动把 {} 拷到 {} 里", 那句, 从, 插件格)
+/// 表里那一家的某一句（「没找着」/「咬住」/「装好」/「拷不动」）；
+/// 每句里用到哪几个占位由表里那句话决定，代码这边只管把现场那几样一并递过去：
+/// 从（包里那一份的原位置）、到（落点）、千字节、那句（盘上原话）、插件格、小抄格、报件。
+/// 表里没这一句就回 None —— 调用方自己决定怎么说，不许在这儿补第二份话。
+pub fn 一句(适: &一份适配, 哪一句: &str, 参数: &[(&str, &str)]) -> Option<String> {
+    适.话.get(哪一句).map(|样| 填话(样, 参数))
 }
 
 /* ================= 测试：只验判断，不起壳、不碰系统 ================= */
@@ -992,7 +985,6 @@ mod 验判断 {
         assert_eq!(程序数据格, "Flow-Desk");
         assert_eq!(小抄格名, "players");
         assert_eq!(钉住件名, "pin.txt");
-        assert_eq!(桥报件名, "musicbee.txt");
         assert_eq!(音乐目录件名, "musicdir.txt");
         assert_eq!(开关件名, "music.txt");
     }
@@ -1024,7 +1016,7 @@ mod 验判断 {
         assert!(认这一家(&[], "MusicBee.exe").is_none());
         let 一张 = 一份适配 {
             名: "空认得上".into(), 认身份含: String::new(), 命令件名: "x.txt".into(),
-            递法: Default::default(),
+            递法: Default::default(), ..Default::default()
         };
         assert!(认这一家(&[一张.clone()], "任何东西").is_none(), "那一格这段是空的，不许把所有播放器都认下来");
     }
@@ -1037,8 +1029,8 @@ mod 验判断 {
         甲法.insert("默认".to_string(), "{命令}".to_string());
         let 乙法 = std::collections::BTreeMap::new();
         let 表 = vec![
-            一份适配 { 名: "甲".into(), 认身份含: "jia".into(), 命令件名: "jia-cmd.txt".into(), 递法: 甲法 },
-            一份适配 { 名: "乙".into(), 认身份含: "yi".into(), 命令件名: "yi.txt".into(), 递法: 乙法 },
+            一份适配 { 名: "甲".into(), 认身份含: "jia".into(), 命令件名: "jia-cmd.txt".into(), 递法: 甲法, ..Default::default() },
+            一份适配 { 名: "乙".into(), 认身份含: "yi".into(), 命令件名: "yi.txt".into(), 递法: 乙法, ..Default::default() },
         ];
         let 甲 = 认这一家(&表, "Jia.Player").unwrap();
         let 乙 = 认这一家(&表, "某某 yi 播放器").unwrap();
@@ -1176,33 +1168,42 @@ mod 验判断 {
     /* ---- 九、给 MusicBee 装监听插件（批五） ---- */
 
     #[test]
-    fn 桥那两句原话与那几个名照原件() {
+    fn 桥那两句原话与表级那一句() {
         assert_eq!(桥没装那句, "音乐遥控器这一家还没加载，插件文件就在插件路径里。去「插件管理」按「加载」再按这个按钮。");
-        assert_eq!(桥没件那句, "音乐遥控器的包里没带插件文件（插件清单 assets.bridge 那个），这一份包不完整");
+        assert_eq!(桥没件那句, "音乐遥控器的包里没带插件文件（插件清单里点名的那一栏），这一份包不完整");
         assert_eq!(随行格里, "assets");
-        assert_eq!(桥件键名, "bridge");
-        assert_eq!(插件格名, "Plugins");
-        assert_eq!(桥插件件名, "mb_FlowDesk.dll");
-        assert_eq!(认家件名, "MusicBee.exe");
-        assert!(认家注册格.ends_with("App Paths\\MusicBee.exe"));
-        assert!(认家注册格.starts_with("SOFTWARE\\"));
+        /* 表级那一句只在"表里两家以上、又认不出当前是哪一家"时用得上，所以它不点任何一家的名 */
+        assert!(表级话("没找着").unwrap().contains("需要装监听插件的播放器"));
+        assert!(表级话("没这一句").is_none(), "表里没有就是没有，不许在代码里补第二份话");
     }
 
     #[test]
-    fn 那六摆与另两摆一名不落() {
-        assert_eq!(
-            那六摆,
-            ["MusicBee", "Programs\\MusicBee", "Program Files\\MusicBee",
-             "Program Files (x86)\\MusicBee", "Apps\\MusicBee", "Software\\MusicBee"]
-        );
-        assert_eq!(另两摆, ["Programs\\MusicBee", "MusicBee"]);
+    fn 表里那一格各栏一名不落() {
+        /* 这些名与件名不再是代码里的常量，是表里的一栏（第 4 批 4.5 第二片）—— 逐栏照原件核一遍 */
+        let 表 = 读表();
+        assert_eq!(表.len(), 1, "此刻表里就一家");
+        let 蜂 = &表[0];
+        assert_eq!(蜂.名, "MusicBee");
+        assert_eq!(蜂.认身份含, "musicbee");
+        assert_eq!(蜂.命令件名, "musicbee-cmd.txt");
+        assert_eq!(蜂.报件名, "musicbee.txt");
+        assert_eq!(蜂.家件名, "MusicBee.exe");
+        assert_eq!(蜂.插件格名, "Plugins");
+        assert_eq!(蜂.插件件名, "mb_FlowDesk.dll");
+        assert_eq!(蜂.随行键名, "bridge");
+        assert_eq!(蜂.咬住错码, 32);
+        assert!(蜂.注册格.starts_with("SOFTWARE\\"), "注册格那一条得从 SOFTWARE 起");
+        assert!(蜂.注册格.ends_with("App Paths\\MusicBee.exe"), "注册格那一条得落在 App Paths 底下那一格");
+        assert_eq!(蜂.盘上摆法.len(), 6, "每一格盘上那六种摆法（原件 mbGuesses 那六条 path.join）");
+        assert_eq!(蜂.用户格摆法, ["Programs\\MusicBee", "MusicBee"], "用户数据那一格底下那两摆，顺序是 Programs 那一头在前");
     }
 
     #[test]
-    fn 候选的序是先一盘六条再补两条() {
+    fn 候选的序是先每格盘走完那一摞再补用户格那一摞() {
+        let 蜂 = 读表().remove(0);
         let 盘 = vec!["第一格\\".to_string(), "第二格\\".to_string()];
-        let 候 = 桥候选(&盘, "用户数据那一格");
-        /* 2 格盘 × 六摆 + 另两摆 */
+        let 候 = 候选(&蜂, &盘, "用户数据那一格");
+        /* 2 格盘 × 六摆 + 用户格那两摆 */
         assert_eq!(候.len(), 14);
         assert_eq!(候[0], "第一格\\MusicBee");
         assert_eq!(候[1], "第一格\\Programs\\MusicBee");
@@ -1211,15 +1212,23 @@ mod 验判断 {
         assert_eq!(候[12], "用户数据那一格\\Programs\\MusicBee");
         assert_eq!(候[13], "用户数据那一格\\MusicBee");
         /* 那一格尾巴上带不带分隔符拼出来是同一串；整格空着就只留下头那一段 */
-        assert_eq!(桥候选(&["某格\\".to_string()], ""), 桥候选(&["某格".to_string()], ""));
-        assert_eq!(桥候选(&[], "")[0], "Programs\\MusicBee");
-        assert_eq!(桥候选(&[], "").len(), 2);
+        assert_eq!(候选(&蜂, &["某格\\".to_string()], ""), 候选(&蜂, &["某格".to_string()], ""));
+        assert_eq!(候选(&蜂, &[], "")[0], "Programs\\MusicBee");
+        assert_eq!(候选(&蜂, &[], "").len(), 2);
+    }
+
+    #[test]
+    fn 表里那两摞是空的就不凭空拼路() {
+        /* 表里那一格漏写了摆法 / 家件名：候选一条不给、谁都不认 —— 不许拿一份默认的什么去凑 */
+        let 空 = 一份适配 { 名: "甲".into(), ..Default::default() };
+        assert!(候选(&空, &["某格\\".to_string()], "用户格").is_empty());
+        assert!(!那是这一家(&空, r"任何一格\MusicBee.exe"), "家件名那栏是空的，不许把所有播放器都认下来");
     }
 
     #[test]
     fn 随行件名只认那一栏还不许爬出包外() {
         let 单 = r#"{"id":"music-remote","assets":{"bridge":"mb_FlowDesk.dll","watcher":"smtc-watcher.ps1"}}"#;
-        assert_eq!(随行件名(单, 桥件键名).as_deref(), Some("mb_FlowDesk.dll"));
+        assert_eq!(随行件名(单, "bridge").as_deref(), Some("mb_FlowDesk.dll"));
         /* 反斜杠当斜杠、头里的斜杠去掉（原件 packRaw 那一句 replace(/\\/g,'/').replace(/^\/+/,'')） */
         assert_eq!(随行件名(r#"{"assets":{"bridge":"\\子格\\mb.dll"}}"#, "bridge").as_deref(), Some("子格/mb.dll"));
         assert_eq!(随行件名(r#"{"assets":{"bridge":"mb.dll/"}}"#, "bridge"), None);
@@ -1227,12 +1236,12 @@ mod 验判断 {
         assert_eq!(随行件名(r#"{"assets":{"bridge":"./mb.dll"}}"#, "bridge"), None);
         assert_eq!(随行件名(r#"{"assets":{"bridge":""}}"#, "bridge"), None);
         /* 没 assets 那一格 / 那一栏不是字串 / 整份读不出 JSON —— 都算包里没带 */
-        assert_eq!(随行件名(r#"{"id":"x"}"#, 桥件键名), None);
-        assert_eq!(随行件名(r#"{"assets":{"bridge":404}}"#, 桥件键名), None);
-        assert_eq!(随行件名("不是 JSON", 桥件键名), None);
+        assert_eq!(随行件名(r#"{"id":"x"}"#, "bridge"), None);
+        assert_eq!(随行件名(r#"{"assets":{"bridge":404}}"#, "bridge"), None);
+        assert_eq!(随行件名("不是 JSON", "bridge"), None);
         /* 这一头比原件多挡的那一道：带冒号的那一段（Rust 的 join 会被它整条换掉） */
-        assert_eq!(随行件名(r#"{"assets":{"bridge":"C:坏的一格/mb.dll"}}"#, 桥件键名), None);
-        assert_eq!(随行件名(r#"{"assets":{"bridge":"子格/mb.dll"}}"#, 桥件键名).as_deref(), Some("子格/mb.dll"));
+        assert_eq!(随行件名(r#"{"assets":{"bridge":"C:坏的一格/mb.dll"}}"#, "bridge"), None);
+        assert_eq!(随行件名(r#"{"assets":{"bridge":"子格/mb.dll"}}"#, "bridge").as_deref(), Some("子格/mb.dll"));
     }
 
     #[test]
@@ -1246,31 +1255,45 @@ mod 验判断 {
     }
 
     #[test]
-    fn 注册表那一串只认结尾那颗文件() {
-        assert!(那是这一家吗(r"某个目录\MusicBee.exe"));
-        assert!(那是这一家吗(r"某个目录\musicbee.EXE"));
-        assert!(!那是这一家吗(r"某个目录\MusicBee.exe.bak"));
-        assert!(!那是这一家吗("musicbee"));
-        assert!(!那是这一家吗(""));
+    fn 注册表那一串只认表上那颗文件() {
+        let 蜂 = 读表().remove(0);
+        assert!(那是这一家(&蜂, r"某个目录\MusicBee.exe"));
+        assert!(那是这一家(&蜂, r"某个目录\musicbee.EXE"));
+        assert!(!那是这一家(&蜂, r"某个目录\MusicBee.exe.bak"));
+        assert!(!那是这一家(&蜂, "musicbee"));
+        assert!(!那是这一家(&蜂, ""));
     }
 
     #[test]
-    fn 桥那四句话逐字对得上原件() {
+    fn 那四句话逐字对得上原件_只是话从表里来() {
+        /* 表里那一格的「话」四句逐字照旧（第 4 批 4.5 第二片搬的是"住在哪儿"，不是措辞）；
+           代码这边只管把现场那几样递过去，占位由句子里写着的那几个决定。 */
+        let 蜂 = 读表().remove(0);
+        let 参: &[(&str, &str)] = &[
+            ("从", "某包格\\music-remote\\mb_FlowDesk.dll"),
+            ("到", "某家\\Plugins\\mb_FlowDesk.dll"),
+            ("千字节", "96"),
+            ("那句", "撞墙了"),
+            ("插件格", "Plugins"),
+            ("小抄格", "players"),
+            ("报件", "musicbee.txt"),
+        ];
         assert_eq!(
-            桥没找着句("某包格\\music-remote\\mb_FlowDesk.dll"),
+            一句(&蜂, "没找着", 参).unwrap(),
             "没检测到 MusicBee 装在哪。手动装一次也行：把 某包格\\music-remote\\mb_FlowDesk.dll 拷到 <MusicBee>\\Plugins\\ 里（同名就覆盖），再开 MusicBee。"
         );
         assert_eq!(
-            桥咬住句("某家\\Plugins\\mb_FlowDesk.dll"),
+            一句(&蜂, "咬住", 参).unwrap(),
             "MusicBee 正开着，插件文件被它咬住了。先在托盘里右键 MusicBee 选「退出」（不是关窗口），再点一次这个按钮。目标位置：某家\\Plugins\\mb_FlowDesk.dll"
         );
         assert_eq!(
-            桥装好句("某家\\Plugins\\mb_FlowDesk.dll", 96),
+            一句(&蜂, "装好", 参).unwrap(),
             "插件已装到 某家\\Plugins\\mb_FlowDesk.dll（96KB）· 开 MusicBee 就能监到，正在放的歌会把文件路径写进 players\\musicbee.txt"
         );
         assert_eq!(
-            桥拷不动句("撞墙了", "某包格\\mb_FlowDesk.dll", "某家\\Plugins"),
-            "拷不过去（撞墙了）：手动把 某包格\\mb_FlowDesk.dll 拷到 某家\\Plugins 里"
+            一句(&蜂, "拷不动", 参).unwrap(),
+            "拷不过去（撞墙了）：手动把 某包格\\music-remote\\mb_FlowDesk.dll 拷到 Plugins 里"
         );
+        assert!(一句(&蜂, "没这一句", 参).is_none(), "表里没这一句就回没有，不许在代码里补第二份话");
     }
 }

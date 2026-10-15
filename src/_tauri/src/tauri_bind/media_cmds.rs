@@ -37,18 +37,21 @@
    跑在 tokio 那一条线程上，同样不占窗口那一条；dirSet 与 flag 就是读一份写一份，跟着批四那五颗走同步。
 
    五处明写着没搬齐 / 做不全等的（不是藏着）：
-     ① 脚本那份还给 MusicBee 留了一条「走桥插件那一行明文」的近路（musicbee-cmd.txt），因为它不想让
-        MusicBee 的会话声明 IsPlayEnabled 之后抢走硬件媒体键。这一头照旧走系统那一路 Try*，
-        装了桥插件的 MusicBee 在这一头会不会又抢媒体键，得起程序当场验过才敢写 —— 这一批不许起程序自测，没验。
+     ① 那一条「走桥插件那一行明文」的近路已经搬了（议题 16），而且从插件分离第 4 批 4.5 起它是**照那张明文表**走的：
+        认哪一家、那一份文件叫什么，都在 src/core/media/players.json 里，这一本里不写播放器名。
+        还欠的是验：装了桥插件的那一家会不会又抢走硬件媒体键（脚本当初留这一条就是为了不抢），
+        得起程序当场验过才敢写 —— 这一批不许起程序自测，没验。
      ② main.cjs 那一颗 fs.watch(players\)（1261 行 playWatch：小抄一变就广播 media:players 并重递一句 pick）
         不在这九颗里，没搬 —— media:players 照样回当前那一份，mediaOnPlayers 那一路暂时不会自己动。
         这一条直接影响批五：dirPick / dirSet / flag 写完盘上就变了，页面那头要等下一次问（或重新挂卡）才跟上，
-        原件是当场广播。装桥插件那一句里说的「正在放的歌会把文件路径写进 players\musicbee.txt」也一样 ——
-        那一份壳里读得到（media:players 的 mbPath），但没人替它广播。
-     ③ media:bridge 找 MusicBee 装在哪，原件有三条路（1347 行 mbDir）：正在跑的进程路径（喊 powershell 取
+        原件是当场广播。装桥插件那一句里说的「正在放的歌会把文件路径写进 players 底下那一份」也一样 ——
+        那一份壳里读得到（media:players 的 mbPath 那一栏），但没人替它广播。
+        那一栏的名字还留着 mbPath 这个旧写法：它是壳 ↔ 页 ↔ 桥插件三头共用的协议字段，改它要一起动
+        插件清单与那颗 dll，不在 4.5 这一条的射程里（4.5 搬的是"哪一家的形状写在代码里"这件事）。
+     ③ media:bridge 找那一家装在哪，原件有三条路（1347 行 mbDir）：正在跑的进程路径（喊 powershell 取
         Get-Process）、注册表 App Paths、常见落点挨个试。壳里不起子进程（批四那条口径），走得通的是后两条；
         「正开着」那一档原件是动手前先拿 tasklist.exe 问一句（1342 行 mbRunning），这一头挪到真拷那一步 ——
-        撞上「文件被别的程序咬住」那一条盘上错码才报 busy:true。差在 MusicBee 正开着而目标那一格还空着
+        撞上表上那一格「咬住错码」那条盘上错才报 busy:true。差在 那一家正开着而目标那一格还空着
         （第一次装）时：原件当场挡一句，这一头会真拷过去（装是装成了，不重启它照样监不到，页面那句提示本来就说要重启）。
      ④ 同一颗里那两笔运行日志（旧插件留了备份 / 已装到哪一格）照原件落 data\logs\ ——
         动手在 tauri_bind::log_cmds，那一行的形状在 core::log_line（带测试），两句原话照抄。
@@ -381,39 +384,71 @@ pub fn media_flag(k: String, v: Option<Value>) -> 一个成不成 {
     写一份(判::开关件名, &判::开关并入(&表, &名, &新值))
 }
 
-/// media:bridge —— 给 MusicBee 装那颗监听插件（原件 1367~1396 行那一颗）
+/* 表里就一家时，「没找着」说的就是那一家的话（与从前逐字一致）；两家以上又认不出当前是哪一家，
+   说表级那一句（不点任何一家的名）。这一条只是把"表里几格"这件事翻译成话，判据都在表里。 */
+fn 没找着那句(表: &[判::一份适配], 从: &str) -> String {
+    if 表.len() == 1 {
+        if let Some(句) = 判::一句(&表[0], "没找着", &[("从", 从), ("插件格", 表[0].插件格名.as_str())]) {
+            return 句;
+        }
+    }
+    判::表级话("没找着").unwrap_or_default()
+}
+
+/// 挑一家：钉住/当前那一家优先（认得上就只说那一家的话），认不上就挨家到盘上找，找着哪家算哪家
+fn 挑一家(表: &[判::一份适配], 钉: &str) -> Option<(判::一份适配, String)> {
+    if let Some(适) = 判::认这一家(表, 钉) {
+        if let Some(家) = 找装在哪(适) {
+            return Some((适.clone(), 家));
+        }
+    }
+    表.iter().find_map(|适| 找装在哪(适).map(|家| (适.clone(), 家)))
+}
+
+/// media:bridge —— 给"表里认得到的那一家"装那颗监听插件（原件 1367~1396 行那一颗；
+/// 是哪一家、装到哪一格、叫什么件名，全看那张明文表 —— 第 4 批 4.5 第二片）
 #[tauri::command]
 pub async fn media_bridge() -> 一个桥回执 {
-    /* 原件的先后：packHas('music-remote') → landAsset 取包里那一份 → mbDir 找装在哪 →
-       mbRunning 挡一句 → 建 Plugins 那一格 → 同名留 .bak → 拷过去 → 报大小 */
+    /* 原件的先后：packHas('music-remote') → landAsset 取包里那一份 → 找装在哪 → 建那一格 →
+       同名留 .bak → 拷过去 → 报大小。第 4 批 4.5 第二片起：认哪一家、件名叫什么、落在哪一格、
+       注册表读哪一格、盘上试哪几种摆法、撞住的错码是几、那四句给用户听的话，全在
+       src/core/media/players.json 那张明文表里 —— 这一头不写任何播放器名字。 */
     if !装了音乐遥控器() {
         return 一个桥回执 { ok: false, found: None, busy: None, dir: None, to: None, kb: None, msg: Some(判::桥没装那句.to_string()) };
     }
-    let Some(从) = 包里那份() else {
+    let 表 = 判::读表();
+    let 挑着 = 挑一家(&表, &读一份(判::钉住件名));
+    /* 取包里那一份插件文件要用的栏名也在表上；一家都没挑着时按表里第一格的栏名取（那句「包里没带」的话与是哪一家无关） */
+    let Some(适) = 挑着.as_ref().map(|(适, _)| 适.clone()).or_else(|| 表.first().cloned()) else {
+        /* 表是空的（那份明文读不动、或一格都没写）：没有哪一家可装，说表级那一句，不点任何一家的名 */
+        return 一个桥回执 { ok: false, found: Some(false), busy: None, dir: None, to: None, kb: None,
+            msg: Some(判::表级话("没找着").unwrap_or_default()) };
+    };
+    let Some(从) = 包里那份(&适) else {
         return 一个桥回执 { ok: false, found: None, busy: None, dir: None, to: None, kb: None, msg: Some(判::桥没件那句.to_string()) };
     };
-    let Some(家) = 找音乐bee() else {
+    let Some((_, 家)) = 挑着 else {
         /* 这一支多带 found:false（原件 1375 行就是这一格），msg 里带着源那一串与手动装的写法 */
         return 一个桥回执 {
             ok: false, found: Some(false), busy: None, dir: None, to: None, kb: None,
-            msg: Some(判::桥没找着句(&从)),
+            msg: Some(没找着那句(&表, &从)),
         };
     };
-    let 插件格 = Path::new(&家).join(判::插件格名);
-    let 到 = 插件格.join(判::桥插件件名);
+    let 插件格 = Path::new(&家).join(适.插件格名.as_str());
+    let 到 = 插件格.join(适.插件件名.as_str());
     let 家串 = 家;
     let 格串 = 插件格.to_string_lossy().to_string();
     let 到串 = 到.to_string_lossy().to_string();
-    /* 「MusicBee 正开着」这一档：原件先喊 tasklist.exe 问进程再动手，壳里不起子进程（顶上第③条），
-       改成挪到真拷那一步 —— 撞上「文件被别的程序咬住」那一条盘上错码就报 busy:true 那一句 */
+    /* 「那一家正开着」这一档：原件先喊 tasklist.exe 问进程再动手，壳里不起子进程（顶上第③条），
+       改成挪到真拷那一步 —— 撞上表上那一格「咬住错码」那条盘上错就报 busy:true 那一句 */
     if let Err(e) = std::fs::create_dir_all(&插件格) {
-        return 桥拷不动(&盘上那句(&e), &家串, &从, &格串);
+        return 桥拷不动(&适, &盘上那句(&e), &家串, &从, &格串);
     }
     /* 同名先留一份 .bak（原件 1384~1388 行，那一句「旧插件留了备份」也照原样落进 data\logs） */
     if 到.is_file() {
         let 底串 = format!("{}.bak", 到串);
         if let Err(e) = std::fs::copy(&到, &底串) {
-            return 桥拷不动(&盘上那句(&e), &家串, &从, &格串);
+            return 桥拷不动(&适, &盘上那句(&e), &家串, &从, &格串);
         }
         crate::tauri_bind::log_cmds::记一笔("插件", format!("旧插件留了备份：{}", 底串));
     }
@@ -421,31 +456,36 @@ pub async fn media_bridge() -> 一个桥回执 {
         Ok(写进) => {
             /* 原件 1390 行报的是 statSync(到).size 那一颗落盘之后的字节数（不是源那份的） */
             let 千字节 = 判::算千字节(写进);
+            let 数 = 千字节.to_string();
             crate::tauri_bind::log_cmds::记一笔("插件", format!("已装 {}（{}KB）", 到串, 千字节));
-            let 句 = 判::桥装好句(&到串, 千字节);
+            let 句 = 判::一句(&适, "装好", &[
+                ("到", 到串.as_str()), ("千字节", 数.as_str()),
+                ("小抄格", 判::小抄格名), ("报件", 适.报件名.as_str()),
+            ]).unwrap_or_default();
             一个桥回执 {
                 ok: true, found: None, busy: None, dir: Some(家串), to: Some(到串), kb: Some(千字节),
                 msg: Some(句),
             }
         }
         Err(e) => {
-            if e.raw_os_error() == Some(判::咬住错码) {
-                let 句 = 判::桥咬住句(&到串);
+            if e.raw_os_error() == Some(适.咬住错码) {
+                let 句 = 判::一句(&适, "咬住", &[("到", 到串.as_str())]).unwrap_or_default();
                 return 一个桥回执 {
                     ok: false, found: None, busy: Some(true), dir: Some(家串), to: None, kb: None,
                     msg: Some(句),
                 };
             }
-            桥拷不动(&盘上那句(&e), &家串, &从, &格串)
+            桥拷不动(&适, &盘上那句(&e), &家串, &从, &格串)
         }
     }
 }
 
 /// 桥那一颗「拷不过去」那一支：{ ok:false, dir, msg }（原件 1394 行，没有 to 也没有 kb）
-fn 桥拷不动(那句: &str, 家: &str, 从: &str, 插件格: &str) -> 一个桥回执 {
+fn 桥拷不动(适: &判::一份适配, 那句: &str, 家: &str, 从: &str, 插件格: &str) -> 一个桥回执 {
+    let 话 = 判::一句(适, "拷不动", &[("那句", 那句), ("从", 从), ("插件格", 插件格)]).unwrap_or_default();
     一个桥回执 {
         ok: false, found: None, busy: None, dir: Some(家.to_string()), to: None, kb: None,
-        msg: Some(判::桥拷不动句(那句, 从, 插件格)),
+        msg: Some(话),
     }
 }
 
@@ -1129,6 +1169,17 @@ fn 递桥命令(适: &判::一份适配, 正文: &str) -> bool {
     std::fs::rename(&时, &到).is_ok()
 }
 
+/// 各家桥插件报回来那一份文件叫什么，写在表上「报件名」那一栏；挨家问，第一份读到内容的算
+/// （此刻表里就一家，读的就是从前那一份 —— 只是这一头不再写那一名）
+fn 报上来() -> String {
+    for 适 in 判::读表() {
+        if 适.报件名.is_empty() { continue; }
+        let 文 = 读一份(适.报件名.as_str());
+        if !文.is_empty() { return 文; }
+    }
+    String::new()
+}
+
 /// playState() 那一格：五栏一名不落
 fn 小抄() -> 一份小抄 {
     let 表 = 判::开关表(&读一份(判::开关件名));
@@ -1137,7 +1188,7 @@ fn 小抄() -> 一份小抄 {
     let 面 = 净.into_iter().map(|(名, 值)| (名, json!(值))).collect::<Map<_, _>>();
     一份小抄 {
         pin: 读一份(判::钉住件名),
-        mb_path: 读一份(判::桥报件名),
+        mb_path: 报上来(),
         music: 读一份(判::音乐目录件名),
         flags: Value::Object(面),
         dir: 小抄格().to_string_lossy().to_string(),
@@ -1177,14 +1228,14 @@ fn 卸掉名单(包格: &Path) -> Vec<String> {
 /* ---------- 给 MusicBee 装监听插件那一颗要动的三处盘 ---------- */
 
 /// 音乐遥控器包里那一份插件文件在哪（原件 packAssetOf + packRaw + landAsset 那一段）：
-/// 读插件清单 assets.bridge 那一栏（相对包里那一格）。
+/// 读插件清单 assets 那一格里、由表上「随行键名」点名的那一栏（相对包里那一格）。
 /// 从前这一格读不到还退一格「原厂」（data\plugins-factory\，导入那一下留的底）—— 那一格随
 /// 插件分离第 2 批 2.6 整格撤了，现在只认活的这一格；拿不到就回空，由叫它那一头照旧报。
 /// 差在哪写着两处，见顶上第⑤条：不落 watcher\、zip 里那一份读不出来。
-fn 包里那份() -> Option<String> {
+fn 包里那份(适: &判::一份适配) -> Option<String> {
     let 家 = PathBuf::from(crate::tauri_bind::comp_cmds::活的那一格()).join(那一家);
     let Ok(文) = std::fs::read_to_string(家.join(包清单名)) else { return None; };
-    let Some(相对) = 判::随行件名(&文, 判::桥件键名) else { return None; };
+    let Some(相对) = 判::随行件名(&文, 适.随行键名.as_str()) else { return None; };
     /* 相对那一串按段贴上去（段里有没有 '..' 已经在纯判断那一格挡过了） */
     let 份 = 相对.split('/').fold(家, |累, 段| 累.join(段));
     if 份.is_file() {
@@ -1211,8 +1262,10 @@ fn 宽串(串: &str) -> Vec<u16> {
 
 /// 注册表 App Paths 那一格的默认值（原件 reg.exe query 'HKLM 底下那一格 App Paths' /ve 那一条 ——
 /// 走系统接口现读，不喊外部 reg 程序）。读不出来 / 不是 REG_SZ / 那一串是空的，都算没这一条。
-fn 注册表那条() -> Option<String> {
-    let 子 = 宽串(判::认家注册格);
+/// 读哪一格由表上「注册格」那一栏说（第 4 批 4.5 第二片）。
+fn 注册表那条(适: &判::一份适配) -> Option<String> {
+    if 适.注册格.is_empty() { return None; }
+    let 子 = 宽串(&适.注册格);
     let 名 = 宽串(""); /* 空的那一栏 = 这一格的默认值，正是 /ve 读的那一格 */
     let mut 缓 = [0u16; 1024];
     let mut 长 = (缓.len() * 2) as u32;
@@ -1236,22 +1289,23 @@ fn 注册表那条() -> Option<String> {
     }
 }
 
-/// 找 MusicBee 装在哪（原件 mbDir 1347~1366 行那三条路里走得通的两条：注册表 → 常见落点。
-/// 「正在跑的那一家的路径」那一条要喊 powershell，壳里不起子进程 —— 顶上第③条写着差在哪）
-fn 找音乐bee() -> Option<String> {
-    /* ② 注册表：读回来那一串得是结尾那颗这一家的可执行文件，再取它上一格，且那一格真在盘上 */
-    if let Some(串) = 注册表那条() {
-        if 判::那是这一家吗(&串) {
+/// 找那一家装在哪（原件 mbDir 1347~1366 行那三条路里走得通的两条：注册表 → 常见落点。
+/// 「正在跑的那一家的路径」那一条要喊 powershell，壳里不起子进程 —— 顶上第③条写着差在哪）。
+/// 注册表读哪一格、认哪一颗可执行文件、常见落点有哪几种摆法，全在表上那一格里（第 4 批 4.5 第二片）。
+fn 找装在哪(适: &判::一份适配) -> Option<String> {
+    /* ② 注册表：读回来那一串得是结尾那颗表上点名的可执行文件，再取它上一格，且那一格真在盘上 */
+    if let Some(串) = 注册表那条(适) {
+        if 判::那是这一家(适, &串) {
             let 格 = Path::new(&串).parent().map(Path::to_path_buf).unwrap_or_default();
             if 格.is_dir() {
                 return Some(格.to_string_lossy().to_string());
             }
         }
     }
-    /* ③ 常见落点挨个问：认的是「这一格里有那颗可执行文件」，只认到目录不算（原件 1363 行）*/
+    /* ③ 常见落点挨个问：认的是「这一格里有表上那颗可执行文件」，只认到目录不算（原件 1363 行）*/
     let 底串 = 用户数据底().to_string_lossy().to_string();
-    for 候 in 判::桥候选(&盘根们(), &底串) {
-        if Path::new(&候).join(判::认家件名).is_file() {
+    for 候 in 判::候选(适, &盘根们(), &底串) {
+        if Path::new(&候).join(适.家件名.as_str()).is_file() {
             return Some(候);
         }
     }
