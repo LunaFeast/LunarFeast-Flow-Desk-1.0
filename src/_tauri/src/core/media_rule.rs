@@ -104,25 +104,58 @@ pub fn 命令递的是名字吗(串: &str) -> bool {
     串 == "pick"
 }
 
-/* ---------- MusicBee 那一家的近路（2026-10-14 议题 16 补上） ----------
-   监听脚本 smtc-watcher.ps1 里"递命令"那一段从前没搬进壳：MusicBee 的命令不走系统 Try*，
-   而是往 players\musicbee-cmd.txt 写一行明文，由装进 MusicBee 的那颗桥插件去执行。
-   为什么绕这一道（主人 2026-10-05：「音乐遥控器以前不会抢系统媒体键，现在会抢，我不需要他抢」）：
+/* ---------- 播放器那一张明文表（插件分离第 4 批 4.5 · #44 #46）----------
+   从前这一格里有 15 处写着 MusicBee 的名字与文件名：命令往哪儿递、认哪一家、装在哪一格、注册表那一格、
+   报回来的那一份文件、那几句给用户听的话，全钉在代码上。按 2026-10-16 点的那一条：那些"形状"搬成
+   一家一格的明文表（src/core/media/players.json），代码里只留一台读表办事的通用解释器 ——
+   加一家 = 在表里添一格，不动代码；硬地板一个字不动。
+   这一片搬的是「命令怎么递」那一路（议题 16 坏的就是这一路：钉住 MusicBee 时三枚按钮全没反应）。
+   认装在哪、注册表那一格、插件 DLL 的落点与候选目录、报回来的那一份文件、那四句话此刻还写在下面的常量上，
+   搬齐之后这一张就是唯一那一份 —— 这一笔差在哪写在清单第 4 批 4.5 那一节，不当已经搬齐。
+   为什么绕这一道明文（主人 2026-10-05：「音乐遥控器以前不会抢系统媒体键，现在会抢，我不需要他抢」）：
    系统那一路要会话先向系统声明 IsPlayEnabled，一声明，键盘与耳机上那颗硬件媒体键就归了这个会话；
-   插件那边那五枚按钮全关着，所以既按得动又不抢键。没搬的后果就是议题 16 报的那一句：
-   钉住 MusicBee 时上一首 / 播放暂停 / 下一首 三枚全没反应（系统 Try* 递过去，MusicBee 不接）。 */
+   插件那边那五枚按钮全关着，所以既按得动又不抢键。
+   读不动那张表（改 JSON 改坏了）不算错到底：当成空表，命令照旧落回系统那一路，不把命令吞掉 ——
+   与「明文写不过去就落回系统 Try*」是同一条规矩。表在编译期就跟着这一格烧进产物（include_str!），运行时不碰磁盘。 */
 
-/// 那一行明文落在哪一份文件
-pub const 桥命令件名: &str = "musicbee-cmd.txt";
-
-/// 会话的发布者是不是 MusicBee（名字里含这一段就算，大小写不论）
-pub fn 是音乐蜂(身份: &str) -> bool {
-    身份.to_lowercase().contains("musicbee")
+/// 表里一格的形状（键名照那份 JSON 原文；递法那一张表就是 JSON 里「命令正文」那一格）
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+pub struct 一份适配 {
+    pub 名: String,
+    pub 认身份含: String,
+    pub 命令件名: String,
+    #[serde(rename = "命令正文")] pub 递法: std::collections::BTreeMap<String, String>,
 }
 
-/// 递过去的那一行正文：seek 带位置，其余就一个命令名（脚本里同一句）
-pub fn 桥命令正文(命令: &str, 进度: i64) -> String {
-    if 命令 == "seek" { format!("seek:{}", 进度) } else { 命令.to_string() }
+/// 整张表读一遍（只解字符串，不碰磁盘）
+pub fn 读表() -> Vec<一份适配> {
+    #[derive(serde::Deserialize)]
+    struct 一张表 {
+        #[serde(default)]
+        适配: Vec<一份适配>,
+    }
+    match serde_json::from_str::<一张表>(include_str!("media/players.json")) {
+        Ok(表) => 表.适配,
+        Err(_) => Vec::new(),
+    }
+}
+
+/// 会话的发布者是哪一家：名字里含「认身份含」那一段就算（大小写不论，各家写法不一）；
+/// 表里没有、或那一格这段是空的，都算认不上 —— 认不上就走系统那一路，不是错。
+pub fn 认这一家<'a>(表: &'a [一份适配], 身份: &str) -> Option<&'a 一份适配> {
+    let 下 = 身份.to_lowercase();
+    表.iter()
+        .find(|适| !适.认身份含.is_empty() && 下.contains(&适.认身份含.to_lowercase()))
+}
+
+/// 递过去的那一行正文：{命令} 换命令名、{值} 换那颗进度；表里没点到名的命令走「默认」那一档，
+/// 连「默认」都没写就只递命令名（各家写法不一，这一处由表说话，代码里不认任何一家）
+pub fn 命令正文(适: &一份适配, 命令: &str, 进度: i64) -> String {
+    let 样 = 适.递法.get(命令)
+        .or_else(|| 适.递法.get("默认"))
+        .cloned()
+        .unwrap_or_else(|| "{命令}".to_string());
+    样.replace("{命令}", 命令).replace("{值}", 进度.to_string().as_str())
 }
 
 /// pos 那一栏：不是数当 0，负的一律按 0（原件 1046 行 Math.max(0, Number(msg.pos) || 0)）
@@ -971,18 +1004,49 @@ mod 验判断 {
     }
 
     #[test]
-    fn 音乐蜂那一家的近路认名字与递正文() {
-        /* 会话的发布者名字各家写法不一（进程名带后缀、大小写不一），含这一段就算 */
-        assert!(是音乐蜂("MusicBee.exe"));
-        assert!(是音乐蜂("musicbee"));
-        assert!(是音乐蜂("MusicBee"));
-        assert!(!是音乐蜂("Spotify.exe"));
-        assert!(!是音乐蜂("Windows Media Player"));
+    fn 表里那一家认名字与递正文按那张明文表走() {
+        /* 会话的发布者名字各家写法不一（进程名带后缀、大小写不一），含那一段就算 */
+        let 表 = 读表();
+        assert!(!表.is_empty(), "那张明文表读不动就等于没有一家走近路（players.json 改坏了）");
+        let 蜂 = 认这一家(&表, "MusicBee.exe").expect("表里那一格该认得上 MusicBee.exe");
+        assert!(认这一家(&表, "musicbee").is_some() && 认这一家(&表, "MusicBee").is_some());
+        assert!(认这一家(&表, "Spotify.exe").is_none() && 认这一家(&表, "Windows Media Player").is_none());
         /* 文件名叫那个（桥插件盯的就是这一份），正文 seek 带位置、其余就一个命令名 */
-        assert_eq!(桥命令件名, "musicbee-cmd.txt");
-        assert_eq!(桥命令正文("toggle", 0), "toggle");
-        assert_eq!(桥命令正文("next", 0), "next");
-        assert_eq!(桥命令正文("seek", 82660), "seek:82660");
+        assert_eq!(蜂.命令件名, "musicbee-cmd.txt");
+        assert_eq!(命令正文(蜂, "toggle", 0), "toggle");
+        assert_eq!(命令正文(蜂, "next", 0), "next");
+        assert_eq!(命令正文(蜂, "seek", 82660), "seek:82660");
+    }
+
+    #[test]
+    fn 表里没这一家就认不上_命令落回系统那一路() {
+        /* 认不上不是错：回 None，调用方照旧走系统 Try*（读不动那张表时表是空的，也是这一支） */
+        assert!(认这一家(&[], "MusicBee.exe").is_none());
+        let 一张 = 一份适配 {
+            名: "空认得上".into(), 认身份含: String::new(), 命令件名: "x.txt".into(),
+            递法: Default::default(),
+        };
+        assert!(认这一家(&[一张.clone()], "任何东西").is_none(), "那一格这段是空的，不许把所有播放器都认下来");
+    }
+
+    #[test]
+    fn 两家各按各的写法成形_代码里不认播放器名() {
+        /* 同一套解释器，两张写法：一家 seek 写成 "seek={值}"，另一家写成 "SEEK {命令}={值}" 且没有默认档 */
+        let mut 甲法 = std::collections::BTreeMap::new();
+        甲法.insert("seek".to_string(), "seek:{值}".to_string());
+        甲法.insert("默认".to_string(), "{命令}".to_string());
+        let 乙法 = std::collections::BTreeMap::new();
+        let 表 = vec![
+            一份适配 { 名: "甲".into(), 认身份含: "jia".into(), 命令件名: "jia-cmd.txt".into(), 递法: 甲法 },
+            一份适配 { 名: "乙".into(), 认身份含: "yi".into(), 命令件名: "yi.txt".into(), 递法: 乙法 },
+        ];
+        let 甲 = 认这一家(&表, "Jia.Player").unwrap();
+        let 乙 = 认这一家(&表, "某某 yi 播放器").unwrap();
+        assert_eq!(命令正文(甲, "seek", 1200), "seek:1200");
+        assert_eq!(命令正文(甲, "prev", 0), "prev");
+        /* 连「默认」那一档都没写的家：没点到名的命令就只递命令名，不瞎猜格式 */
+        assert_eq!(命令正文(乙, "play", 0), "play");
+        assert_eq!(乙.命令件名, "yi.txt");
     }
 
     #[test]
