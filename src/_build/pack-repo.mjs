@@ -7,6 +7,8 @@
      node src/_build/pack-repo.mjs --扫公开面=notes|所有        推之前那道闸：这一棵里进版本的每一本文本，扫本机盘符、帐户名、私人目录名
      node src/_build/pack-repo.mjs --对账=notes|所有            删主仓那一份之前那道对账：字节逐份相等、那份进了版本、远程那一头就是这一笔
      node src/_build/pack-repo.mjs --看所有                     七家一张表（谁铺了、谁没铺、源码几份）
+     node src/_build/pack-repo.mjs --分自检                     主仓那一摞探针按"这台真去读了谁的份"分家：跟着搬 / 混着读 / 只读壳
+     node src/_build/pack-repo.mjs --搬自检=notes|所有          把"整台只读这一家"的那几台搬进那一棵（连那把尺一起），当场跑一遍
 
    形状照已定的那一条（docs\插件分离规划.md 第五节）：**主程序那一仓打出来的是空壳**，插件一家一仓。
    所以这一颗铺出去的是这一家在自己仓里的完整一棵 —— 运行时那一格（进版本的几份）+ 表里登记的源码那几份，
@@ -64,6 +66,9 @@ export const 仓名 = {
 const 远程 = 名 => 'git@github.com:LunarFeast/' + 名 + '.git';
 const 仓根默认 = () => path.dirname(TREE);
 const 仓路 = (id, 根) => path.join(根 || 仓根默认(), 仓名[id] || 停('这一家没有仓名对应：' + id));
+/* 那一棵自己长出来的东西：跟着搬过来的那一摞自检（src\tools\probes\）与顶上那颗跑子。
+   这一颗只管把主仓那几份铺过去，重铺不许动这些 —— 那是这一家往后自己改的检查。 */
+export const 自带 = p => p === '自检.mjs' || p.startsWith('src/tools/probes/');
 
 /* ---------- 进版本的那几份才铺：产物（三颗内核）由那一家的出包命令现出 ----------
    判"是不是产物"不抄第二份名单，拿主仓那份 .gitignore 问一遍（git check-ignore）。
@@ -224,6 +229,113 @@ console.log('信息段：' + 打.信息.id + ' · ' + 打.信息.name + ' · ' +
 console.log('里面这几份：\\n' + 份.join('\\n'));
 `;
 
+/* ---------- 探针分家（第 5 批第四刀：检查跟着代码走，不是把检查删掉）----------
+   主程序仓里那些台子，有的整台都在验某一家自己那几份源码 —— 那一家搬走之后这一台留在壳里就是读不到东西的哑台；
+   有的既读壳也读插件 —— 那种留在壳里改口。判据不靠人记，靠这台自己写了去读哪几份：
+   把 `rd('路径')`（单引号、反引号两种写法）与 `path.join(TREE, '路径')` 都抓出来，逐份问归谁。
+   带 ${...} 的那种是"运行时那一格里现在装着谁"，不是某一家的源码 —— 算壳自己的事，留在壳里。 */
+const 读的路 = (文, 名) => [...new Set([
+  ...[...文.matchAll(/\brd\(\s*'([^']+)'/g)].map(m => m[1]),
+  ...[...文.matchAll(/\brd\(\s*`([^`]+)`/g)].map(m => m[1]),
+  ...[...文.matchAll(/path\.join\(\s*TREE\s*,\s*'([^']+)'/g)].map(m => m[1]),
+  /* 从壳里那几颗 import 进来的零件（../../_build/… 与 ../../pack/… 那一类）：搬过去就 import 不到，
+     这一台得算混着读 —— 只看 rd() 会把它放过去，跑起来才撞。同一格里并排的零件（./lib-slice.mjs）跟着搬，不算。 */
+  ...[...文.matchAll(/from\s+'(\.\.?\/[^']+)'/g)].map(m => path.posix.normalize('src/tools/probes/' + m[1])),
+  /* 兜一道：凡是写成 'src/…' 'data/…' 那种样子的串都算它读过 —— 拿目录数组 readdirSync 的那几台
+     （test-flicker 那种「全仓台账」）就是这一类，只认 rd() 会把跨仓的台账判成一家自己的。
+     宁可多判成"混着读"留在壳里由人改口，也不许把一台跑不绿的东西搬进别人那一仓。 */
+  ...[...文.matchAll(/'((?:src|data)\/[A-Za-z0-9_.\-\/]+)'/g)].map(m => m[1]),
+].map(p => p.split('\\').join('/').replace(/\/+$/, '')))];
+function 归谁(路){
+  if(/\$\{|^data\/plugins$|^data\/plugins\/$/.test(路) || /\/\$|\.fdpkg$/.test(路)) return undefined;
+  const 找 = 家.find(j => j.from.some(p => 路 === p.replace(/\/$/, '') || 路.startsWith(p.replace(/\/$/, '') + '/')))
+    || 子件.find(j => j.from.some(p => 路 === p.replace(/\/$/, '') || 路.startsWith(p.replace(/\/$/, '') + '/')));
+  return 找 ? 找.id : null;                      /* undefined = 运行时那一格那种；null = 主程序自己的 */
+}
+export function 分自检(){
+  const 格 = path.join(TREE, 'src', 'tools', 'probes');
+  const 出 = [];
+  for(const 名 of fs.readdirSync(格).sort()){
+    if(!/^(gate|test|klog)-.*\.mjs$/.test(名)) continue;
+    const 文 = fs.readFileSync(path.join(格, 名), 'utf8');
+    const 路 = 读的路(文, 名).filter(p => !p.startsWith('src/tools/probes/'));   /* 同一格里并排的零件跟着搬，不算外求 */
+    const 主 = [...new Set(路.map(归谁).filter(x => x !== undefined))].map(x => x === null ? '壳' : x);
+    出.push({ 名, 读: 路.length, 家: 主, 类: 主.length === 1 ? 主[0] : (主.length === 0 ? '壳' : '混') });
+  }
+  return 出;
+}
+
+/* ---------- 搬自检（第四刀的前半：检查跟着代码走，不是把检查删掉）----------
+   一台探针只要读的全是这一家那几份，它就跟着这一家走：落到那一棵里同样的位置
+   （src\tools\probes\，连那把尺 lib-slice.mjs 一起），rd('src/_wnw/src/w8-write.js') 这种路径一个字都不用改 ——
+   那一棵里这些份本来就在同样的路径上（铺的时候一名不改）。
+   顶上再生成一颗 `自检.mjs`：这一棵自己跑自己那一摞，读不到主程序任何零件，也不许拿"一台都没有"当"全过了"。 */
+const 自检文本 = (id, 仓) => `/* ${仓} 自己那一摞自检（插件分离第 5 批：检查跟着代码走）
+   ------------------------------------------------------------
+     node 自检.mjs        跑 src\\tools\\probes\\ 里 gate- / test- / klog- 起头的那几台
+   这一棵里没有主程序那些零件：这几台读的就是本仓那几份源码，路径与从前在主程序仓里逐字一样。
+   这一份由主程序那一颗搬仓的（src\\_build\\pack-repo.mjs 的 --搬自检）生成，改判据请改那一颗再重搬。 */
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const 仓 = path.dirname(fileURLToPath(import.meta.url));
+const 格 = path.join(仓, 'src', 'tools', 'probes');
+const 台 = fs.existsSync(格) ? fs.readdirSync(格).filter(f => /^(gate|test|klog)-.*\\.mjs$/.test(f)).sort() : [];
+if(!台.length){ console.error('${id} 这一棵里一台自检都没有 —— 别把"没有台子"当成"全过了"'); process.exit(1); }
+let 跑通 = 0, 抛了 = 0;
+for(const 名 of 台){
+  const 结 = spawnSync(process.execPath, [path.join(格, 名)], { cwd: 仓, encoding: 'utf8' });
+  const 出 = String(结.stdout || '') + String(结.stderr || '');
+  const 账 = /：(\\d+) 过 (\\d+) 不过/.exec(出);
+  if(结.status === 0){ 跑通++; console.log('  · ' + 名 + ' 跑通' + (账 ? ' · ' + 账[1] + ' 过 ' + 账[2] + ' 不过' : ' · 这台没报账')); }
+  else { 抛了++; console.log('  ! ' + 名 + ' 抛了（退出码 ' + 结.status + '）');
+    console.log(出.split(/\\r?\\n/).filter(l => /FAIL|Error|抛/.test(l)).slice(0, 8).map(l => '      ' + l).join('\\n')); }
+}
+console.log('\\n${仓} 自己那一摞：' + 台.length + ' 台 · 跑通 ' + 跑通 + ' · 抛了 ' + 抛了);
+process.exitCode = 抛了 ? 1 : 0;
+`;
+export function 搬自检(id, 根){
+  const 路 = 仓路(id, 根);
+  if(!fs.existsSync(path.join(路, '.git'))) 停('这一棵还没铺，搬不了自检：' + 路 + '（先 --铺=' + id + '）');
+  const 表 = 分自检().filter(x => x.类 === id);
+  const 源 = path.join(TREE, 'src', 'tools', 'probes');
+  const 落 = path.join(路, 'src', 'tools', 'probes');
+  const 摘 = [];
+  if(表.length){
+    fs.mkdirSync(落, { recursive: true });
+    fs.copyFileSync(path.join(源, 'lib-slice.mjs'), path.join(落, 'lib-slice.mjs'));
+    for(const x of 表) fs.copyFileSync(path.join(源, x.名), path.join(落, x.名));
+    /* 收回来：那一棵里不再该拥有的那几台摘掉（判据改了、或那本来就是一台跨仓台账），
+       免得壳里删了、那一棵里还留着一台跑不绿的旧台子 */
+    const 该留 = new Set(['lib-slice.mjs', ...表.map(x => x.名)]);
+    for(const 名 of fs.readdirSync(落))
+      if(/^(gate|test|klog)-.*\.mjs$/.test(名) && !该留.has(名)){ fs.rmSync(path.join(落, 名), { force: true }); 摘.push(名); }
+    fs.writeFileSync(path.join(路, '自检.mjs'), 自检文本(id, 仓名[id]));
+  } else if(fs.existsSync(落)){
+    for(const 名 of fs.readdirSync(落)) fs.rmSync(path.join(落, 名), { force: true });
+    fs.rmSync(落, { recursive: true, force: true });
+    fs.rmSync(path.join(路, '自检.mjs'), { force: true });
+  }
+  const 跑 = (args) => { try{ return execFileSync('git', args, { cwd: 路, encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }catch(e){ return ''; } };
+  跑(['add', '-A']);
+  const 动 = 跑(['status', '--porcelain']);
+  if(动) 跑(['commit', '-q', '--allow-empty-message', '-m', '']);
+  return { 路, 仓: 仓名[id], 搬: 表.map(x => x.名), 摘, 落笔: !!动 };
+}
+/* 搬完当场跑一遍：那一棵里跑不绿的自检，等于把一台好端端的检查搬成了一块砖 */
+export function 跑自检(id, 根){
+  const 路 = 仓路(id, 根);
+  const 件 = path.join(路, '自检.mjs');
+  if(!fs.existsSync(件)) return { 路, 有: false };
+  let 出 = '', 码 = 0;
+  try{ 出 = execFileSync(process.execPath, [件], { cwd: 路, encoding: 'utf8' }); }
+  catch(e){ 出 = String((e && (e.stdout || '')) + ((e && e.stderr) || '')); 码 = (e && e.status) || 1; }
+  return { 路, 有: true, 码, 尾: 出.trim().split(/\r?\n/).slice(-1)[0] || '', 报: 出 };
+}
+
 /* ---------- 推之前那道公开面闸（判据只在 public-scan.mjs 那一份里，这里只把"面"换掉）----------
    那一颗原本扫的是「origin/main 到这一轮那条支之间新增修改的文本」，拿的是主程序那一棵的 git；
    插件这一棵刚铺出来时既没有远程也没有可比对的一笔，所以面直接取 `git ls-files` 的全部 —— 只大不小。
@@ -313,7 +425,7 @@ export function 铺(id, 根, opt){
     const 该有 = new Set([...情.份.map(x => 'data/plugins/' + id + '/' + x.路), ...情.源码.map(x => x.路),
       '.gitignore', ...(情.子 ? [] : ['出包.mjs'])]);
     摘 = execFileSync('git', ['-C', 路, '-c', 'core.quotepath=false', 'ls-files', '-z'], { encoding: 'utf8' })
-      .split('\0').filter(Boolean).filter(p => !该有.has(p));
+      .split('\0').filter(Boolean).filter(p => !该有.has(p) && !自带(p));
     for(const p of 摘) fs.rmSync(path.join(路, ...p.split('/')), { force: true });
   }
   if(!fs.existsSync(path.join(路, '.git')))
@@ -411,6 +523,34 @@ if(process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === impo
     else if(val('--打包', '')) { const 结 = 打包(做, 根);
       console.log(结.报 + '\n  读回来对过：' + (结.对得上 ? '每一份的字节数与清单对得上' : '对不上！')
         + ' · 信息段八键到 ' + 结.键 + ' 格 · 头 ' + 结.头.记 + ' v' + 结.头.版 + ' 标志 ' + 结.头.志); }
+    else if(has('--分自检')){
+      const 表 = 分自检();
+      const 堆 = {};
+      for(const x of 表) (堆[x.类] = 堆[x.类] || []).push(x);
+      for(const 类 of Object.keys(堆).sort())
+        console.log('\n[' + 类 + '] ' + 堆[类].length + ' 台');
+      for(const x of 表.filter(y => y.类 !== '壳' && y.类 !== '混')) console.log('  ' + x.类 + ' ← ' + x.名 + '（读 ' + x.读 + ' 份）');
+      for(const x of 表.filter(y => y.类 === '混')) console.log('  混着读 ← ' + x.名 + '（读 ' + x.读 + ' 份：' + x.家.join('、') + '）');
+      console.log('\n合计 ' + 表.length + ' 台：跟着搬 ' + 表.filter(x => x.类 !== '壳' && x.类 !== '混').length
+        + ' · 混着读要改口 ' + 表.filter(x => x.类 === '混').length
+        + ' · 只读壳 ' + 表.filter(x => x.类 === '壳').length);
+    }
+    else if(val('--搬自检', '')){
+      const 要 = val('--搬自检', '');
+      /* 「所有」走的是盘上已经铺出来的每一棵（不是"有台子要搬的那几家"）：
+         判据改口之后某一家一台都不该留了，也得走这一趟把那一棵里旧的收回来、把跑子撤掉 */
+      const 挑 = 要 === '所有' ? [...家, ...子件].map(j => j.id).filter(id => fs.existsSync(path.join(仓路(id, 根), '.git'))) : [要];
+      let 坏 = 0;
+      for(const id of 挑){
+        const 结 = 搬自检(id, 根), 跑 = 跑自检(id, 根);
+        if(结.搬.length && (!跑.有 || 跑.码)) 坏++;
+        console.log(结.仓 + ' · 搬 ' + 结.搬.length + ' 台' + (结.摘.length ? ' · 收回 ' + 结.摘.join('、') : '')
+          + (结.落笔 ? ' · 落了一笔' : ' · 逐字没动，这一趟没落笔')
+          + ' · 在那一棵里跑起来：' + (跑.有 ? (跑.码 ? '抛了' : '全绿') : '这一棵没有跑子') + '（' + 跑.尾 + '）');
+        if(跑.码) console.error(跑.报.split(/\r?\n/).filter(l => /^\s*!|FAIL|Error/.test(l)).slice(0, 12).join('\n'));
+      }
+      if(坏){ console.error('有 ' + 坏 + ' 家搬过去的自检跑不绿 —— 主程序仓里那几台先别删。'); process.exitCode = 1; }
+    }
     else if(val('--对账', '')){
       const 要 = val('--对账', '');
       const 挑 = 要 === '所有' ? Object.keys(仓名) : [要];

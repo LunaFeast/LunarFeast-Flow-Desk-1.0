@@ -22,7 +22,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { 记账, rd } from './lib-slice.mjs';
-import { 仓名, 看一家, 铺, 打包, TREE } from '../../_build/pack-repo.mjs';
+import { 仓名, 看一家, 铺, 打包, 分自检, 搬自检, 跑自检, TREE } from '../../_build/pack-repo.mjs';
 import { 私人串清单, 扫文本 } from '../../_build/public-scan.mjs';
 
 const 台 = 记账('gate-repo5');
@@ -239,8 +239,45 @@ try{
     /const 该有 = new Set/.test(工) && /'ls-files', '-z'/.test(工) && /!该有\.has\(p\)/.test(工)
     && /fs\.rmSync\(path\.join\(路, \.\.\.p\.split\('\/'\)\)/.test(工));
   台.判('反证 · 把那道比名单摘掉（谁都不删），挪走的份就永远留在原来那一棵里，两仓同时住一份',
-    (() => { const 改 = 工.replace('.filter(p => !该有.has(p));', ';');
+    (() => { const 改 = 工.replace('.filter(p => !该有.has(p) && !自带(p));', ';');
       return 改 !== 工 && !/该有\.has\(p\)/.test(改); })());
+}
+
+台.题('八、检查跟着代码走：一台只读这一家那几份的探针整台搬过去，在那一棵里要跑绿；搬完再铺一次，不许把它铺没');
+{
+  const 工 = rd('src/_build/pack-repo.mjs');
+  台.判('分家那一道认四种「真去读」的写法：rd 单引号、rd 反引号、path.join(TREE,…)、从壳里 import 进来的零件，再加一道 src/… 串的兜底',
+    工.includes("matchAll(/\\brd\\(\\s*'") && 工.includes('matchAll(/\\brd\\(\\s*`') && 工.includes('matchAll(/path\\.join\\(\\s*TREE')
+    && 工.includes('matchAll(/from') && 工.includes("matchAll(/'((?:src|data)"));
+  台.判('反证 · 把「同一格里并排的零件不算外求」那一格摘掉，每一台都会因为 import 了那把尺被判成混着读，一台也搬不走',
+    (() => { const 串 = ".filter(p => !p.startsWith('src/tools/probes/'))";
+      const 改 = 工.replace(串, '.filter(() => true)');
+      return 工.includes(串) && 改 !== 工 && !改.includes(串); })());
+  const 表 = 分自检();
+  const 搬单 = 表.filter(x => x.类 !== '壳' && x.类 !== '混');
+  台.判('量出来的账：跟着搬的那 14 台全在为写与音乐遥控器这两家名下（别的一家一台都没有 —— 那几家的检查本来就只读页面与插件清单）',
+    搬单.length === 14 && [...new Set(搬单.map(x => x.类))].sort().join('、') === 'music-remote、why-not-write',
+    搬单.map(x => x.类 + ':' + x.名).join(' '));
+  台.判('混着读的钉成「不许搬」：test-flicker 那种全仓台账（一行的目录数组里既列为写也列壳）判回来留在壳里改口',
+    (() => { const 混 = 表.filter(x => x.类 === '混').map(x => x.名);
+      return 混.includes('test-flicker.mjs') && 混.includes('gate-bank46.mjs') && !混.includes('test-w37.mjs'); })(),
+    '混 ' + 表.filter(x => x.类 === '混').length + ' 台');
+  /* 真搬一次：铺一棵 → 搬自检 → 在那一棵里跑 → 再铺一次（重铺）→ 还在、还绿 */
+  const 棵 = 铺('why-not-write', 沙盒, { 重铺: true });
+  const 搬 = 搬自检('why-not-write', 沙盒);
+  const 跑 = 跑自检('why-not-write', 沙盒);
+  台.判('搬过去的那一棵里：12 台与那把尺都落在与主仓逐字一样的位置上（所以 rd 里那些路径一个字都不用改）',
+    搬.搬.length === 12 && fs.existsSync(path.join(棵.路, 'src', 'tools', 'probes', 'lib-slice.mjs'))
+    && fs.existsSync(path.join(棵.路, 'src', 'tools', 'probes', 'test-w37.mjs'))
+    && fs.existsSync(path.join(棵.路, '自检.mjs')), '搬 ' + 搬.搬.length + ' 台');
+  台.判('在那一棵里真跑一遍：12 台全绿（读不到主程序任何零件才算这一家自己的检查）',
+    跑.有 && 跑.码 === 0 && /跑通 12 · 抛了 0/.test(跑.尾), 跑.尾 || '跑子没回话');
+  铺('why-not-write', 沙盒, { 重铺: true });
+  const 再跑 = 跑自检('why-not-write', 沙盒);
+  台.判('搬完再铺一次同一棵：自家那一摞自检与顶上那颗跑子都不被「摘掉这一趟不该再有的那几份」那一手扫走（自带那一格挡着）',
+    fs.existsSync(path.join(棵.路, 'src', 'tools', 'probes', 'test-w37.mjs')) && 再跑.码 === 0, 再跑.尾);
+  台.判('反证 · 把「自带」那一格摘掉（重铺时谁都不放过），这一家刚搬过去的检查立刻被自己人扫干净',
+    (() => { const 改 = 工.replace('&& !自带(p)', ''); return 改 !== 工 && !/!自带\(p\)/.test(改); })());
 }
 
 清();
