@@ -78,6 +78,12 @@ export const 产物格 = path.join(TREE, 'dist', 'tauri');
 export const 打包记录名 = '这一摞包.json';
 export const 打包记录路 = path.join(产物格, 打包记录名);
 
+/* 一家一仓的形状（插件分离规划第五节：主程序那一仓打出来的是空壳，插件一家一个仓库）：
+   from 写的是**这一家在自己仓里该有哪几份**，路径照主程序仓那一套（铺出来一名不改）——
+     · pack(id)    运行时那一格（data\plugins\<id>\），其中内核产物是那一家的出包命令现出的，不进版本；
+     · 结尾带 '/'  那一格整个目录（这一棵自己的源码，铺的时候一层层跟着走）；
+     · 一份文件    点名的那一份。
+   内核那一步（内核 那一格）：这一家自己出那颗内核怎么出 —— 产物不进仓，由它自己那条出包命令现出。 */
 export const 家 = [
   { id:'notes',                  中文:'你的便签',       支:'plugin/notes',                  仓:'', from:[pack('notes')] },
   { id:'schedule',               中文:'日程',           支:'plugin/schedule',               仓:'', from:[pack('schedule')] },
@@ -86,11 +92,12 @@ export const 家 = [
       'src/pack/plugin/FlowDeskBridge.cs', 'src/pack/plugin/MBHeader.cs', 'src/pack/plugin/build-plugin.ps1'] },
   { id:'singbit-input-practice', 中文:'声笔输入法练习', 支:'plugin/singbit-input-practice',  仓:'', from:[pack('singbit-input-practice'),
       'src/_build/rp-kernel.mjs', 'src/_build/rp-base.html',
-      'src/_build/p1.js', 'src/_build/p2.js', 'src/_build/p3.js', 'src/_build/p4.js', 'src/_build/p5.js', 'src/_build/p6.js'] },
-  { id:'wnw-custom',             中文:'推演组件定制',       支:'plugin/wnw-custom',             仓:'', from:[pack('wnw-custom'),
-      'src/_wcustom/build-kernel.mjs', 'src/_wcustom/src/sh-banks.js', 'src/_wcustom/src/sh-bank-ui.js',
-      'src/_wcustom/src/sh-gen.js', 'src/_wcustom/src/sh-wizard.js', 'src/_wcustom/src/sh-code.js'] },
-  { id:'why-not-write',          中文:'为写',           支:'plugin/why-not-write',           仓:'', from:[pack('why-not-write')] },
+      'src/_build/p1.js', 'src/_build/p2.js', 'src/_build/p3.js', 'src/_build/p4.js', 'src/_build/p5.js', 'src/_build/p6.js'],
+    内核:{ 那颗:'src/_build/rp-kernel.mjs', 装名:'rp-kernel.js' } },
+  { id:'wnw-custom',             中文:'推演组件定制',       支:'plugin/wnw-custom',             仓:'', from:[pack('wnw-custom'), 'src/_wcustom/'],
+    内核:{ 出:'src/_wcustom/build-kernel.mjs', 产物:'src/_wcustom/wnw-custom-kernel.js', 装名:'wnw-custom-kernel.js' } },
+  { id:'why-not-write',          中文:'为写',           支:'plugin/why-not-write',           仓:'', from:[pack('why-not-write'), 'src/_wnw/'],
+    内核:{ 出:'src/_wnw/build-kernel.mjs', 产物:'src/_wnw/wnw-kernel.js', 装名:'wnw-kernel.js' } },
 ];
 
 /* 2026-10-13 他定的：为写不再搞独立那一棵 —— 基础的为写回到插件这一格，和其余六家一起进出厂那一层。

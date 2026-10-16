@@ -11,6 +11,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import { rd, 切, 切方法, 记账, ROOT } from './lib-slice.mjs';
+import { 看一家, 仓名 } from '../../_build/pack-repo.mjs';
 
 const 台 = 记账('gate-bank46');
 const 载 = rd('src/_shared/sh-load.js');
@@ -134,9 +135,15 @@ const 为写数据 = rd('src/_wnw/src/w7-data.js');
   台.判('整库改名那条不再只认源码格 `_shared` 一格 —— 词库层搬进去那一格也收，且 src / comp 那一栏按两格分（少收一格就是悄悄不改）',
     令.includes('底子那两格') && 令.includes('并路(&源, "_wcustom\\\\src")') && 令.includes('在底子里(&x.file)')
     && 命.includes('落点.starts_with(去尾分隔(源码那一格).as_str())'));
-  const 名 = rd('src/_build/plugin-repos.mjs');
-  台.判('七家路径那一张表里，这两份归到推演定制那一家（别处不许另抄一份对应表）',
-    /'src\/_wcustom\/src\/sh-banks\.js', 'src\/_wcustom\/src\/sh-bank-ui\.js'/.test(名.replace(/\r?\n\s*/g, ' ')));
+  /* 这一条从前拿那张表的文本比（写成两份点名路径），表一改成"一整格"就假红了。
+     现在问那颗工具本身：把推演定制这一家铺出来该带哪几份源码 —— 量的是那份对应表现在真长成什么样。 */
+  const 定制源码 = 看一家('wnw-custom').源码.map(x => x.路);
+  const 别家也有 = Object.keys(仓名).filter(n => n !== 'wnw-custom')
+    .filter(n => 看一家(n).源码.some(x => /sh-bank(-ui)?\.js$/.test(x.路)));
+  台.判('七家路径那一张表里，这两份归到推演定制那一家（量的是那颗工具真铺得出来哪几份，别处没有第二份对应表）',
+    定制源码.some(p => /sh-banks\.js$/.test(p)) && 定制源码.some(p => /sh-bank-ui\.js$/.test(p))
+    && 定制源码.some(p => /_wcustom\/src\/sh-gen\.js$/.test(p)) && 别家也有.length === 0,
+    定制源码.join('、') + ' ⁄ 别家也带着的：' + (别家也有.join('、') || '没有'));
   台.判('宿主读词库层的四处全带"这个名字在不在"：装载器那两只手、卡片菜单那颗、为写侧栏那颗、词库没读到那张卡上那颗钮',
     /if\(typeof mkBank !== 'function'\) return null;/.test(载) && /banks:typeof Banks !== 'undefined' \? Banks : null/.test(载)
     && /typeof BankDlg !== 'undefined'/.test(rd('src/_fd/src/fd3-shell.js'))

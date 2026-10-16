@@ -2,12 +2,14 @@
    gate-repo5.mjs · 插件分离第 5 批：一家一家搬仓那颗工具（src/_build/pack-repo.mjs）
    ------------------------------------------------------------
      node src/tools/probes/gate-repo5.mjs [--沙盒=一处目录]
-   钉的是六件事：① 仓名那张表照他 2026-10-16 给的仓库列表截图那一种写法，一格不许改；
+   钉的是七件事：① 仓名那张表照他 2026-10-16 给的仓库列表截图那一种写法，一格不许改；
    ② 铺出来的一棵与主程序仓同形状（路径逐字一样，"改了没有"拿两份逐字节对就得出）；
    ③ 这一家自己那条出包命令真打得出一份容器，读回来每一份的字节数与哈希都对得上；
    ④ 打包手不进插件仓（那一棵里不许有压包、签名、加密那三样的实现，只许去叫主程序那一颗）；
    ⑤ 这台机器的路径与帐户名不进那一棵（拿发布那一摊同一把尺量）；
-   ⑥ 这一颗不推、不删主程序仓那一份 —— 那两刀都要他点头。
+   ⑥ 这一颗不推、不删主程序仓那一份 —— 那两刀都要他点头；
+   ⑦ 一家一仓的形状（规划第五节：主程序那一仓打出来的是空壳）：那一家的**源码**进那一仓、内核**产物**不进那一仓
+      （由那一家的出包命令第一步现出），号取自那一仓自己那一笔，跑完那一棵 git status 仍干净。
    外加两件：再铺一次同一棵要报"逐字没动"（幂等，别一次跑落两笔），以及一条反证：
    把那条出包命令里"找不到主程序那颗打包手就停"摘掉，它就不再给那句白话，而是撞进一个不存在的路径。
    沙盒落在主程序那一棵的旁边（现算，不写死盘符），跑完当场删掉。
@@ -17,7 +19,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { 记账 } from './lib-slice.mjs';
+import { 记账, rd } from './lib-slice.mjs';
 import { 仓名, 看一家, 铺, 打包, TREE } from '../../_build/pack-repo.mjs';
 import { 私人串清单, 扫文本 } from '../../_build/public-scan.mjs';
 
@@ -133,8 +135,13 @@ try{
   台.判('没有推的那一手：这颗工具里不许出现 git push（含 --force、-u、set-upstream），也不建 PR（推与建 PR 只在 pr.mjs 那一颗）',
     !/'push'|"push"|force-push|--force|set-upstream|createPull|gh pr/.test(工)
     && !/git[^\n]{0,20}\bpush\b/.test(工), '数组那几处的 push 不算（只盯 git push）');
-  台.判('没有删主仓那一份的那一手：搜不到 rmSync / unlink 打在 data\\plugins 上，也没有 git rm',
-    !/rmSync|unlink|git',\s*\[\s*'rm/.test(工));
+  /* 这一颗要能"铺"，就不能有删主仓那一份的那一手。它确实有一处 rmSync：出包前把
+     dist\摊开\<id>\ 那一份临时副本清掉（号改在那一份上，仓里进版本的插件清单一个字不动）——
+     那一格被 .gitignore 挡着、跟 dist 同一待遇。所以尺要盯"删的是哪一格"，不是"有没有 rmSync"。 */
+  台.判('没有删主仓那一份的那一手：git rm 一处不剩；rmSync / cpSync 只落在 dist 那一格，运行时那一格（data\\plugins）与被铺出去的那一棵都不许碰',
+    !/\[\s*'rm'/.test(工) && !/rmSync\(\s*格\b/.test(工) && !/rmSync\([^)\n]*plugins[^)\n]*\)/.test(工)
+    && /rmSync\(摊/.test(工) && /cpSync\(格, 摊/.test(工),
+    (工.match(/rmSync\([^)]{0,40}/g) || []).join(' ⏎ '));
   台.判('主程序仓里便签那三件还在（这一颗只铺不删）',
     fs.existsSync(path.join(TREE, 'data', 'plugins', 'notes', 'main.js'))
     && fs.existsSync(path.join(TREE, 'data', 'plugins', 'notes', 'manifest.json')));
@@ -159,6 +166,50 @@ try{
         && 表.find(x => x.id === 'why-not-write').内核 >= 1 && 表.find(x => x.id === 'wnw-custom').内核 >= 1
         && 表.find(x => x.id === 'notes').通道 === 0; })(),
     Object.keys(仓名).map(id => id + ' ' + 看一家(id).份.length + ' 份').join(' · '));
+}
+
+台.题('六、一家一仓的形状：源码进那一仓、内核产物不进那一仓、号取自自己那一仓（规划第五节：主程序那一仓打出来的是空壳）');
+{
+  const 工 = rd('src/_build/pack-repo.mjs'), 表 = rd('src/_build/plugin-repos.mjs');
+  台.判('那张表里 为写 与 推演定制 各自登记了自己那一整格源码（不是只登记运行时那一格），三家带内核的各自写了内核怎么出',
+    /'src\/_wnw\/'/.test(表) && /'src\/_wcustom\/'/.test(表)
+    && /内核:\{ 出:'src\/_wnw\/build-kernel\.mjs'/.test(表) && /内核:\{ 出:'src\/_wcustom\/build-kernel\.mjs'/.test(表)
+    && /内核:\{ 那颗:'src\/_build\/rp-kernel\.mjs'/.test(表));
+  台.判('铺的时候两样一起看：from 里点名的源码（一整格就一层层走）一并铺，产物拿主仓那份 .gitignore 挡 —— 问不动当场停，不拿"问不出"当"没有"',
+    /function 列源码/.test(工) && /项\.endsWith\('\/'\)/.test(工) && /check-ignore/.test(工)
+    && /e\.status === 1/.test(工) && /停\('问不了主仓那份 \.gitignore/.test(工));
+  台.判('反证 · 把那道 .gitignore 的闸改成"一份都没命中"，为写那颗产物立刻算进要铺的那几份 —— 挡路的就是这一句',
+    (() => {
+      const 改 = 工.replace('return new Set(String(出).split(/\\r?\\n/).filter(Boolean));', 'return new Set();');
+      return 改 !== 工 && /return new Set\(\);/.test(改);
+    })());
+  /* 真铺一棵带内核的：为写（源码 24 份 + 运行时三份 + 那颗产物不铺） */
+  const 一棵 = 铺('why-not-write', 沙盒, { 重铺: true });
+  台.判('为写那一棵里源码真在里面（出内核那颗与 src\\_wnw\\src 那几份，路径与主仓逐字一样）',
+    fs.existsSync(path.join(一棵.路, 'src', '_wnw', 'build-kernel.mjs'))
+    && fs.existsSync(path.join(一棵.路, 'src', '_wnw', 'src', 'w0-skin.js'))
+    && fs.existsSync(path.join(一棵.路, 'src', '_wnw', 'src', 'w22-web.js')), '源码 ' + 一棵.源码 + ' 份');
+  台.判('那颗内核产物**不在**那一棵里（主仓盘上躺着的那一份没跟着铺），并且那一棵的 .gitignore 点名挡着它',
+    !fs.existsSync(path.join(一棵.路, 'src', '_wnw', 'wnw-kernel.js'))
+    && !fs.existsSync(path.join(一棵.路, 'data', 'plugins', 'why-not-write', 'wnw-kernel.js'))
+    && /src\/_wnw\/wnw-kernel\.js/.test(fs.readFileSync(path.join(一棵.路, '.gitignore'), 'utf8'))
+    && /data\/plugins\/why-not-write\/wnw-kernel\.js/.test(fs.readFileSync(path.join(一棵.路, '.gitignore'), 'utf8')),
+    一棵.产物.join('、') || '没量到产物');
+  /* 跑那一棵自己的出包命令：第一步现出内核，第二步叫主程序那颗打包手 */
+  const 打 = 打包('why-not-write', 沙盒);
+  台.判('那一棵自己那条命令把包打出来了：内核是它现出的，容器读回来每一份都对得上',
+    打.对得上 && 打.份数 === 4 && /wnw-kernel\.js/.test(打.现.join(' ')),
+    '份 ' + 打.现.join('、') + ' · ' + 打.字节 + ' 字节');
+  const 号那句 = (打.报.split(/\r?\n/).find(l => /号 ·/.test(l)) || '').trim();
+  台.判('号取自自己那一仓那一笔（不抄主程序那一串），改号改的是 dist\\摊开 那一份 —— 仓里进版本的那份插件清单照旧',
+    /号 · 这一仓那一笔 [0-9a-f]{7,} → /.test(号那句)
+    && JSON.parse(fs.readFileSync(path.join(一棵.路, 'data', 'plugins', 'why-not-write', 'manifest.json'), 'utf8')).version
+       === JSON.parse(rd('data/plugins/why-not-write/manifest.json')).version, 号那句 || '那句没念出来');
+  台.判('跑完那一棵仍然干净：出的内核与打的容器都落在 .gitignore 挡着的那几格里（git status 一句不报）',
+    (() => { try{ return execFileSync('git', ['-C', 一棵.路, 'status', '--porcelain'], { encoding: 'utf8' }).trim() === ''; }
+      catch(e){ return false; } })(),
+    (() => { try{ return execFileSync('git', ['-C', 一棵.路, 'status', '--porcelain'], { encoding: 'utf8' }).trim().replace(/\r?\n/g, ' ⏎ ') || '干净'; }
+      catch(e){ return '问不出 git'; } })());
 }
 
 清();
