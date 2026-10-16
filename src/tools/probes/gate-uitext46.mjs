@@ -98,10 +98,9 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
     /h\('button', '换成这句'\)/.test(读('data/plugins/demo/main.js')) && /^import x from /.test(读('data/plugins/demo/main.js')));
   台.判('静态 html 里属性上那句也落到了（title 换掉、标签之间那段没动）',
     /<title>换了标题<\/title>/.test(读('src/_fd/template.html')) && /<p>标签之间的一句<\/p>/.test(读('src/_fd/template.html')));
-  台.判('回执给的是重新生成产物那三趟的次序，且顺序是为写内核 → 推演组件定制内核 → 那一张页面',
-    JSON.stringify(r.builds) === JSON.stringify(['src/_wnw/build-kernel.mjs', 'src/_wcustom/build-kernel.mjs', 'src/_fd/build.mjs']),
-    JSON.stringify(r.builds));
-  台.判('那三趟住在 uitext 这一份里（artifactBuilds 一颗），别处不抄第二份：界面文字那一屏叫的是它',
+  台.判('回执给的是重新生成产物那一串（插件分离第 5 批一家一仓之后只剩那一张页面那一趟 —— 那两颗内核归各家自己那一仓的 出包.mjs）',
+    JSON.stringify(r.builds) === JSON.stringify(['src/_fd/build.mjs']), JSON.stringify(r.builds));
+  台.判('这一串住在 uitext 这一份里（artifactBuilds 一颗），别处不抄第二份：界面文字那一屏叫的是它',
     /function artifactBuilds\(/.test(文UIT) && rd('src/_build/push-ui.mjs').includes('字.artifactBuilds()'));
   台.判('写完刷新清单本身：已经落进源码的那几行不再算「他写的改动」（不然下一趟就成了认不到的孤儿行）',
     /refresh\(TREE, 丢\)/.test(颗(文UIT, 'apply')) && /function refresh\(TREE, 丢掉\)/.test(文UIT));

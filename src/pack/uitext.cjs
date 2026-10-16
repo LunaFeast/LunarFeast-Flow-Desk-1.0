@@ -880,9 +880,10 @@ function parse(text){
    ----------
    改的是源码，所以写完界面上还看不见 —— 得把产物重新生成一遍。这一趟的次序在这一份文件里说一次，
    别处（工具那一屏、发布那一条）都从 artifactBuilds() 取，不抄第二份：
-     1 src/_wnw/build-kernel.mjs      私有那一棵自己出为写那颗内核产物
-     2 src/_wcustom/build-kernel.mjs  出推演组件定制那颗内核产物
-     3 src/_fd/build.mjs              读上面那两颗产物 + 现拼声笔那颗，生成 pages\ 那一张页面
+     1 src/_fd/build.mjs   主程序这一棵只生成 pages\ 那一张页面
+   插件分离第 5 批（2026-10-16 一家一仓）之后这一串只剩这一趟：为写那颗内核与推演定制那颗内核
+   不再由主程序这一棵来出 —— 那两家各自在自己那一仓里跑自己的 出包.mjs（第一步出现自己那颗内核，
+   第二步叫主程序这一颗打包手压成容器）。声笔那颗从前是这里现拼的，也一样归它自己那一仓。
    这三趟都落到他的源码树里，正好是「改动进了源码 → 由分支和 PR 带走」那条路：
    产物里 wnw-kernel.js 与 wnw-custom-kernel.js 已经进了 .gitignore（各仓自己出），
    进公开面的就是源码那几份改动加上一张页面。
@@ -907,7 +908,7 @@ function 位置对得上(body, pc){
   return 引号(头) && 头 === 尾;
 }
 /* 源码改动要重新生成产物那三趟，次序在这里说一次（工具那一屏、发布那一条都从这一颗取，别处不抄第二份） */
-function artifactBuilds(){ return ['src/_wnw/build-kernel.mjs', 'src/_wcustom/build-kernel.mjs', 'src/_fd/build.mjs']; }
+function artifactBuilds(){ return ['src/_fd/build.mjs']; }   /* 一家一仓之后主程序这一棵只出那一张页面：那两颗内核归各家自己那一仓（2026-10-16 第四刀） */
 function locate(TREE, edits){
   const { src, occ } = collectAll(TREE);
   const groups = groupsOf(occ);
