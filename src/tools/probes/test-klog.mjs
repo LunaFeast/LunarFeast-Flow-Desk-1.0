@@ -1,10 +1,11 @@
 /* 外28 一组自检：把 w20-keystroke.js 那份真源码搬进沙箱跑，不抄第二份。
    驱动方式跟正文那头一模一样：改一摞段文本 → 把改前改后交给 KLog.diff。 */
 import fs from "node:fs";
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from "node:vm";
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
-const src = fs.readFileSync(__树根 + '/src/_wnw/src/w20-keystroke.js', "utf8");
+const src = rd('src/_wnw/src/w20-keystroke.js');
 let buf = '', 读不动 = false;
 /* Hist 那一个文件（w15-hist.js）在真页面里排在前面，逐字记录的目录就是问它要 —— 沙箱照同样的式子给一份 */
 const WNW_DATA_PRE = '';

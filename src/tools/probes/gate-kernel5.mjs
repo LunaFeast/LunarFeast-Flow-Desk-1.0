@@ -17,8 +17,8 @@
    反证四件：把"注过的不重注"那句判反、把 kernelBoot 那道门拆掉、把 home 那一格当没写、
    把把手里那句请内核删掉 —— 各红对应那一条。
    ============================================================ */
-import fs from 'node:fs';
-import { rd, 切, 切方法, 记账, ROOT } from './lib-slice.mjs';
+import { rd, 切, 切方法, 记账 } from './lib-slice.mjs';
+import { 家 } from '../../_build/plugin-repos.mjs';
 
 const 台 = 记账('gate-kernel5');
 const 载 = rd('src/_shared/sh-load.js');
@@ -151,9 +151,10 @@ for(const [家, 颗, 件] of [['wnw', 'start', 'wnw-kernel.js'], ['rp', 'start',
       return 老.indexOf('home === false') > 老.indexOf("if(type === 'tool')"); })());
   台.判('那几家自己点名：只有推演定制写了 home:false（为写与声笔输入法练习照旧上首页，只是不开机注内核）',
     (() => {
-      const 读 = id => JSON.parse(fs.readFileSync(ROOT + 'data/plugins/' + id + '/manifest.json', 'utf8'));
-      const 不上的 = ['notes', 'schedule', 'your-sentences', 'music-remote', 'singbit-input-practice', 'why-not-write', 'wnw-custom']
-        .filter(id => 读(id).home === false);
+      /* 插件分离第四刀：data\plugins\<id>\ 那几家不住本仓了 —— 名单拿 plugin-repos 那张 家 表算（唯一出处），
+         每一份问尺（本仓先问、再问隔壁那一棵），这一台不再自己拼仓根。 */
+      const 读 = id => JSON.parse(rd('data/plugins/' + id + '/manifest.json'));
+      const 不上的 = 家.map(j => j.id).filter(id => 读(id).home === false);
       return 不上的.join() === 'wnw-custom' && 读('wnw-custom').kernelBoot === true
         && 读('why-not-write').kernelBoot === undefined && 读('singbit-input-practice').kernelBoot === undefined;
     })(), '看报的那一句');

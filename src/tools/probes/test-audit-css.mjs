@@ -8,12 +8,13 @@
      E 两条规则之间夹一段注释                                          → 行号指选择器那一行
    临时目录建在本会话的临时工作区，不碰他的树。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const AUDIT = fs.readFileSync(__树根 + '/src/tools/audit.mjs', 'utf8');
+const AUDIT = rd('src/tools/audit.mjs');
 /* 咬位置靠「第八节那一个 ALSO_OK_DUPES」，不咬注释的措辞：
    从前拿一整行带注释的原文当锚点，注释里改了两个字（「现在空」→ 添了三个名单）这台就当场死掉。 */
 const HEAD = "head('七、";

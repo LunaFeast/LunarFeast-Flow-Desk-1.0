@@ -1,9 +1,10 @@
 /* 看一眼真跑出来的行长什么样：为什么 1 倍打字量是 110 KB 而不是上一轮那个 74 KB */
 import fs from "node:fs";
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from "node:vm";
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
-const src = fs.readFileSync(__树根 + '/src/_wnw/src/w20-keystroke.js', "utf8");
+const src = rd('src/_wnw/src/w20-keystroke.js');
 let buf = '';
 const FD_APP = { appendPageFile:async(rel, text)=>{ buf += text; }, readPageFile:async()=>buf, pageFileExists:async()=>buf.length>0 };
 const ctx = { console, DB:{}, Blob, crypto, TextEncoder, WNW_DATA_PRE:'', Img:{ dir:() => '测试书' }, Hist:{ dirOf:ch => '测试书/history/' + ch },

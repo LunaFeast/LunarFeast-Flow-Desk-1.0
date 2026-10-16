@@ -1,12 +1,8 @@
 /* 外27 戊组 · 图13 子日程完成度：真的 subBars 抠出来跑，再看三个落点是否都改口了 */
-import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const SCH = __树根 + '/data/plugins/schedule/main.js';
-const SH = __树根 + '/src/_fd/src/fd3-shell.js';
-const s = fs.readFileSync(SCH, 'utf8'), sh = fs.readFileSync(SH, 'utf8');
+const s = rd('data/plugins/schedule/main.js'), sh = rd('src/_fd/src/fd3-shell.js');
 
 const i0 = s.indexOf('\nfunction subBars');
 const body = s.slice(i0 + 1, s.indexOf('\n}\n', i0) + 2);

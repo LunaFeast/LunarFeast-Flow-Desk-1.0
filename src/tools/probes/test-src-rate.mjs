@@ -4,13 +4,14 @@
              ② 差过 500 毫秒死区、当场被拽回几次（每一次就是啪一下）
    方法：从组件原文里按名字切出 eff/deadband/apply/nowMs/offsetMs/lyricMs 六段，其余打桩。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import path from 'node:path';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
-
-const MAIN = __树根 + '/data/plugins/music-remote/main.js';
-const src = fs.readFileSync(MAIN, 'utf8');
+/* rd 收的是「仓里那个相对路径」，到哪儿找那一份由尺自己定（插件分离第四刀之后
+   data/plugins/music-remote 那一格住在 Music-Remote 那一棵）—— 从前这里自己拼了一遍仓根，
+   拼出来的绝对路径再进尺就被当成相对的一截，读出来是 D:\…\D:\… 那种两截拼一起的路。 */
+const MAIN = 'data/plugins/music-remote/main.js';
+const src = rd(MAIN);
 /* 按方法名切原文：从 "\n  name(" 起，到下一行正好是 "  }," 或 "  }" 止 */
 function pick(name){
   const i = src.indexOf('\n  ' + name + '(');

@@ -20,7 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { 记账, rd, ROOT } from './lib-slice.mjs';
+import { ROOT, lsd, rd, 尺在, 记账 } from './lib-slice.mjs';
 import { 家 } from '../../_build/plugin-repos.mjs';
 import { 私人串清单 } from '../../_build/public-scan.mjs';
 
@@ -81,9 +81,9 @@ const 各家 = 家.map(j => j.id);
    一条核"data\ 底下除插件那一格之外零份" —— 现在树里连插件那一格都没有，
    七家改成核「货架上七颗自有格式的容器一颗不缺」，data\ 那一道闸回到零放行。 */
 const 在架 = Number((包.全文.match(/货架 (\d+) 家各一颗容器/) || [])[1] || 0);
-台.判('货架上那 ' + 各家.length + ' 家一颗容器都不缺（发布那一趟当场报的数，不是照屏上勾的）',
-  在架 === 各家.length, '报的是 ' + 在架 + ' 家');
-台.判('树里一家的代码都没有（空壳：data\\plugins 那一路零份）', 有('data/plugins/').length === 0, 有('data/plugins/').slice(0, 4));
+台.判('主程序这一枚报的货架是 0 家（空壳：一家一仓之后，那 ' + 各家.length + ' 颗容器归各家那一仓自己的 出包.mjs）',
+  在架 === 0, '报的是 ' + 在架 + ' 家');
+台.判('树里一家的代码都没有（空壳：data\\plugins 那一路零份）', lsd('data/plugins').length === 0, lsd('data/plugins').slice(0, 4));
 台.判('树根那份说明在包里', 有('安装说明.txt').length === 1, 有('安装说明.txt'));
 const 脏 = () => (包.清单 || []).filter(k => k === 'data' || k.startsWith('data/'));
 台.判('data\\ 底下一份都不带（空壳那一枚的硬闸：连插件那一格也不放行）', 脏().length === 0, 脏().slice(0, 6));

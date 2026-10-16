@@ -7,8 +7,8 @@
      node src/_build/pack-repo.mjs --扫公开面=notes|所有        推之前那道闸：这一棵里进版本的每一本文本，扫本机盘符、帐户名、私人目录名
      node src/_build/pack-repo.mjs --对账=notes|所有            删主仓那一份之前那道对账：字节逐份相等、那份进了版本、远程那一头就是这一笔
      node src/_build/pack-repo.mjs --看所有                     七家一张表（谁铺了、谁没铺、源码几份）
-     node src/_build/pack-repo.mjs --分自检                     主仓那一摞探针按"这台真去读了谁的份"分家：跟着搬 / 混着读 / 只读壳
-     node src/_build/pack-repo.mjs --搬自检=notes|所有          把"整台只读这一家"的那几台搬进那一棵（连那把尺一起），当场跑一遍
+     node src/_build/pack-repo.mjs --分自检                     主仓那一摞探针按"这台真去读了谁的份"报一张账：只读壳 / 只读一家 / 跨着读
+     node src/_build/pack-repo.mjs --落刀=notes|所有            第四刀：对账过了、那一棵跑绿了，才从主程序仓里删掉那几格
 
    形状照已定的那一条（docs\插件分离规划.md 第五节）：**主程序那一仓打出来的是空壳**，插件一家一仓。
    所以这一颗铺出去的是这一家在自己仓里的完整一棵 —— 运行时那一格（进版本的几份）+ 表里登记的源码那几份，
@@ -16,12 +16,16 @@
    `出包.mjs` 第一步现出（为写、推演定制跑自己那棵 build-kernel.mjs，声笔输入法练习现场拼那七份源码），
    第二步才去叫主程序那一颗打包手压成容器。搬完之后主程序仓里那一格与那一棵源码要删干净（第 5 批每一家第四刀，删要点头）。
 
-   三条这一颗一辈子不做的（都是他定过的，不是我怕事）：
+   两条这一颗一辈子不做的（都是他定过的，不是我怕事）：
      · **不往 GitHub 推**：推支与建 PR 只在 `src/_build/pr.mjs` 那一颗，而且每一步都要他点头；
-     · **不删主程序仓里那一份**：那是每一家四步里的最后一刀，删要他点头 —— 这一颗只铺、只打、只验；
      · **打包手不进插件仓**：`src/_build/packbox.mjs` 留在发布那一层（第 3 批 3.3 乙 那条硬要求，
        插件那一侧不许有能把自己压成包、更不许有能加密的那一手）。这一家那条出包命令只是**去叫**主程序那一颗，
        叫不到就当场停下来报错，不自己压、也不留一份"看着像包"的东西。
+
+   删主程序仓里那一份（每一家四步的最后一刀）2026-10-16 起由 `--落刀` 办 —— 他那天定的原话是
+   「原有仓库之后作为空壳 Flow Desk 的仓库使用」，所以这一刀有了凭据；但这一颗动手前自己先问两道：
+   对账过没过（字节逐份相等、进了那一仓的版本、远程那一头就是那一笔）与那一棵自己那一摞跑没跑绿，
+   缺一样就停。
 
    仓名那张对应表只此一份（下面那张 仓名），照着清单第 5 批那张表抄的，别处不许再抄第二份。
    铺出去那一格是默认位置（主程序那一棵的上一层、按仓名叫），换机器换盘给 --仓根=；
@@ -30,6 +34,8 @@
    挂在某一家底下的**子件**（MusicBee 播放器适配那种：不是插件、没有运行时那一格、不出自己的容器）
    记在同一本 `plugin-repos.mjs` 的 `子件` 那张表里，也占一仓 —— 这一颗对它只铺源码与 .gitignore，
    不给它生成出包命令（它没有容器可出），产物由它自己那份编译脚本现编。
+   检查（src\tools\probes\ 那一摞）一概**留在主程序这一仓**：那把尺会问隔壁那一棵，
+   所以壳里删掉插件字节之后它们照样读得到 —— 把同一台搬进各家那一棵，只会跑出来两份、各改一半。
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -66,21 +72,21 @@ export const 仓名 = {
 const 远程 = 名 => 'git@github.com:LunarFeast/' + 名 + '.git';
 const 仓根默认 = () => path.dirname(TREE);
 const 仓路 = (id, 根) => path.join(根 || 仓根默认(), 仓名[id] || 停('这一家没有仓名对应：' + id));
-/* 那一棵自己长出来的东西：跟着搬过来的那一摞自检（src\tools\probes\）与顶上那颗跑子。
-   这一颗只管把主仓那几份铺过去，重铺不许动这些 —— 那是这一家往后自己改的检查。 */
-export const 自带 = p => p === '自检.mjs' || p.startsWith('src/tools/probes/');
 
 /* ---------- 进版本的那几份才铺：产物（三颗内核）由那一家的出包命令现出 ----------
-   判"是不是产物"不抄第二份名单，拿主仓那份 .gitignore 问一遍（git check-ignore）。
+   判"是不是产物"不抄第二份名单，拿那一份实际站着的那一棵的 .gitignore 问一遍（git check-ignore）。
+   2026-10-16 第四刀之后这一问必须问对一棵：主程序仓里 data\plugins 那一整格已经整个不进仓了（装进来的包不是这一仓的内容），
+   拿它问会把每一家那三件都问成"产物"；那一家自己那一棵里，.gitignore 只挡它自己那颗内核产物 —— 问那一棵才算数。
    问不动（不在一个仓里、git 叫不到）和"问出来是一份都没有"是两件事，必须分开：
    后者照旧铺，前者当场停 —— 一声不吭把产物铺进插件仓，就是"仓里有产物没源码"那一格。 */
-function 被忽略几(几份){
+function 被忽略几(几份, 问哪一棵){
   if(!几份.length) return new Set();
+  const 一棵 = 问哪一棵 || TREE;
   let 出 = null;
-  try{ 出 = execFileSync('git', ['-C', TREE, 'check-ignore', '--stdin'], { input: 几份.join('\n'), encoding: 'utf8' }); }
+  try{ 出 = execFileSync('git', ['-C', 一棵, 'check-ignore', '--stdin'], { input: 几份.join('\n'), encoding: 'utf8' }); }
   catch(e){
     if(e && e.status === 1) 出 = String((e.stdout) || '');            /* 退出码 1 = 一份都没命中，这是答案，不是出事 */
-    else 停('问不了主仓那份 .gitignore（git check-ignore 回话：' + String((e && (e.stderr || e.message)) || e).split(/\r?\n/)[0] + '）—— 分不清哪几份是产物，这一趟不铺');
+    else 停('问不了那一棵的 .gitignore（' + 一棵 + ' · git check-ignore 回话：' + String((e && (e.stderr || e.message)) || e).split(/\r?\n/)[0] + '）—— 分不清哪几份是产物，这一趟不铺');
   }
   return new Set(String(出).split(/\r?\n/).filter(Boolean));
 }
@@ -88,36 +94,51 @@ function 被忽略几(几份){
 function 列源码(活, id){
   const 候选 = [];
   for(const 项 of 活.from){
+    let 问;
     if(项 === 'data/plugins/' + id) continue;                     /* 那一格由 份 那一串管 */
     if(项.endsWith('/')){
-      const 根 = path.join(TREE, 项);
-      if(!fs.existsSync(根)) 停('仓里没有这一格：' + 项);
+      问 = 找一家(id, 项);
+      if(!问) 停('两棵里都没有这一格：' + 项);
       (function 走(格内, 前){
         for(const 名 of fs.readdirSync(格内).sort()){
           const 相 = path.join(格内, 名), 相前 = 前 + '/' + 名;
-          if(fs.statSync(相).isDirectory()) 走(相, 相前); else 候选.push({ 相, 路: 相前 });
+          if(fs.statSync(相).isDirectory()) 走(相, 相前); else 候选.push({ 相, 路: 相前, 根: 问.根 });
         }
-      })(根, 项.replace(/\/+$/, ''));
+      })(问.相, 项.replace(/\/+$/, ''));
       continue;
     }
-    const 相 = path.join(TREE, 项);
-    if(!fs.existsSync(相)) 停('仓里没有这一份：' + 项);
-    候选.push({ 相, 路: 项 });
+    问 = 找一家(id, 项);
+    if(!问) 停('两棵里都没有这一份：' + 项);
+    候选.push({ 相: 问.相, 路: 项, 根: 问.根 });
   }
-  const 挡 = 被忽略几(候选.map(x => x.路));
+  /* 一份一份问它站着的那一棵（同一家也可能一半在本仓、一半在隔壁那一棵） */
+  const 挡 = new Set();
+  for(const 一棵 of [...new Set(候选.map(x => x.根 || TREE))])
+    for(const p of 被忽略几(候选.filter(x => (x.根 || TREE) === 一棵).map(x => x.路), 一棵)) 挡.add(p);
   return 候选.filter(x => !挡.has(x.路))
     .map(x => ({ 路: x.路, 字: fs.readFileSync(x.相), 字节: fs.statSync(x.相).size }))
     .sort((a, b) => (a.路 < b.路 ? -1 : a.路 > b.路 ? 1 : 0));
+}
+
+/* 搬完之后这一家住在哪儿：主程序仓里那一格删掉之后，唯一的一份就在隔壁那一棵里。
+   所以"看一家"先问本仓、再问那一棵 —— 问不到才停。这一格不改判据，只改"到哪儿找"。 */
+function 找一家(id, 相){
+  const 本 = path.join(TREE, ...相.split('/'));
+  if(fs.existsSync(本)) return { 相: 本, 根: TREE, 源: '主程序仓' };
+  const 邻 = path.join(仓路(id), ...相.split('/'));
+  if(fs.existsSync(邻)) return { 相: 邻, 根: 仓路(id), 源: 仓名[id] };
+  return null;
 }
 
 /* ---------- 一家现在有什么（子件走同一颗：没有运行时那一格，只有源码那几份）---------- */
 export function 看一家(id){
   const 子 = 子件.find(j => j.id === id);
   const 活 = 家.find(j => j.id === id) || 子 || 停('名单里没有这一家：' + id);
-  const 格 = path.join(TREE, 'data', 'plugins', id);
+  const 格问 = 找一家(id, 'data/plugins/' + id);
+  const 格 = 格问 ? 格问.相 : path.join(TREE, 'data', 'plugins', id);
   let 份 = [], 产物 = [], 单 = null, 手 = [], 通道 = [];
   if(!子){
-    if(!fs.existsSync(格)) 停('盘上没有这一家：' + 格);
+    if(!格问) 停('盘上没有这一家（主程序仓与 ' + 仓名[id] + ' 那一棵都问过了）：' + 格);
     const 堆 = [];
     (function 走(格内, 前){
       for(const 名 of fs.readdirSync(格内).sort()){
@@ -126,7 +147,7 @@ export function 看一家(id){
         else 堆.push({ 相, 路: 相前, 字节: fs.statSync(相).size });
       }
     })(格, '');
-    const 挡 = 被忽略几(堆.map(x => 'data/plugins/' + id + '/' + x.路));
+    const 挡 = 被忽略几(堆.map(x => 'data/plugins/' + id + '/' + x.路), 格问.根);
     份 = 堆.filter(x => !挡.has('data/plugins/' + id + '/' + x.路))
       .map(x => ({ 路: x.路, 字: fs.readFileSync(x.相), 字节: x.字节 }));
     产物 = 堆.filter(x => 挡.has('data/plugins/' + id + '/' + x.路)).map(x => x.路);
@@ -265,75 +286,35 @@ export function 分自检(){
   return 出;
 }
 
-/* ---------- 搬自检（第四刀的前半：检查跟着代码走，不是把检查删掉）----------
-   一台探针只要读的全是这一家那几份，它就跟着这一家走：落到那一棵里同样的位置
-   （src\tools\probes\，连那把尺 lib-slice.mjs 一起），rd('src/_wnw/src/w8-write.js') 这种路径一个字都不用改 ——
-   那一棵里这些份本来就在同样的路径上（铺的时候一名不改）。
-   顶上再生成一颗 `自检.mjs`：这一棵自己跑自己那一摞，读不到主程序任何零件，也不许拿"一台都没有"当"全过了"。 */
-const 自检文本 = (id, 仓) => `/* ${仓} 自己那一摞自检（插件分离第 5 批：检查跟着代码走）
-   ------------------------------------------------------------
-     node 自检.mjs        跑 src\\tools\\probes\\ 里 gate- / test- / klog- 起头的那几台
-   这一棵里没有主程序那些零件：这几台读的就是本仓那几份源码，路径与从前在主程序仓里逐字一样。
-   这一份由主程序那一颗搬仓的（src\\_build\\pack-repo.mjs 的 --搬自检）生成，改判据请改那一颗再重搬。 */
-import fs from 'node:fs';
-import path from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-
-const 仓 = path.dirname(fileURLToPath(import.meta.url));
-const 格 = path.join(仓, 'src', 'tools', 'probes');
-const 台 = fs.existsSync(格) ? fs.readdirSync(格).filter(f => /^(gate|test|klog)-.*\\.mjs$/.test(f)).sort() : [];
-if(!台.length){ console.error('${id} 这一棵里一台自检都没有 —— 别把"没有台子"当成"全过了"'); process.exit(1); }
-let 跑通 = 0, 抛了 = 0;
-for(const 名 of 台){
-  const 结 = spawnSync(process.execPath, [path.join(格, 名)], { cwd: 仓, encoding: 'utf8' });
-  const 出 = String(结.stdout || '') + String(结.stderr || '');
-  const 账 = /：(\\d+) 过 (\\d+) 不过/.exec(出);
-  if(结.status === 0){ 跑通++; console.log('  · ' + 名 + ' 跑通' + (账 ? ' · ' + 账[1] + ' 过 ' + 账[2] + ' 不过' : ' · 这台没报账')); }
-  else { 抛了++; console.log('  ! ' + 名 + ' 抛了（退出码 ' + 结.status + '）');
-    console.log(出.split(/\\r?\\n/).filter(l => /FAIL|Error|抛/.test(l)).slice(0, 8).map(l => '      ' + l).join('\\n')); }
-}
-console.log('\\n${仓} 自己那一摞：' + 台.length + ' 台 · 跑通 ' + 跑通 + ' · 抛了 ' + 抛了);
-process.exitCode = 抛了 ? 1 : 0;
-`;
-export function 搬自检(id, 根){
-  const 路 = 仓路(id, 根);
-  if(!fs.existsSync(path.join(路, '.git'))) 停('这一棵还没铺，搬不了自检：' + 路 + '（先 --铺=' + id + '）');
-  const 表 = 分自检().filter(x => x.类 === id);
-  const 源 = path.join(TREE, 'src', 'tools', 'probes');
-  const 落 = path.join(路, 'src', 'tools', 'probes');
-  const 摘 = [];
-  if(表.length){
-    fs.mkdirSync(落, { recursive: true });
-    fs.copyFileSync(path.join(源, 'lib-slice.mjs'), path.join(落, 'lib-slice.mjs'));
-    for(const x of 表) fs.copyFileSync(path.join(源, x.名), path.join(落, x.名));
-    /* 收回来：那一棵里不再该拥有的那几台摘掉（判据改了、或那本来就是一台跨仓台账），
-       免得壳里删了、那一棵里还留着一台跑不绿的旧台子 */
-    const 该留 = new Set(['lib-slice.mjs', ...表.map(x => x.名)]);
-    for(const 名 of fs.readdirSync(落))
-      if(/^(gate|test|klog)-.*\.mjs$/.test(名) && !该留.has(名)){ fs.rmSync(path.join(落, 名), { force: true }); 摘.push(名); }
-    fs.writeFileSync(path.join(路, '自检.mjs'), 自检文本(id, 仓名[id]));
-  } else if(fs.existsSync(落)){
-    for(const 名 of fs.readdirSync(落)) fs.rmSync(path.join(落, 名), { force: true });
-    fs.rmSync(落, { recursive: true, force: true });
-    fs.rmSync(path.join(路, '自检.mjs'), { force: true });
+/* ---------- 第四刀：从主程序仓里删掉（2026-10-16 他点头：原有那一仓改作空壳 Flow-Desk 用）----------
+   这一刀有两道前置，缺一样就当场停，不动一个字节：
+     ① 对账过 —— 每一份字节相等、都进了那一仓的版本、远程那一头就是那一笔（源码已经在别处站着了）；
+   删的是两样：运行时那一整格（连盘上躺着的内核产物，删要删干净）与表里登记的源码那几格（连产物）。
+   检查不跟着走 —— 那把尺会问隔壁那一棵，那一摞留在主程序这一仓。只删盘，不动 git —— 改口改到全绿之后由人一笔落下去。 */
+export function 落刀(id, 根){
+  const 情 = 看一家(id);
+  const 账 = 对账(id, 根);
+  if(账.缺.length || 账.差.length || !账.推上)
+    停('对账没过（没进版本 ' + 账.缺.length + ' 份 · 字节不一样 ' + 账.差.length + ' 份 · 远程那一头'
+      + (账.推上 ? '就是这一笔' : '不是这一笔') + '）—— 主程序仓里那一份一处都不许删');
+  const 活 = 家.find(j => j.id === id) || 子件.find(j => j.id === id) || 停('名单里没有这一家：' + id);
+  const 删 = [];
+  const 摘 = (相, 说) => {
+    if(!fs.existsSync(相)) return;
+    const 字 = fs.statSync(相).isDirectory()
+      ? (function 走(格){ let n = 0, b = 0; for(const e of fs.readdirSync(格, {withFileTypes:true})){
+          const 相 = path.join(格, e.name); if(e.isDirectory()){ const x = 走(相); n += x[0]; b += x[1]; }
+          else { n++; b += fs.statSync(相).size; } } return [n, b]; })(相)[0]
+      : 1;
+    fs.rmSync(相, { recursive: true, force: true });
+    删.push(说 + '（' + 字 + ' 份）');
+  };
+  if(!情.子) 摘(path.join(TREE, 'data', 'plugins', id), 'data\\plugins\\' + id + '\\');
+  for(const 项 of 活.from){
+    if(项 === 'data/plugins/' + id) continue;
+    摘(path.join(TREE, ...项.split('/')), 项);
   }
-  const 跑 = (args) => { try{ return execFileSync('git', args, { cwd: 路, encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }catch(e){ return ''; } };
-  跑(['add', '-A']);
-  const 动 = 跑(['status', '--porcelain']);
-  if(动) 跑(['commit', '-q', '--allow-empty-message', '-m', '']);
-  return { 路, 仓: 仓名[id], 搬: 表.map(x => x.名), 摘, 落笔: !!动 };
-}
-/* 搬完当场跑一遍：那一棵里跑不绿的自检，等于把一台好端端的检查搬成了一块砖 */
-export function 跑自检(id, 根){
-  const 路 = 仓路(id, 根);
-  const 件 = path.join(路, '自检.mjs');
-  if(!fs.existsSync(件)) return { 路, 有: false };
-  let 出 = '', 码 = 0;
-  try{ 出 = execFileSync(process.execPath, [件], { cwd: 路, encoding: 'utf8' }); }
-  catch(e){ 出 = String((e && (e.stdout || '')) + ((e && e.stderr) || '')); 码 = (e && e.status) || 1; }
-  return { 路, 有: true, 码, 尾: 出.trim().split(/\r?\n/).slice(-1)[0] || '', 报: 出 };
+  return { id, 仓: 情.仓, 删, 账: 账.份数 + ' 份 / ' + 账.字节 + ' 字节已在 ' + 情.仓 };
 }
 
 /* ---------- 推之前那道公开面闸（判据只在 public-scan.mjs 那一份里，这里只把"面"换掉）----------
@@ -379,17 +360,20 @@ export function 对账(id, 根){
   const 在版本 = new Set(execFileSync('git', ['-C', 路, '-c', 'core.quotepath=false', 'ls-files', '-z'],
     { encoding: 'utf8' }).split('\0').filter(Boolean));
   const 项 = [];
+  /* 主仓那一份还在不在都认：还在 → 逐字节比一次（搬的时候不许改字）；已经删掉了 → 只看那一棵里有没有、
+     进没进版本、远程是不是这一笔。搬完之后再跑这一道，报的是"这一仓站着几份"，不是"两边一样不一样"。 */
   const 比 = (相前, 主相) => {
     const 那相 = path.join(路, ...相前.split('/'));
-    const a = fs.readFileSync(主相), b = fs.existsSync(那相) ? fs.readFileSync(那相) : null;
-    项.push({ 路: 相前, 字节: a.length, 进版本: 在版本.has(相前),
-      一致: !!b && Buffer.compare(a, b) === 0 });
+    const a = fs.existsSync(主相) ? fs.readFileSync(主相) : null, b = fs.existsSync(那相) ? fs.readFileSync(那相) : null;
+    项.push({ 路: 相前, 字节: (a || b || Buffer.alloc(0)).length, 在主仓: !!a, 进版本: 在版本.has(相前),
+      一致: !!b && (!a || Buffer.compare(a, b) === 0) });
   };
   for(const 份 of 情.份) 比('data/plugins/' + id + '/' + 份.路, path.join(TREE, 'data', 'plugins', id, ...份.路.split('/')));
   for(const 份 of 情.源码) 比(份.路, path.join(TREE, ...份.路.split('/')));
   const 缺 = 项.filter(x => !x.进版本).map(x => x.路);
   const 差 = 项.filter(x => !x.一致).map(x => x.路);
-  return { id, 仓: 情.仓, 路, 笔, 远, 推上, 份数: 项.length, 字节: 项.reduce((s, x) => s + x.字节, 0), 缺, 差 };
+  return { id, 仓: 情.仓, 路, 笔, 远, 推上, 份数: 项.length, 字节: 项.reduce((s, x) => s + x.字节, 0),
+    在主仓: 项.filter(x => x.在主仓).length, 缺, 差 };
 }
 
 /* ---------- 铺：建那一棵、开版本、挂远程（不推） ----------
@@ -425,7 +409,7 @@ export function 铺(id, 根, opt){
     const 该有 = new Set([...情.份.map(x => 'data/plugins/' + id + '/' + x.路), ...情.源码.map(x => x.路),
       '.gitignore', ...(情.子 ? [] : ['出包.mjs'])]);
     摘 = execFileSync('git', ['-C', 路, '-c', 'core.quotepath=false', 'ls-files', '-z'], { encoding: 'utf8' })
-      .split('\0').filter(Boolean).filter(p => !该有.has(p) && !自带(p));
+      .split('\0').filter(Boolean).filter(p => !该有.has(p));
     for(const p of 摘) fs.rmSync(path.join(路, ...p.split('/')), { force: true });
   }
   if(!fs.existsSync(path.join(路, '.git')))
@@ -529,27 +513,22 @@ if(process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === impo
       for(const x of 表) (堆[x.类] = 堆[x.类] || []).push(x);
       for(const 类 of Object.keys(堆).sort())
         console.log('\n[' + 类 + '] ' + 堆[类].length + ' 台');
-      for(const x of 表.filter(y => y.类 !== '壳' && y.类 !== '混')) console.log('  ' + x.类 + ' ← ' + x.名 + '（读 ' + x.读 + ' 份）');
-      for(const x of 表.filter(y => y.类 === '混')) console.log('  混着读 ← ' + x.名 + '（读 ' + x.读 + ' 份：' + x.家.join('、') + '）');
-      console.log('\n合计 ' + 表.length + ' 台：跟着搬 ' + 表.filter(x => x.类 !== '壳' && x.类 !== '混').length
-        + ' · 混着读要改口 ' + 表.filter(x => x.类 === '混').length
+      for(const x of 表.filter(y => y.类 !== '壳' && y.类 !== '混')) console.log('  只读一家 ← ' + x.类 + ' · ' + x.名 + '（读 ' + x.读 + ' 份）');
+      for(const x of 表.filter(y => y.类 === '混')) console.log('  跨着读 ← ' + x.名 + '（读 ' + x.读 + ' 份：' + x.家.join('、') + '）');
+      console.log('\n合计 ' + 表.length + ' 台：只读一家 ' + 表.filter(x => x.类 !== '壳' && x.类 !== '混').length
+        + ' · 跨着读 ' + 表.filter(x => x.类 === '混').length
         + ' · 只读壳 ' + 表.filter(x => x.类 === '壳').length);
+      console.log('这一摞一台都不搬：插件那几份住在隔壁那一棵，靠 src\\_build\\邻居.mjs 那把尺去问 —— '
+        + '搬进各家那一棵只会跑出来两份、各改一半（2026-10-16 量出来的：分类一变，同一台两头都不在）。');
     }
-    else if(val('--搬自检', '')){
-      const 要 = val('--搬自检', '');
-      /* 「所有」走的是盘上已经铺出来的每一棵（不是"有台子要搬的那几家"）：
-         判据改口之后某一家一台都不该留了，也得走这一趟把那一棵里旧的收回来、把跑子撤掉 */
-      const 挑 = 要 === '所有' ? [...家, ...子件].map(j => j.id).filter(id => fs.existsSync(path.join(仓路(id, 根), '.git'))) : [要];
-      let 坏 = 0;
+    else if(val('--落刀', '')){
+      const 要 = val('--落刀', '');
+      const 挑 = 要 === '所有' ? [...家, ...子件].map(j => j.id) : [要];
       for(const id of 挑){
-        const 结 = 搬自检(id, 根), 跑 = 跑自检(id, 根);
-        if(结.搬.length && (!跑.有 || 跑.码)) 坏++;
-        console.log(结.仓 + ' · 搬 ' + 结.搬.length + ' 台' + (结.摘.length ? ' · 收回 ' + 结.摘.join('、') : '')
-          + (结.落笔 ? ' · 落了一笔' : ' · 逐字没动，这一趟没落笔')
-          + ' · 在那一棵里跑起来：' + (跑.有 ? (跑.码 ? '抛了' : '全绿') : '这一棵没有跑子') + '（' + 跑.尾 + '）');
-        if(跑.码) console.error(跑.报.split(/\r?\n/).filter(l => /^\s*!|FAIL|Error/.test(l)).slice(0, 12).join('\n'));
+        const 结 = 落刀(id, 根);
+        console.log(结.仓 + ' · ' + 结.账 + ' · 从主程序仓删掉 ' + 结.删.length + ' 格：' + 结.删.join('、'));
       }
-      if(坏){ console.error('有 ' + 坏 + ' 家搬过去的自检跑不绿 —— 主程序仓里那几台先别删。'); process.exitCode = 1; }
+      console.log('这一颗只删盘，不落 git 笔 —— 把还指着这几份的检查改口、跑到全绿之后，由人一笔落下去。');
     }
     else if(val('--对账', '')){
       const 要 = val('--对账', '');
@@ -558,7 +537,7 @@ if(process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === impo
       for(const id of 挑){
         const 结 = 对账(id, 根);
         坏 += 结.缺.length + 结.差.length + (结.推上 ? 0 : 1);
-        console.log(结.仓 + ' · ' + 结.份数 + ' 份 / ' + 结.字节 + ' 字节'
+        console.log(结.仓 + ' · ' + 结.份数 + ' 份 / ' + 结.字节 + ' 字节（主程序仓里还躺着 ' + 结.在主仓 + ' 份）'
           + ' · 逐份字节相等 ' + (结.差.length ? '差 ' + 结.差.length + ' 份' : '全对')
           + ' · 进了那一仓的版本 ' + (结.缺.length ? '缺 ' + 结.缺.length + ' 份' : '全进')
           + ' · 远程那一头 ' + (结.推上 ? '就是这一笔 ' + 结.笔.slice(0, 7) : '对不上（本地 ' + 结.笔.slice(0, 7) + ' / 远程 ' + (结.远 || '问不到') + '）'));

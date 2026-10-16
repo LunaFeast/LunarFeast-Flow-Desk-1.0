@@ -7,20 +7,30 @@
    ③ 他写在冒号右边的字不会因为重扫被吃掉（render → parse 在内存里对一遍）；
    外加一条防将来：.mjs 那道口子是量过才关的，五棵源码树里该扫的一份不漏。 */
 import fs from 'node:fs';
+import { 根列表 } from '../../_build/邻居.mjs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { 记账 } from './lib-slice.mjs';
+import { 记账, rd, lsd } from './lib-slice.mjs';
 import { fileURLToPath as __url } from 'node:url';
+
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const require = createRequire(import.meta.url);
 const U = require(__树根 + '/src/pack/uitext.cjs');
+/* 这一台是「自己另走一遍树」的复账，所以它也得会问邻居：先问本仓，本仓没有才问隔壁那一棵。
+   邻居名单不抄第二本账，拿 src\_build\邻居.mjs 现算；相对路径按它自己那一棵切。 */
+function 那格(根, 相){
+  const 拆 = String(相).split('/').filter(Boolean);
+  for(const 一 of [根, ...根列表().slice(1)]){ const 全 = path.join(一, ...拆); if(fs.existsSync(全)) return { 全, 根: 一 }; }
+  return { 全: path.join(根, ...拆), 根 };
+}
+U.设邻居(根列表().slice(1));   /* 一家一仓之后那几家的源码在隔壁那一棵：这本清单还得覆盖它们（句子写回说话那一份） */
 const Z = 记账('test-uitool');
 const TREE = U.TREE;
 
 Z.题('一、出处那一栏的名字都起齐了');
 const 文件 = U.listFiles(TREE);
-const dyn = U.settingPages(Object.fromEntries(文件.map(rel => [rel, fs.readFileSync(path.join(TREE, rel), 'utf8')])));
+const dyn = U.settingPages(Object.fromEntries(文件.map(rel => [rel, rd(rel)])));
 const packs = U.packNames(TREE);
 const 裸名 = 文件.map(rel => ({ rel, page:U.pageOf(rel, '', dyn, packs).page }))
   .filter(x => /\.(js|cjs|mjs|html)$/.test(x.page)).map(x => x.rel + ' → ' + x.page);
@@ -45,11 +55,11 @@ Z.题('四、五棵源码树该扫的一份不漏，那道口关得有理');
   /* 自己另走一遍树（不叫小工具带路），把该扫的列出来和它的名单对 */
   const 收 = [];
   const 跳 = ['node_modules','images','userdata-fd','userdata-wnw','userdata-rp','logs','plugin','dist','tools','_build'];
-  const walk = d => { for(const e of fs.readdirSync(d, { withFileTypes:true })){
-    if(e.isDirectory()){ if(跳.includes(e.name)) continue; walk(path.join(d, e.name)); }
-    else if(/\.(js|cjs)$/.test(e.name) && !/\.code\.js$/.test(e.name)) 收.push(path.relative(TREE, path.join(d, e.name)).replace(/\\/g,'/'));
+  const walk = (d, 根 = TREE) => { for(const e of fs.readdirSync(d, { withFileTypes:true })){
+    if(e.isDirectory()){ if(跳.includes(e.name)) continue; walk(path.join(d, e.name), 根); }
+    else if(/\.(js|cjs)$/.test(e.name) && !/\.code\.js$/.test(e.name)) 收.push(path.relative(根, path.join(d, e.name)).replace(/\\/g,'/'));
   } };
-  for(const d of ['src/pack','src/_fd','src/_wnw','src/_shared','data/plugins']) walk(path.join(TREE, d));
+  for(const d of ['src/pack','src/_fd','src/_wnw','src/_shared','data/plugins']){ const 格 = 那格(TREE, d); walk(格.全, 格.根); }
   const 该扫 = 收.filter(x => !/uitext\.cjs|(^|\/)(wnw-kernel|wnw-custom-kernel|rp-kernel)\.js$/.test(x));
   const 漏 = 该扫.filter(x => !文件.includes(x));
   Z.判('4 五棵树里每一份 .js / .cjs 都进了扫描名单（除了界面文字那台生成器自己和为写内核那颗产物）：漏一份就是那一页的字进不了清单',
@@ -58,10 +68,10 @@ Z.题('四、五棵源码树该扫的一份不漏，那道口关得有理');
      .gitignore 已经关了它）—— 扫它等于把同一批字抄第二遍，所以两头都要指名排掉：
      名单里没有它、扫描那一头写着排它。份数不写死（2026-10-12 可拆性整理一家一家往上添，写死一次红一次）：
      磁盘上那一批、内核装配名单上那一批、扫描名单里那一批，三批一字不差才对得上。 */
-  const 扫描 = fs.readFileSync(path.join(TREE, 'src/pack/uitext.cjs'), 'utf8');
-  const 装配名单 = (fs.readFileSync(path.join(TREE, 'src/_wnw/build-kernel.mjs'), 'utf8')
+  const 扫描 = rd('src/pack/uitext.cjs');
+  const 装配名单 = (rd('src/_wnw/build-kernel.mjs')
     .match(/const PARTS = \[([\s\S]*?)\];/)[1].match(/'[^']+'/g) || []).map(s => s.slice(1, -1)).sort();
-  const 源码份 = fs.readdirSync(path.join(TREE, 'src/_wnw/src')).filter(n => /\.js$/.test(n)).sort();
+  const 源码份 = lsd('src/_wnw/src').filter(n => /.js$/.test(n)).sort();
   const 扫到的 = 文件.filter(x => x.startsWith('src/_wnw/src/')).map(x => x.slice('src/_wnw/src/'.length)).sort();
   Z.判('4b 为写内核那颗产物不在扫描名单里，uitext 那一头写着排它，磁盘 / 装配名单 / 扫描名单三份一字不差',
     !文件.includes('src/_wnw/wnw-kernel.js')
@@ -72,13 +82,13 @@ Z.题('四、五棵源码树该扫的一份不漏，那道口关得有理');
          装配名单.filter(x => !扫到的.includes(x)), 扫到的.filter(x => !装配名单.includes(x))]
         .flat().join('、'));
   const mjs = [];
-  const walk2 = d => { for(const e of fs.readdirSync(d, { withFileTypes:true })){
+  const walk2 = (d, 根 = TREE) => { for(const e of fs.readdirSync(d, { withFileTypes:true })){
     const p = path.join(d, e.name);
-    if(e.isDirectory()){ if(跳.includes(e.name) || e.name === '备份' || e.name === 'dist' || e.name === 'update') continue; walk2(p); }
-    else if(/\.mjs$/.test(e.name)) mjs.push(path.relative(TREE, p).replace(/\\/g,'/'));
+    if(e.isDirectory()){ if(跳.includes(e.name) || e.name === '备份' || e.name === 'dist' || e.name === 'update') continue; walk2(p, 根); }
+    else if(/\.mjs$/.test(e.name)) mjs.push(path.relative(根, p).replace(/\\/g,'/'));
   } };
-  for(const d of ['src/pack','src/_fd','src/_wnw','src/_shared']) walk2(path.join(TREE, d));
-  const 界面上的话 = mjs.filter(rel => { try{ return /\btoast\(/.test(fs.readFileSync(path.join(TREE, rel), 'utf8')); }catch(e){ return false; } });
+  for(const d of ['src/pack','src/_fd','src/_wnw','src/_shared']){ const 格 = 那格(TREE, d); walk2(格.全, 格.根); }
+  const 界面上的话 = mjs.filter(rel => { try{ return /\btoast\(/.test(rd(rel)); }catch(e){ return false; } });
   Z.判('5 「只认 .js / .cjs」这一刀是量过的：这几份 .mjs 全是敲命令行跑的构建脚本，一句往界面上说的话都没有' +
     '（份数不写死 —— 加一颗少一颗都改一次数字，写死一次红一次）',
     mjs.length >= 5 && 界面上的话.length === 0, { mjs, 界面上的话 });
@@ -90,7 +100,7 @@ Z.题('二、这一批新加的界面话扫得到');
 {
   let occ = [];
   for(const rel of 文件){
-    const t = fs.readFileSync(path.join(TREE, rel), 'utf8');
+    const t = rd(rel);
     try{ occ = occ.concat(/\.html$/.test(rel) ? U.scanHtml(rel, t, packs) : U.scanJs(rel, t, dyn, packs)); }
     catch(e){ Z.判('! 扫不动 ' + rel, false, e.message); }
   }
@@ -168,7 +178,7 @@ Z.题('五、拼接式不许越过本句的末尾（外32 图7 踩出来的那�
   ].map(码 => 扫(码).some(o => o.text === '第二句'));
   Z.判('20 字开头、字在中间、字在两头三种拼法都收得住（一种越过句末就少一片清单）',
     三种.every(Boolean), 三种.join(' / '));
-  const 一颗 = 扫(fs.readFileSync(path.join(TREE, 'src/_wnw/src/w10-cards.js'), 'utf8')).length;
+  const 一颗 = 扫(rd('src/_wnw/src/w10-cards.js')).length;
   Z.判('21 拿真源码再量一遍：卡片那一摊扫出来的条数不该掉一截（外32 图7 那一版只剩 26 条，一份清单当场少四百多行）',
     一颗 > 450, 一颗);
 }

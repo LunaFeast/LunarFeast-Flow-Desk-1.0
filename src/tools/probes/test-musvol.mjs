@@ -6,13 +6,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 
-const ROOT = __树根;
-const MUS = fs.readFileSync(path.join(ROOT, 'data/plugins/music-remote/main.js'), 'utf8');
-const 声 = fs.readFileSync(path.join(ROOT, 'src/_tauri/src/tauri_bind/vol_cmds.rs'), 'utf8');
-const 判 = fs.readFileSync(path.join(ROOT, 'src/_tauri/src/core/media_rule.rs'), 'utf8');
+const MUS = rd('data/plugins/music-remote/main.js');
+const 声 = rd('src/_tauri/src/tauri_bind/vol_cmds.rs');
+const 判 = rd('src/_tauri/src/core/media_rule.rs');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (extra ? ' · ' + extra : '')); } };
 

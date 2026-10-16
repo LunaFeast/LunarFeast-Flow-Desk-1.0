@@ -8,12 +8,12 @@
    规矩照这一仓的来：真源码一颗一颗切进 node:vm 跑，只在边界使替身（数据库 / 弹窗 / 写盘 / 取色控件），
    每一条都把数到的东西打印出来（不许哑），最后咬两口 —— 把承重那一句改坏，判法必须不过。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const ROOT = __树根 + '/';
-const rd = p => fs.readFileSync(ROOT + p, 'utf8');
 const 源 = {
   packs:rd('src/_shared/sh-packs.js'), look:rd('src/_shared/sh-look.js'),
   font:rd('src/_shared/sh-font.js'),

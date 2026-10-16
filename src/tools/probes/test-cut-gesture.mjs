@@ -2,11 +2,12 @@
    跑的是 w18-lyric.js 里真发出去的那几行原文：cell() 里那三行接线 + 那个 cutToggle。
    要验的是：双击进来 → 单击落刀 → 再双击出去，而双击自带的两次单击不许把刀落下去。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const SRC = fs.readFileSync(__树根 + '/src/_wnw/src/w18-lyric.js', 'utf8');
+const SRC = rd('src/_wnw/src/w18-lyric.js');
 const i0 = SRC.indexOf('if(!counting){');
 const i1 = SRC.indexOf('\n    }', i0);
 const wire = SRC.slice(i0, i1 + 6);

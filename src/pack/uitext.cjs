@@ -226,7 +226,7 @@ const P_FD = 'Flow-Desk', P_WNW = '为写', P_RP = '声笔输入法练习',
    多出一段谁也对不上的旧名字，所以改成读插件清单。 */
 function packNames(TREE){
   const out = {};
-  const dir = path.join(TREE, 'data', 'plugins');
+  const dir = 那格(TREE, 'data/plugins').全;
   let es = [];
   try{ es = fs.readdirSync(dir, { withFileTypes:true }); }catch(e){ return out; }
   for(const e of es){
@@ -639,31 +639,49 @@ const SKIP_NAME = new Set(['uitext.cjs', 'wnw-kernel.js', 'wnw-custom-kernel.js'
    收进来就成了清单里的脏行（和 uitext.cjs 同一类）。
    src/tools/ 底下那些 .mjs 是自检台，压根不在这几棵树的射程里。
    哪天新增了往界面上说话的一份，给它在这一行加一个名或者在 pageOf 里加一页，别放开这个口子。 */
+/* ---------- 到哪儿找那一份（插件分离第 5 批：一家一仓）----------
+   为写、定制、各家那一格都搬去旁边那一层各自那一仓了，界面文字这本清单还得覆盖它们
+   （界面上说的话，句子得回到说话那一份源码里）。这一份是 .cjs，import 不了 src\_build\邻居.mjs，
+   所以邻居名单由 ESM 那一头（src\_fd\build.mjs）递进来 —— 这一颗不自己算第二本账。
+   没递（比如探针直接 require 这一份）就只认本仓：读不到就是读不到，不蒙。 */
+let 邻根 = [];
+function 设邻居(名单){ 邻根 = (名单 || []).map(String); }
+/* 回的是「那一份在哪儿」+「它是从哪一棵量出来的」—— 相对路径要按它自己那一棵切，
+   不然隔壁那一棵里的一份会变成 ../Schedule/data/plugins/... 这种谁也对不上的名字。 */
+function 那格(TREE, 相){
+  const 拆 = String(相).split('/').filter(Boolean);
+  for(const 根 of [TREE, ...邻根]){
+    const 全 = path.join(根, ...拆);
+    if(fs.existsSync(全)) return { 全, 根 };
+  }
+  return { 全: path.join(TREE, ...拆), 根: TREE };
+}
 function listFiles(TREE){
-  const out = [];
-  const walk = dir => {
+  const out = [];  const walk = (dir, 根 = TREE) => {
     let es = [];
     try{ es = fs.readdirSync(dir, { withFileTypes:true }); }catch(e){ return; }
     for(const e of es){
       const p = path.join(dir, e.name);
-      if(e.isDirectory()){ if(['node_modules','images','userdata-fd','userdata-wnw','userdata-rp','logs','plugin','dist','target','gen'].includes(e.name)) continue; walk(p); }
+      if(e.isDirectory()){ if(['node_modules','images','userdata-fd','userdata-wnw','userdata-rp','logs','plugin','dist','target','gen'].includes(e.name)) continue; walk(p, 根); }
       else if(/\.(js|cjs|rs)$/.test(e.name) && !/\.code\.js$/.test(e.name) && !SKIP_NAME.has(e.name)){
-        const rel = path.relative(TREE, p).replace(/\\/g, '/');
+        const rel = path.relative(根, p).replace(/\\/g, '/');
         if(!SKIP_REL.has(rel)) out.push(rel);
       }
     }
   };
-  for(const d of ['src/pack', 'src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/_tauri', 'data/plugins']) walk(path.join(TREE, d));
+  for(const d of ['src/pack', 'src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/_tauri', 'data/plugins']){
+    const 格 = 那格(TREE, d); walk(格.全, 格.根);
+  }
   for(const f of ['src/_build/p1.js','src/_build/p2.js','src/_build/p3.js','src/_build/p4.js','src/_build/p5.js','src/_build/p6.js'])
-    if(fs.existsSync(path.join(TREE, f))) out.push(f);
-  for(const f of HTML_FILES) if(fs.existsSync(path.join(TREE, f))) out.push(f);
-  for(const f of CS_FILES) if(fs.existsSync(path.join(TREE, f))) out.push(f);
+    if(fs.existsSync(那格(TREE, f).全)) out.push(f);
+  for(const f of HTML_FILES) if(fs.existsSync(那格(TREE, f).全)) out.push(f);
+  for(const f of CS_FILES) if(fs.existsSync(那格(TREE, f).全)) out.push(f);
   return [...new Set(out)].sort();
 }
 function collectAll(TREE){
   const files = listFiles(TREE);
   const src = {};
-  for(const rel of files){ try{ src[rel] = fs.readFileSync(path.join(TREE, rel), 'utf8'); }catch(e){ src[rel] = ''; } }
+  for(const rel of files){ try{ src[rel] = fs.readFileSync(那格(TREE, rel).全, 'utf8'); }catch(e){ src[rel] = ''; } }
   const dyn = settingPages(src);
   const packs = packNames(TREE);
   let occ = [];
@@ -999,7 +1017,7 @@ function apply(TREE, edits){
   }
   const files = [];
   for(const 份 of r.文件){
-    const 全 = path.join(TREE, 份.rel);
+    const 全 = 那格(TREE, 份.rel).全;   /* 句子写回它自己那一棵那一份 */
     fs.writeFileSync(全, 份.文, 'utf8');
     files.push(全);
   }
@@ -1026,7 +1044,7 @@ function refresh(TREE, 丢掉){
   return { file, rows:groups.length, occ:occ.length };
 }
 
-module.exports = { collectAll, groupsOf, render, parse, plan, apply, refresh, tokenize, scanJs, scanHtml,
+module.exports = { 设邻居, collectAll, groupsOf, render, parse, plan, apply, refresh, tokenize, scanJs, scanHtml,
   listFiles, pageOf, settingPages, packNames, uiTextPath, unesc, resc, splitTemplate, fnMap, fnAt, artifactBuilds,
   checkSyntax:语法闸,          /* 自检台拿「原样读得通 / 改完读不通」这一对反向验这一闸咬得住，别处不另写一把 */
   yq, kvOf, plainOk,

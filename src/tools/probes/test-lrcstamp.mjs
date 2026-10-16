@@ -1,13 +1,10 @@
 /* 审查第 21 条：词格导出逐句 LRC 那三位毫秒。
    跑的是 src\_wnw\src\w18-lyric.js 里那份真 lyricToLrc + 真 LyricFmt + src\_wnw\src\w18-ttml.js 里那把真尺，
    不抄第二份产品代码；「旧算法」只作为对照出现在断言里（用来说明这一格确实坏过）。 */
-import fs from "node:fs";
 import vm from "node:vm";
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
-const R = __树根 + '/src/';
-const w18 = fs.readFileSync(R + "_wnw/src/w18-lyric.js", "utf8");
-const ttml = fs.readFileSync(R + "_wnw/src/w18-ttml.js", "utf8");
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
+const w18 = rd("src/_wnw/src/w18-lyric.js");
+const ttml = rd("src/_wnw/src/w18-ttml.js");
 
 function grabObj(name, from){
   const i = from.indexOf("const " + name + " = {");

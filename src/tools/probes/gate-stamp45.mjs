@@ -9,8 +9,8 @@
      四、tag 钉在代码那一笔上，不钉在「把号写进清单」那一笔上；
      五、盘上那七份清单现在都带 +build. 尾巴，没有一家还是当初那个占位死号。
    ============================================================ */
-import fs from 'node:fs';
-import { rd, 记账, 切, ROOT } from './lib-slice.mjs';
+import { rd, 记账, 切, 出自 } from './lib-slice.mjs';
+import { 家 } from '../../_build/plugin-repos.mjs';
 
 const 台 = 记账('gate-stamp45');
 const rel = rd('src/_build/release.mjs');
@@ -45,10 +45,14 @@ const 写号 = 切(rel, '号写回清单');
   写号.includes('往那一支写(r.支, [{ 份:清单格(r.id)') && 写号.includes('另起一笔记号') && !写号.includes("'--only='"));
 
 台.题('五、盘上那七份清单现在都带真号');
-for(const id of ['notes', 'schedule', 'your-sentences', 'music-remote', 'singbit-input-practice', 'why-not-write', 'wnw-custom']){
-  let v = '';
-  try{ v = String(JSON.parse(fs.readFileSync(ROOT + 'data/plugins/' + id + '/manifest.json', 'utf8')).version || ''); }catch(e){ v = '（读不到）'; }
-  台.判(id + ' 那一格带 +build. 尾巴（现在：' + v + '）', /\+build\.[0-9a-f]{7}$/.test(v));
+/* 插件分离第四刀：那七格一份不住在主程序仓了（一家一仓，住在上一层）——
+   名单照 src\_build\plugin-repos.mjs 那张 家 表算（唯一出处，这一台不再自己抄第二份七个名），
+   每一份问尺（本仓先问、再问隔壁那一棵）。判据一字没改：还是那一条「带 +build. 七位真号尾巴」。 */
+for(const j of 家){
+  let v = '', 在 = '';
+  try{ v = String(JSON.parse(rd('data/plugins/' + j.id + '/manifest.json')).version || ''); 在 = 出自('data/plugins/' + j.id + '/manifest.json'); }
+  catch(e){ v = '（读不到）'; }
+  台.判(j.id + ' 那一格带 +build. 尾巴（现在：' + v + ' · 那一份住在 ' + 在 + '）', /\+build\.[0-9a-f]{7}$/.test(v), v);
 }
 
 台.收尾();

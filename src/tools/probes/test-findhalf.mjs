@@ -4,11 +4,12 @@
    这台断的是「标题承诺的动作，界面上得有对应控件」这一类，外加新加的「找下一处」真按顺序跳。
    跳那一步跑的是真源码（从 w8-write.js 里抠出 nextHit 进沙箱），不抄第二份。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const SRC = fs.readFileSync(__树根 + '/src/_wnw/src/w8-write.js', 'utf8');
+const SRC = rd('src/_wnw/src/w8-write.js');
 const i0 = SRC.indexOf('async findBookDlg()');
 const body = (() => {
   let d = 0, j = SRC.indexOf('{', i0);

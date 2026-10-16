@@ -19,6 +19,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { 在 as 邻居在, 文本 as 邻居文本 } from './邻居.mjs';   /* 到哪儿找那一份，全仓只此一处 */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const TREE = path.resolve(HERE, '..', '..');
@@ -118,14 +119,18 @@ export function 分支在不在(在, 分支) {
    开关那种从前一律回「带着」，等于把没量说成量过。 */
 export function 现在带不带(在, 项) {
   const 根 = path.resolve(在 || TREE);
+  /* 一家一仓之后（插件分离第 5 批）：那几份源码住在各家自己那一仓，本仓里没有 ——
+     "到哪儿找那一份"不在这儿另算，交给 src\_build\邻居.mjs 那一颗（先问本仓，再问隔壁那一棵）。 */
+  const 那份在 = (相) => 邻居在(相, 根);
+  const 那份读 = (相) => 邻居文本(相, 根);
   const 份 = (项.量这份 || []).filter(Boolean);
   if (份.length) {
-    const 有 = 份.filter(p => fs.existsSync(path.join(根, p)));
+    const 有 = 份.filter(p => 那份在(p));
     return { 带: 有.length > 0, 话: 有.length + '/' + 份.length + ' 份在盘上（' + 份.map(p => p.split('/').pop()).join('、') + '）' };
   }
   const 句 = (项.量这句 || []).filter(x => Array.isArray(x) && x.length === 2);
   if (句.length) {
-    const 中 = 句.filter(([p, 串]) => { try { return fs.readFileSync(path.join(根, p), 'utf8').includes(串); } catch (e) { return false; } });
+    const 中 = 句.filter(([p, 串]) => { try { return 那份读(p).includes(串); } catch (e) { return false; } });
     return { 带: 中.length > 0, 话: 中.length + '/' + 句.length + ' 句还在源码里' };
   }
   return { 带: null, 话: '这一项还没登记怎么量（不当它带着，也不当它没有）' };

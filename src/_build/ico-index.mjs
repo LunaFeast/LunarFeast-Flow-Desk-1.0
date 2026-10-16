@@ -10,6 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { 找 } from './邻居.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const FACTORY = path.join(ROOT, 'src', 'pack', 'icons');
@@ -149,7 +150,9 @@ function aliasChars(){
   return m;
 }
 const files = [];
-for(const d of SCAN_DIRS) walk(path.join(ROOT, d), files);
+/* 一家一仓之后（插件分离第 5 批）：SCAN_DIRS 里那几格（为写、定制、各家那一格）已经不在主程序仓里了，
+   "到哪儿找"交给 src\_build\邻居.mjs —— 先问本仓，本仓没有才问隔壁那一棵；哪一棵都没有就交回本仓那条（walk 认空目录）。 */
+for(const d of SCAN_DIRS) walk(找(d, ROOT), files);
 const reads = files.map(f => ({ f, txt: fs.readFileSync(f, 'utf8') }));
 const ALIAS = aliasChars();
 function refWhere(name){

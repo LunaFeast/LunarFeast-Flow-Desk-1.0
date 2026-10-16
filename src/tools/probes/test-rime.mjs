@@ -9,6 +9,7 @@
        走的调用（addAll(RIME_HEXES,'rime','小企鹅')），看来源记成 Rime、组落成 小企鹅、再点一趟不攒第二个。
    跑法：node test-rime.mjs */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
@@ -24,7 +25,7 @@ const gen = fs.readFileSync(GEN, 'utf8');
 const 池 = [...gen.matchAll(/(#[0-9a-f]{6})/g)].map(m => m[1]);
 
 /* ---------- A 反序：色卡池那一份 + 生成那份都在，先核最硬的一条 ---------- */
-const col = fs.readFileSync(ROOT + 'src/_shared/sh-color.js', 'utf8');
+const col = rd('src/_shared/sh-color.js');
 const ctx = vm.createContext({ Math, JSON, String, Number, Object, Array, RegExp, isNaN, parseFloat, parseInt, console });
 vm.runInContext(col, ctx, { filename:'sh-color.js' });
 vm.runInContext('globalThis.__c = { parseColor };', ctx);
@@ -53,8 +54,8 @@ if(fs.existsSync(YAML)){
 }
 
 /* ---------- D 进池那一步：真源码 + 生成那份，一起搬进沙箱 ---------- */
-const lib = fs.readFileSync(ROOT + 'src/_fd/src/fd3-lib.js', 'utf8');
-const cards = fs.readFileSync(ROOT + 'src/_fd/src/fd11-cards.js', 'utf8');
+const lib = rd('src/_fd/src/fd3-lib.js');
+const cards = rd('src/_fd/src/fd11-cards.js');
 function grab(name, from){
   const i = from.indexOf('const ' + name + ' = {');
   if(i < 0) throw new Error('找不到 ' + name);

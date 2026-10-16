@@ -4,6 +4,8 @@
    原样搬进虚拟机跑（第 56~57 轮纹理名单改吃图片库，lookTexGroups 那条没人走了、跟着撤，这里也不再切它）；
    其余按源码现场数，数的是「还剩几处提到强度和内置那 11 张」—— 不是拿记忆当证据。 */
 import fs from 'node:fs';
+import { 尺在 } from './lib-slice.mjs';
+import { lsd, rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,14 +13,13 @@ import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const ROOT = __树根 + '/';
-const rd = p => fs.readFileSync(ROOT + p, 'utf8');
 const LOOK = rd('src/_shared/sh-look.js');
 const LIB = rd('src/_fd/src/fd3-lib.js');
 const SHL = rd('src/_fd/src/fd3-shell.js');
 const UI = rd('src/_fd/src/fd4-builtin.js');
 /* 外观方案那一份是程序开机从存档里长出来的（data\looks.yaml）：新克隆的一棵上还没有它，
    这一台量的就是「磁盘那一份里长什么样」，没有就明说量不出来，不拿空串当证据。 */
-if(!fs.existsSync(ROOT + 'data/looks.yaml')){
+if(!尺在('data/looks.yaml')){
   console.log('缺数据：这台机器上还没有 data\\looks.yaml（程序第一次跑过才会长出来）—— 这一台量不出来');
   process.exit(77);
 }
@@ -121,12 +122,12 @@ const 路 = ['icons/textures', 'src/pack/icons/textures', 'data/textures.yaml', 
 const 存 = 路.filter(p => fs.existsSync(ROOT + p));
 ok('20 盘上那五样也真没了（icons\\textures 那 11 张、出厂层那一份副本、data\\textures.yaml、data\\textures 那一格、造那 11 张图的脚本）' +
    ' —— 还在的：' + (存.length ? 存.join(',') : '一个也没有'), 存.length === 0);
-const 图剩 = fs.readdirSync(ROOT + 'icons').filter(n => n.indexOf('textures') >= 0);
+const 图剩 = lsd('icons').filter(n => n.indexOf('textures') >= 0);
 ok('21 图标那一格里再也没有叫 textures 的东西（数到 ' + (图剩.join(',') || '一个也没有') + '），出厂那一份子目录也整个不在',
-  图剩.length === 0 && !fs.existsSync(ROOT + 'src/pack/icons/textures'));
-const 张数 = fs.readdirSync(ROOT + 'icons').filter(n => /\.(svg|png|jpg|jpeg|webp|gif)$/i.test(n)).length;
+  图剩.length === 0 && !尺在('src/pack/icons/textures'));
+const 张数 = lsd('icons').filter(n => /\.(svg|png|jpg|jpeg|webp|gif)$/i.test(n)).length;
 ok('22 图标那一层还在使（顶层 ' + 张数 + ' 张，界面上那些正经图标一张没被牵连），只是往里那一层现在空的或者根本没有',
-  张数 > 60 && !fs.existsSync(ROOT + 'icons/textures'));
+  张数 > 60 && !有('icons/textures'));
 ok('23 两头扫图标都只剩一条数据层那一路：壳里 收一格(图片库那一格, "images-", true)、开发那台 take(..., images-, /images/, true)，' +
    '两头都不再拼 textures- 那一个前缀（数到 ' + ((壳扫 + 壳信 + SERVE + ICO).match(/textures-/g) || []).length + ' 处）',
   /收一格\(&mut 表, &Path::new\(数\)\.join\("images"\), "images-", true/.test(壳信)

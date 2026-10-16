@@ -289,10 +289,10 @@ const 造页 = rd('src/_fd/build.mjs'), 打包 = rd('src/pack/publish.mjs');
   /* 写成什么样不算，写「到哪几颗」才算：把两份脚本里所有写盘的目标名抠出来对一遍 */
   const 写目标 = [...new Set((造页.match(/fs\.(?:writeFileSync|appendFileSync|rmSync|mkdirSync)\((\w+)/g) || [])
     .map(x => x.replace(/.*\((\w+)/, '$1')))];
-  Z.判('47 生成那一趟往磁盘写的目标只有四处：那一张页（OUT_DIR / OUT）与各家那一格里的内核产物（KDIR / KOUT）—— 内核产物落 data\\plugins\\ 底下，用户的书与用户配置（data\\userdata-*）不在射程里（插件分离 第 1 批：内核不再拼进页面，改铺进各家那一格）',
-    写目标.sort().join(',') === 'KDIR,KOUT,OUT,OUT_DIR' && /const OUT_DIR = TREE\.pages/.test(造页)
+  Z.判('47 生成那一趟往磁盘写的目标只有那一张页（OUT_DIR / OUT）：内核一概不碰 —— 插件分离第 5 批一家一仓之后，那三颗产物住在各家自己那一仓，由那一仓的 出包.mjs 现出；用户的书与用户配置（data\\userdata-*）从来不在射程里',
+    写目标.sort().join(',') === 'OUT,OUT_DIR' && /const OUT_DIR = TREE\.pages/.test(造页)
     && /const OUT = path\.join\(OUT_DIR, 页名\(版\)\)/.test(造页)
-    && /const KDIR = path\.join\(TREE\.data, 'plugins', 哪家\)/.test(造页)
+    && !/铺内核|KDIR|KOUT/.test(造页)                      /* 正向钉：这一趟再也没有往各家那一格写的那两句 */
     && !/userdata/.test(造页)
     && /return 'Flow_Desk_' \+ \(用了 \|\| 号\(\)\) \+ '\.html'/.test(rd('src/_build/version.mjs')), 写目标);
   Z.判('48 首装和覆盖升级那一颗 exe 带的是整棵树，publish 顶上那道硬闸盯着 data\ 这一格（用户写的书一个字节都不进包）',

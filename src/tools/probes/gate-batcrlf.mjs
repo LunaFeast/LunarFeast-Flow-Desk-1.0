@@ -11,7 +11,7 @@
    没登记就明说没量，不硬编成失败 —— 这一份进仓的闸里也不写本机路径。 */
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { ROOT, 记账 } from './lib-slice.mjs';
+import { ROOT, rd, 记账 } from './lib-slice.mjs';
 import { 推送脚本 } from '../本地路径.mjs';
 
 const 台 = 记账('gate-batcrlf');
@@ -25,7 +25,7 @@ const 签出 = (名, 串) => {
 const 数 = 串 => { const b = Buffer.from(串, 'utf8'); let cr = 0, lf = 0; for(const x of b){ if(x === 13) cr++; if(x === 10) lf++; } return { cr, lf }; };
 
 台.题('一 · .gitattributes 里那条批处理例外');
-const attr = fs.readFileSync(ROOT + '.gitattributes', 'utf8').split(/\r?\n/);
+const attr = rd('.gitattributes').split(/\r?\n/);
 const 行号 = p => attr.findIndex(p);
 const 例外 = 行号(l => /^\*\.bat\s/.test(l) && /eol=crlf/.test(l));
 const 全拒 = 行号(l => /^\*\s+text=auto/.test(l));

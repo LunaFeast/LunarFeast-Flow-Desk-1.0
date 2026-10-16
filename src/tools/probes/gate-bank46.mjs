@@ -10,7 +10,7 @@
    装配单还点着这两份、整库改名那条 Rust 硬写着源码格 `_shared` 那一层。
    ============================================================ */
 import fs from 'node:fs';
-import { rd, 切, 切方法, 记账, ROOT } from './lib-slice.mjs';
+import { ROOT, rd, 切, 切方法, 尺在, 记账 } from './lib-slice.mjs';
 import { 看一家, 仓名 } from '../../_build/pack-repo.mjs';
 
 const 台 = 记账('gate-bank46');
@@ -150,8 +150,8 @@ const 为写数据 = rd('src/_wnw/src/w7-data.js');
     && /typeof BankDlg !== 'undefined'/.test(rd('src/_wnw/src/w3-shell.js'))
     && /typeof Banks !== 'undefined' && typeof mkBank === 'function'/.test(主));
   台.判('老地方那两份一份不剩（搬不是复制：留第二份真身就是两份真相）',
-    !fs.existsSync(ROOT + 'src/_shared/sh-banks.js') && !fs.existsSync(ROOT + 'src/_shared/sh-bank-ui.js')
-    && fs.existsSync(ROOT + 'src/_wcustom/src/sh-banks.js') && fs.existsSync(ROOT + 'src/_wcustom/src/sh-bank-ui.js'));
+    !尺在('src/_shared/sh-banks.js') && !尺在('src/_shared/sh-bank-ui.js')
+    && 尺在('src/_wcustom/src/sh-banks.js') && 尺在('src/_wcustom/src/sh-bank-ui.js'));
 }
 
 台.题('五、词库层只认宿主接口那一格四样东西（两个宿主各递一份，层本身不认宿主的名）');

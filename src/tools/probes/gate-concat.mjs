@@ -7,17 +7,17 @@
    整页 = 外壳 + 那颗产物 + 开机那一份，所以这一台还要顺手量一笔「产物落后没落后」。
    同一天晚些（外39「推演组件定制本身也要分离出来」）又多一棵：src\_wcustom\build-kernel.mjs
    出 src\_wcustom\wnw-custom-kernel.js，那份不套闭包、名字照旧落在顶层，产物在不在新不新同一把尺量。 */
-import fs from 'node:fs';
-import path from 'node:path';
 import vm from 'node:vm';
 import { execFileSync } from 'node:child_process';
 import { 号 } from '../../_build/version.mjs';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
+/* 插件分离第四刀（2026-10-16）：为写那一棵（src/_wnw）与推演组件定制那一棵（src/_wcustom）的源码和产物
+   都不再住在主程序仓 —— 「到哪儿找那一份」只此一处（src\_build\邻居.mjs，经 lib-slice 这一层端出来）。
+   本仓先问、本仓没有才问隔壁那一棵；读不到就照旧 ENOENT，绝不在这儿编一个空结果。
+   拼法、判据、退出码那一条一个字没改，这一台也不再自己算仓根（ROOT 那一格交回尺里）。 */
+import { rd, rd在, 尺在 } from './lib-slice.mjs';
 
-const ROOT = __树根;
-const build = fs.readFileSync(path.join(ROOT, 'src/_fd/build.mjs'), 'utf8');
-const kernel = fs.readFileSync(path.join(ROOT, 'src/_wnw/build-kernel.mjs'), 'utf8');
+const build = rd('src/_fd/build.mjs');
+const kernel = rd('src/_wnw/build-kernel.mjs');
 const grab = (src, marker) => {
   const i = src.indexOf(marker);
   if(i < 0) throw new Error('装配单里找不着：' + marker);
@@ -51,9 +51,8 @@ js += '\nvar FD_VERSION = ' + JSON.stringify(号()) + ';\n';
 const 有那一句 = /var FD_VERSION = /.test(build);
 console.log(有那一句 ? '✓ build.mjs 还在往页顶写那一句号（这一趟的号是 ' + 号() + '）'
   : '✗ build.mjs 里不再写 FD_VERSION：为写和声笔练习那份号就断了来源');
-const read = p => fs.readFileSync(p.startsWith('../')
-  ? path.join(ROOT, 'src/_fd', p) : path.join(ROOT, 'src/_fd/src', p), 'utf8');
-const readWnw = p => fs.readFileSync(path.join(ROOT, 'src/_wnw/src', p), 'utf8');
+const read = p => rd(p.startsWith('../') ? 'src/_fd/' + p : 'src/_fd/src/' + p);
+const readWnw = p => rd('src/_wnw/src/' + p);
 /* 内置代码编辑器的运行时（build 里 add('icode-src', icodeEmbed()) 那一坨）不在源码树里，这里不比 */
 for(const p of parts) add(p, read(p));
 /* 为写那二十份逐份过一遍语法（只查不拼 —— 拼进顶层会和下面那颗产物撞名，
@@ -62,8 +61,7 @@ for(const p of wnw) 查('为写/' + p, readWnw(p));
 let body = '';
 for(const p of wnw) body += readWnw(p) + '\n';
 const 现拼 = '(function(){\n' + body + '\n})();\n';
-const 盘上 = fs.existsSync(path.join(ROOT, 'src/_wnw/wnw-kernel.js'))
-  ? fs.readFileSync(path.join(ROOT, 'src/_wnw/wnw-kernel.js'), 'utf8') : '';
+const 盘上 = 尺在('src/_wnw/wnw-kernel.js') ? rd('src/_wnw/wnw-kernel.js') : '';
 const 新 = !!盘上 && 盘上.endsWith(现拼);
 console.log(!盘上 ? '✗ 产物那一颗根本不在：跑 node src\\_wnw\\build-kernel.mjs'
   : 新 ? '✓ 为写内核产物是最新的（' + Buffer.byteLength(盘上) + ' 字节）'
@@ -77,16 +75,15 @@ if(盘上) add('wnw-kernel', 盘上);
      ② 那颗产物和源码还对不对得上 —— 对不上就是改了源码没重跑那一趟，旧字会悄悄进页。
    比对不在这儿重算一遍拼法（拼法归那一棵的 build-kernel.mjs 管，抄第二份必然对不上口径），
    直接叫它自己的 --比，退出码就是答案。 */
-const 定制棵 = path.join(ROOT, 'src/_wcustom/build-kernel.mjs');
-const 定制产物 = path.join(ROOT, 'src/_wcustom/wnw-custom-kernel.js');
-const 定制在 = fs.existsSync(定制产物);
-const 定制名单 = fs.existsSync(定制棵) ? grab(fs.readFileSync(定制棵, 'utf8'), 'const PARTS = [').map(names) : [];
-for(const p of 定制名单) 查('推演组件定制/' + p, fs.readFileSync(path.join(ROOT, 'src/_wcustom/src', p), 'utf8'));
+const 定制棵 = rd在('src/_wcustom/build-kernel.mjs');       /* 拿绝对位置：这一颗要被 execFileSync 现跑一趟 */
+const 定制在 = 尺在('src/_wcustom/wnw-custom-kernel.js');
+const 定制名单 = 尺在('src/_wcustom/build-kernel.mjs') ? grab(rd('src/_wcustom/build-kernel.mjs'), 'const PARTS = [').map(names) : [];
+for(const p of 定制名单) 查('推演组件定制/' + p, rd('src/_wcustom/src/' + p));
 let 定制新 = false, 定制话 = '';
 try{ execFileSync(process.execPath, [定制棵, '--比'], {stdio:'pipe'}); 定制新 = true; }
 catch(e){ 定制话 = String((e.stdout && String(e.stdout)) || (e.stderr && String(e.stderr)) || e.message).split(/\r?\n/)[0]; }
 console.log(!定制在 ? '✗ 推演组件定制那颗产物不在：跑 node src\\_wcustom\\build-kernel.mjs'
-  : 定制新 ? '✓ 推演组件定制内核产物是最新的（' + Buffer.byteLength(fs.readFileSync(定制产物)) + ' 字节 · ' + 定制名单.length + ' 份源码）'
+  : 定制新 ? '✓ 推演组件定制内核产物是最新的（' + Buffer.byteLength(rd('src/_wcustom/wnw-custom-kernel.js')) + ' 字节 · ' + 定制名单.length + ' 份源码）'
   : '✗ 推演组件定制内核产物落后于源码：跑 node src\\_wcustom\\build-kernel.mjs —— ' + 定制话);
 
 add(boot, read(boot));

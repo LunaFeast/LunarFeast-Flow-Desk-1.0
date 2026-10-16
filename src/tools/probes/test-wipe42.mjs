@@ -11,13 +11,16 @@
    主进程那颗真删（userWipe）要跑起来才有现场，这一台判的是它的写法和不许动的三样；
    真点一遍归人工闸：他自己开探针浏览器按那三次确认。 */
 import fs from 'node:fs';
+import { 根列表 } from '../../_build/邻居.mjs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { ROOT, rd, 切, 记账 } from './lib-slice.mjs';
+import { ROOT, rd, 切, 尺在, 记账 } from './lib-slice.mjs';
+
 
 const 台 = 记账('外42 一键清理与改字工具');
 const require = createRequire(import.meta.url);
 const U = require(ROOT + 'src/pack/uitext.cjs');
+U.设邻居(根列表().slice(1));   /* 一家一仓之后那几家的源码在隔壁那一棵：这本清单还得覆盖它们（句子写回说话那一份） */
 
 /* ---------- 一 · 临时调试那一档删干净 ---------- */
 台.题('一 · 那一档还在不在');
@@ -123,7 +126,7 @@ const pub = rd('src/pack/publish.mjs');
 台.判('发布那一趟不往产物里铺那两份清单（界面文字与卡片大小的名一处不剩）',
   !/card-size|ui-text|出厂清单/.test(pub), (pub.match(/card-size|ui-text|出厂清单/g) || []).join('、'));
 台.判('用户数据详单也不由发布铺（它是用户自己写的那一篇，首次安装就没有它）', !/userdata-list/.test(pub));
-台.判('仓里也没有它的一份（不在公开面）', !fs.existsSync(ROOT + 'src/pack/data/userdata-list.md'));
+台.判('仓里也没有它的一份（不在公开面）', !尺在('src/pack/data/userdata-list.md'));
 
 /* ---------- 五 · 插件往发布物里走的三条路：两条仍然堵着，一条外46 又铺开了 ----------
    ① 程序代码那一层（发布物里的 src\）不收插件 —— 仍然堵着（Electron 那层 resources\app 已随那颗壳一起撤掉，

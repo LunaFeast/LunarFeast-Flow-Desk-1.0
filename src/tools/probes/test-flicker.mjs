@@ -14,10 +14,7 @@
    四、咬口
    边界替身：Work / chWords / State / DOM 全给假的，就地刷新 与 字数账 两颗是仓库里那一份原文。 */
 import vm from 'node:vm';
-import fs from 'node:fs';
-import { rd, 切, 切方法, 记账 } from './lib-slice.mjs';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
+import { rd, lsd, 切, 切方法, 记账 } from './lib-slice.mjs';   /* 列目录也走这一颗尺：一家一仓之后 _wnw 那一棵站在隔壁 */
 
 const R = 记账('test-flicker');
 const W8 = rd('src/_wnw/src/w8-write.js');
@@ -25,7 +22,7 @@ const W8 = rd('src/_wnw/src/w8-write.js');
 /* ---------- 一、全仓 Bus.on 台账 ---------- */
 const 目录 = ['src/_wnw/src', 'src/_fd/src', 'src/_shared'];
 const 全部 = [];
-for(const d of 目录) for(const f of fs.readdirSync(__树根 + '/' + d))
+for(const d of 目录) for(const f of lsd(d))
   if(/\.js$/.test(f)) for(const [i, 行] of rd(d + '/' + f).split('\n').entries())
     if(/Bus\.on\(/.test(行)) 全部.push({ 处:d + '/' + f + ':' + (i + 1), 行:行.trim(), 文:f });
 /* 已逐条看过、各自有解绑那一只手的：写在台账里，多出来的一条都不许悄悄进来 */

@@ -11,7 +11,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { 记账, rd, 切, ROOT } from './lib-slice.mjs';
+import { ROOT, rd, 切, 尺在, rd在, 记账 } from './lib-slice.mjs';
 import { 探针沙盒 } from '../本地路径.mjs';
 import { 拼清单, 读清单, 读清单显示, 改清单, 合法基线, 确认词 } from '../../_build/push-list.mjs';
 
@@ -129,7 +129,7 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
 台.判('读不懂送来的东西就回空对象，不炸（界面上少写一格也不至于崩台）', /try\{ 收\(JSON\.parse\(文 \|\| '\{\}'\)\)/.test(ui));
 
 台.题('六、双击那一颗入口');
-台.判('入口在 src\\tools\\push-fd.bat，指的就是这一台', fs.existsSync(ROOT + 'src/tools/push-fd.bat') && bat.includes('node push-ui.mjs'));
+台.判('入口在 src\\tools\\push-fd.bat，指的就是这一台', 尺在('src/tools/push-fd.bat') && bat.includes('node push-ui.mjs'));
 台.判('那颗是 CRLF（cmd.exe 读 LF 会吃行首，这一条早钉过）', /\r\n/.test(bat) && !/[^\r]\n/.test(bat));
 台.判('它开的端口和这一台的默认端口是同一串（写死两处，比一次）',
   new RegExp('start http://127\\.0\\.0\\.1:' + /PORT \|\| (\d+)/.exec(ui)[1] + '/').test(bat));
@@ -311,7 +311,10 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
   /* ---- 插件包那一张封面：同名盖进它自己那一格（沙盒那一棵，不碰他仓里的包） ---- */
   {
     const 包路 = p => path.join(探针沙盒, '插件封面-闸跑', p);
-    const 他仓那一张 = fs.readFileSync(path.join(ROOT, 'data/plugins/notes/images/icon.svg'));
+    /* 插件分离第四刀：data\plugins\<id>\ 那一家不住本仓了 —— 位置与那一张都问尺（本仓先问、再问隔壁那一棵）。
+       比的还是同一张封面、同一逐字节判据，只是"到哪儿找那一份"交回 src\_build\邻居.mjs 那一处。 */
+    const 那一张 = 'data/plugins/notes/images/icon.svg';
+    const 他仓那一张 = fs.readFileSync(rd在(那一张));
     const 原 = fs.readFileSync(包路('notes/images/icon.svg'));
     const 新 = 甲('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 6"/>');
     const 成 = 那.图标写插件('notes', 'icon.svg', 新);
@@ -331,7 +334,7 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 笔:[
     台.判('13 插件层也能指到别处（FD_PLUGINS），默认才是仓里 data\\plugins\\',
       ui.includes("process.env.FD_PLUGINS ? path.resolve(process.env.FD_PLUGINS)") && ui.includes("path.join(TREE, 'data', 'plugins')"));
     台.判('14 跑完这一节，你仓里 data\\plugins\\notes 那一张封面一个字节没动（逐字节比跑前那一份）',
-      fs.readFileSync(path.join(ROOT, 'data/plugins/notes/images/icon.svg')).equals(他仓那一张),
+      fs.readFileSync(rd在(那一张)).equals(他仓那一张),
       '跑前 ' + 他仓那一张.length + ' 字节');
   }
   fs.rmSync(沙, { recursive: true, force: true });

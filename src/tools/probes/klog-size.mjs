@@ -1,10 +1,11 @@
 /* 外28 二组：拿真编码器 + 真调用口（diff）跑一章，量落盘大小和回放耗时
    打字量倍数 = （敲进去的字 + 删掉的字）÷ 成稿字数 */
 import fs from "node:fs";
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from "node:vm";
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
-const src = fs.readFileSync(__树根 + '/src/_wnw/src/w20-keystroke.js', "utf8");
+const src = rd('src/_wnw/src/w20-keystroke.js');
 let buf = '';
 const FD_APP = { appendPageFile:async(rel, text)=>{ buf += text; }, readPageFile:async()=>buf, pageFileExists:async()=>buf.length > 0 };
 /* 上面那一版是"机器有多快敲多快"，毫秒差全是 0、1 —— 真人打字隔 40~300 毫秒一下，

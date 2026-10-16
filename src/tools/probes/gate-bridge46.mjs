@@ -15,7 +15,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { rd, 记账, ROOT, 桥全部, 桥请壳, 名换算, 壳注册单 } from './lib-slice.mjs';
+import { rd, rd在, 尺在, 记账, ROOT, 桥全部, 桥请壳, 名换算, 壳注册单 } from './lib-slice.mjs';
+import { 家 } from '../../_build/plugin-repos.mjs';
 
 const 台 = 记账('gate-bridge46');
 const 壳根 = path.join(ROOT, 'src', '_tauri');
@@ -126,8 +127,11 @@ function 跳串(文, i){          /* 从一颗引号的位置走到底，跳掉�
 }
 台.题('四、页面上请桥用到的那一栏栏，桥每一栏都挂到了（另一头是页面源码，不再拿 Electron 那份桥比）');
 function 走页(格, 收 = []){
-  const 全 = path.join(ROOT, 格);
-  if(!fs.existsSync(全)) return 收;
+  /* 插件分离第四刀：页面那一头不再只住在主程序仓 —— src/_wnw、src/_wcustom、data/plugins
+     三家格都搬到隔壁那一层了。所以"这一格在不在、在哪儿"一律走尺（本仓先问、再问邻居），
+     收下来的还是同一个相对路径，rd() 拿它自己去隔壁那一份读。 */
+  if(!尺在(格)) return 收;
+  const 全 = rd在(格);
   for(const e of fs.readdirSync(全, { withFileTypes: true })){
     const 相 = 格 + '/' + e.name;
     if(e.isDirectory()){ if(!['node_modules', 'images'].includes(e.name)) 走页(相, 收); continue; }
@@ -135,7 +139,11 @@ function 走页(格, 收 = []){
   }
   return 收;
 }
-const 页面层 = ['src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'data/plugins'].flatMap(d => 走页(d));
+/* 插件分离第四刀：data/plugins 那一格在主程序仓里是空的，一家一格住在各自那一个仓。
+   这一头不能只写 'data/plugins'（尺会先问本仓、量到那一格空的），按 plugin-repos 那张 家 表逐家走 ——
+   名单只此一份，别处不抄第二份。 */
+const 页面层 = ['src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom',
+  ...家.map(j => 'data/plugins/' + j.id)].flatMap(d => 走页(d));
 const 用的 = [...new Set(页面层.flatMap(相 => [...rd(相).matchAll(/FD_APP\.([A-Za-z_$][\w$]*)/g)].map(m => m[1])))].sort();
 const 桥名 = 挂的名字(桥);
 const 缺 = 用的.filter(n => !桥名.includes(n));

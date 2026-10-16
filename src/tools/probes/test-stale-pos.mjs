@@ -2,11 +2,12 @@
    一遍从前（位置没动也照样换基准），一遍今天（那种快照只收元数据、不动基准）。
    看的是基准这一路：每一张快照落地后 FD 拿的那一对 (pos, at)，以及它算出的当前位置与真值差多少。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const src = fs.readFileSync(__树根 + '/data/plugins/music-remote/main.js', 'utf8');
+const src = rd('data/plugins/music-remote/main.js');
 function pick(n){ const i = src.indexOf('\n  ' + n + '('); let j = src.indexOf('\n  },', i);
   const j2 = src.indexOf('\n  }', i + 1); if(j2 > i && j2 < j) j = j2; return src.slice(i + 1, j + 4); }
 const body = ['deadband', 'offsetMs', 'lyricMs', 'apply', 'nowMs'].map(pick).join(',\n');

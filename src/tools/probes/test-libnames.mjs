@@ -4,7 +4,7 @@
    报一句「存不进文件：只认这几份库文件」、重启就没了 —— 色卡那一份 cards.yaml 就是漏登记过一整轮。
    这台不改代码，只做一件事：把页面里真走这条通道的名字数出来，跟两道闸逐条比，并且咬三口确认比得动。 */
 import fs from 'node:fs';
-import { rd, 记账, ROOT } from './lib-slice.mjs';
+import { ROOT, rd, 尺在, 记账 } from './lib-slice.mjs';
 
 const R = 记账('test-libnames');
 const 壳 = rd('src/_tauri/src/core/data_path.rs');
@@ -16,7 +16,7 @@ const 页面 = {
   'fd3-shell.js': rd('src/_fd/src/fd3-shell.js'),
   /* 推演组件定制那一份源码住在它自己那条分支上：这一棵上没有就不数它，
      「名字要在两处登记」那条规矩对它在那一条分支上照样量（那一条分支上这一份就在） */
-  ...(ROOT && fs.existsSync(ROOT + 'src/_wcustom/src/sh-gen.js') ? { 'sh-gen.js': rd('src/_wcustom/src/sh-gen.js') } : {})
+  ...(ROOT && 尺在('src/_wcustom/src/sh-gen.js') ? { 'sh-gen.js': rd('src/_wcustom/src/sh-gen.js') } : {})
 };
 
 /* 名单：两处各是一份数组字面量，从源码里原样端出来（壳里那一本按 Rust 的字面量抽，服务器那一本按 JS 的抽） */
@@ -49,7 +49,7 @@ R.判('数得到名字，而且不是数漏了才显得对得上（色卡那一�
 /* 待实现清单（lib-pending.json）那一格是推演组件定制那一家写的，它的源码住在自己那条分支上。
    这一棵上没有那一家，就把这一格单独钉住：两道闸里必须在册（那条分支合回来当场就要存得下去），
    而页面里此刻没人写它。这一条形同白名单，只此一名 —— 别的名字敢「没人写却在册」，当场红。 */
-const 分支上才写的 = fs.existsSync(ROOT + 'src/_wcustom/src/sh-gen.js') ? [] : ['lib-pending.json'];
+const 分支上才写的 = 尺在('src/_wcustom/src/sh-gen.js') ? [] : ['lib-pending.json'];
 R.判('一份文件只指一个名字：四份库文件各管一件事（色卡两套 / 外观方案 / 图片库 / 待实现清单）',
   ['cards.yaml', 'palettes.yaml', 'looks.yaml', 'images.yaml', 'lib-pending.json']
     .every(n => 页面要.includes(n) || 分支上才写的.includes(n)), 页面要);

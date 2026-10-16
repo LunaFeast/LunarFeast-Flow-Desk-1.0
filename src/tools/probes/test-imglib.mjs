@@ -10,12 +10,12 @@
          标记色只剩一条路、第 4 页三块齐、恢复出厂带上间距、运行时那一头（main.cjs / fd-serve.mjs）收得到这一格。
      三、咬一口：把「旧纹理清单搬进新库」那一句改掉再跑第一段，第 4 条必须不过 —— 免得这条是个假断言。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const ROOT = __树根 + '/';
-const rd = p => fs.readFileSync(ROOT + p, 'utf8');
 const LIB = rd('src/_fd/src/fd3-lib.js');
 const SHL = rd('src/_fd/src/fd3-shell.js');
 const UI = rd('src/_fd/src/fd4-builtin.js');

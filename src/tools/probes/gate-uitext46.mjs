@@ -19,7 +19,7 @@ import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
-import { ROOT, rd, 切, 记账 } from './lib-slice.mjs';
+import { ROOT, rd, 切, 尺在, 记账 } from './lib-slice.mjs';
 
 const 台 = 记账('gate-uitext46');
 const require = createRequire(import.meta.url);
@@ -189,7 +189,7 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
 /* ---------- 五 · 程序里那台旧的改字代码撤干净 ---------- */
 台.题('五 · 旧的「改界面文字」在程序里不留一根线（乙 运行时那一层 / 丙 通道 / 丁 名单）');
 {
-  台.判('运行时替换那一层整份没了（src\\_shared\\sh-text.js）', !fs.existsSync(ROOT + 'src/_shared/sh-text.js'));
+  台.判('运行时替换那一层整份没了（src\\_shared\\sh-text.js）', !尺在('src/_shared/sh-text.js'));
   台.判('生成那一趟不再把它拼进产物', !/sh-text/.test(rd('src/_fd/build.mjs')));
   const 壳 = ['src/_fd/src/fd3-shell.js', 'src/_fd/src/fd6-boot.js', 'src/_fd/src/fd4-builtin.js',
     'src/_wnw/src/w1-core.js', 'src/_wnw/src/w3-shell.js', 'src/_wnw/src/w6-boot.js', 'src/_wnw/src/w10-cards.js',
@@ -213,7 +213,7 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
   台.判('装完卸完功能都不重扫界面文字清单（运行时那几本里没有一颗读它的）',
     !/UIT\./.test(全树().replace(rd('src/pack/uitext.cjs'), '')));
   台.判('卡片大小那一台一处不留：清单生成器、运行时那一份、四颗通道、设置里那一行',
-    !fs.existsSync(ROOT + 'src/pack/cardsize.cjs') && !fs.existsSync(ROOT + 'src/_fd/src/fd10-size.js')
+    !尺在('src/pack/cardsize.cjs') && !尺在('src/_fd/src/fd10-size.js')
     && !/cardSize|card-size/.test(全树())
     && !/SizeList|SizeCfg/.test(rd('src/_fd/src/fd3-shell.js') + rd('src/_fd/src/fd4-builtin.js') + rd('src/_fd/src/fd6-boot.js')));
 }

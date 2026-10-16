@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { rd, 记账, ROOT } from './lib-slice.mjs';
+import { ROOT, rd, 记账 } from './lib-slice.mjs';
 import { 探针沙盒 } from '../本地路径.mjs';    /* 克隆那一棵落在仓外这一格（C 盘不留东西），跑完连格一起收 */
 
 const 台 = 记账('gate-release44');
@@ -172,7 +172,7 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
     真.码 === 0 && /再跑一次 --看/.test(真.文) && !/invalid object name/.test(真.文) &&
     (脏 > 0 ? /--看 照量：盘上 \d+ 处没提交/.test(真.文) : !/照量：盘上 \d+ 处没提交/.test(真.文)),
     真.文.split(/\r?\n/).find(l => l.includes('照量')) || (脏 > 0 ? '脏着却没提醒' : '干净时没多话'));
-  const 清 = fs.readFileSync(ROOT + 'data/推送清单.txt', 'utf8');
+  const 清 = rd('data/推送清单.txt');
   台.判('6 量完的清单上七家一个形状（为写那格的副题也是「这一家的代码在 plugin/why-not-write 那一支」）',
     (清.match(/^【.*】这一家的代码在 plugin\/[\w-]+ 那一支$/gm) || []).length === 7 &&
     !/自己那一棵/.test(清), (清.match(/^【/gm) || []).length + ' 笔');

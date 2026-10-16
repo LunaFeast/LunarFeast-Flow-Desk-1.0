@@ -4,14 +4,15 @@
    调用点又不 catch，于是既开不出来也不说一句话。这台断的就是这三道口子。
    跑的是真源码：Hist.app() 和 KLog.read() 从原文里抠出来塞进一个假对象进沙箱，不抄第二份。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const ROOT = __树根;
-const HIST = fs.readFileSync(ROOT + '/src/_wnw/src/w15-hist.js', 'utf8');
-const KSH = fs.readFileSync(ROOT + '/src/_wnw/src/w20-keystroke.js', 'utf8');
-const W8 = fs.readFileSync(ROOT + '/src/_wnw/src/w8-write.js', 'utf8');
+const HIST = rd('src/_wnw/src/w15-hist.js');
+const KSH = rd('src/_wnw/src/w20-keystroke.js');
+const W8 = rd('src/_wnw/src/w8-write.js');
 
 /* 从「方法名(」起做花括号配平，切出来的就是原文那一段对象方法 */
 function method(src, name){

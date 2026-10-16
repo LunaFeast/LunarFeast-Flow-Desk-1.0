@@ -1,10 +1,11 @@
 /* 外27 己组 · 逐张看：真值落地前 FD 的钟差多少、diff 多大、有没有换基准、实测走速收到多少 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const src = fs.readFileSync(__树根 + '/data/plugins/music-remote/main.js', 'utf8');
+const src = rd('data/plugins/music-remote/main.js');
 function pick(n){ const i = src.indexOf('\n  ' + n + '('); if(i < 0) throw new Error('组件里已经没有方法 ' + n + ' 了');
   let j = src.indexOf('\n  },', i);
   const j2 = src.indexOf('\n  }', i + 1); if(j2 > i && j2 < j) j = j2; return src.slice(i + 1, j + 4); }
@@ -20,7 +21,7 @@ const num = n => { const m = src.match(new RegExp('const ' + n + '\\s*=\\s*([0-9
 const stubs = '({smtc:null,audio:null,at:0,pos:0,dur:0,rate:1,src:1,status:"",title:"",artist:"",album:"",app:"",can:{}' +
   ',appliedSeq:0,trackKey:"",drift:null,timer:null,seekAt:0,gen:0,snapAt:0,confirm:null,flags:{off:0,sync:500}' +
   ',isSelf(){return false},plan(){},loadLyric(){},tell(){},' + body + '})';
-const rows = fs.readFileSync(__树根 + '/smtc-observed.jsonl', 'utf8').split('\n').filter(Boolean)
+const rows = rd('smtc-observed.jsonl').split('\n').filter(Boolean)
   .map(l => JSON.parse(l)).filter(r => r.raw).map(r => JSON.parse(r.raw))
   .filter(o => /musicbee/i.test(o.app || '') && o.status === 'Playing');
 

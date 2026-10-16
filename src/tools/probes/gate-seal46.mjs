@@ -14,9 +14,9 @@
    那一手要等运行时世界那一层（docs\插件真隔离设计.md 第三节的选路），这一台不装成已经关了。
    二、三、四这几节是在 vm 里跑真源码（切的是仓库里那一份原文，不抄第二份），不是查字符串。
    ============================================================ */
-import fs from 'node:fs';
 import vm from 'node:vm';
-import { rd, 记账, ROOT, 切 } from './lib-slice.mjs';
+import { rd, 尺在, 出自, 记账, 切 } from './lib-slice.mjs';
+import { 家 } from '../../_build/plugin-repos.mjs';   /* 那七家的名单只此一份（别处不许再抄第二份） */
 
 const 台 = 记账('gate-seal46');
 const 载 = rd('src/_shared/sh-load.js');
@@ -122,12 +122,16 @@ const 空手 = await 跑(`(() => {
 
 /* ---------- 四 · 七家真清单过这一颗尺 ---------- */
 台.题('四 · 仓里那七家真插件清单一家一家过');
-const 家目录 = ROOT + 'data/plugins';
-const 名单 = fs.readdirSync(家目录).filter(名 => fs.existsSync(家目录 + '/' + 名 + '/manifest.json'));
-台.数('货架上有几家', 名单.length);
-台.判('七家（一家不多一家不少）', 名单.length === 7, 名单);
-for(const 名 of 名单){
-  const 清单 = JSON.parse(fs.readFileSync(家目录 + '/' + 名 + '/manifest.json', 'utf8'));
+/* 插件分离第四刀：data\plugins\<id>\ 一家一格搬去各自那一个仓，主程序仓里那一格是空的 ——
+   「货架上有几家」不能再拿"扫本地那一格"当出处（扫出来是 0，那条判据就成了假的），
+   名单照 src\_build\plugin-repos.mjs 那张 家 表逐家问尺：本仓先问、本仓没有才问隔壁那一棵。 */
+const 清单路 = j => 'data/plugins/' + j.id + '/manifest.json';
+const 读清单 = j => JSON.parse(rd(清单路(j)));
+const 名单 = 家.filter(j => 尺在(清单路(j)));
+台.数('货架上有几家', 名单.length + ' 家（' + 名单.map(j => j.id).join('、') + '）· 那一份住在 ' + (名单[0] ? 出自(清单路(名单[0])) : '哪儿都没有'));
+台.判('七家（一家不多一家不少）', 名单.length === 7, 名单.map(j => j.id));
+for(const 每 of 名单){
+  const 名 = 每.id, 清单 = 读清单(每);
   const 量 = 跑('(() => { const m = PackLoader.metaOf(' + JSON.stringify(名) + ', ' + JSON.stringify(清单) + ');'
     + 'return { 本体:Object.isFrozen(m), 通道:Object.isFrozen(m.appChannels), 键:Object.isFrozen(m.kvKeys),'
     + ' 表单:Object.isFrozen(m.stateKeys), 数据:Object.isFrozen(m.dataKeys), 共享:Object.isFrozen(m.sharedKeys),'
@@ -140,7 +144,7 @@ for(const 名 of 名单){
   跑('Object.keys(PACK_META).map(k => Object.assign({ id:k }, PACK_META[k])).length') > 0);
 台.判('门照旧认得真清单点名的通道（音乐遥控器那 20 颗里挑一颗试）',
   await 跑(`(async () => {
-    const 清 = ${JSON.stringify(JSON.parse(fs.readFileSync(家目录 + '/music-remote/manifest.json', 'utf8')))};
+    const 清 = ${JSON.stringify(读清单(家.find(j => j.id === 'music-remote')))};
     PACK_META['music-remote'] = PackLoader.metaOf('music-remote', 清);
     const 门 = PackCtx.make('music-remote');
     return typeof 门.app.mediaState === 'function' || 门.app === null;
@@ -186,8 +190,8 @@ const 漏 = 必须挡.filter(名 => !地板.includes(名));
 const 挡空 = 地板.filter(名 => !在桥上(名));
 台.判('地板上没有挡空的名（桥上找不到这一颗 = 名单长草或写错名）', 挡空.length === 0, 挡空);
 const 各家点的 = {};
-for(const 名 of 名单)
-  各家点的[名] = (JSON.parse(fs.readFileSync(家目录 + '/' + 名 + '/manifest.json', 'utf8')).appChannels || []);
+for(const 每 of 名单)
+  各家点的[每.id] = (读清单(每).appChannels || []);
 const 撞 = Object.entries(各家点的).flatMap(([家, 串]) => 串.filter(名 => 地板.includes(名)).map(名 => 家 + '·' + 名));
 台.判('七家清单点名的通道一颗都不在地板上（挡了就是当场少一只手）', 撞.length === 0, 撞);
 const 点的全 = Object.values(各家点的).flat();

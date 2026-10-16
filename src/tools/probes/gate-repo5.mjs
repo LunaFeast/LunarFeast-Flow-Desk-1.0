@@ -21,8 +21,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { 记账, rd } from './lib-slice.mjs';
-import { 仓名, 看一家, 铺, 打包, 分自检, 搬自检, 跑自检, TREE } from '../../_build/pack-repo.mjs';
+import { 记账, rd, lsd, 有, 出自, 隔壁 } from './lib-slice.mjs';
+import { 仓名, 看一家, 铺, 打包, 分自检, TREE } from '../../_build/pack-repo.mjs';
 import { 私人串清单, 扫文本 } from '../../_build/public-scan.mjs';
 
 const 台 = 记账('gate-repo5');
@@ -145,9 +145,12 @@ try{
     !/\[\s*'rm'/.test(工) && !/rmSync\(\s*格\b/.test(工) && !/rmSync\([^)\n]*plugins[^)\n]*\)/.test(工)
     && /rmSync\(摊/.test(工) && /cpSync\(格, 摊/.test(工),
     (工.match(/rmSync\([^)]{0,40}/g) || []).join(' ⏎ '));
-  台.判('主程序仓里便签那三件还在（这一颗只铺不删）',
-    fs.existsSync(path.join(TREE, 'data', 'plugins', 'notes', 'main.js'))
-    && fs.existsSync(path.join(TREE, 'data', 'plugins', 'notes', 'manifest.json')));
+  /* 2026-10-16 第四刀之后这一条改了口：从前钉的是「铺完不许删」，现在删是他点过头的（原有那一仓改作空壳），
+     所以钉反过来那一面 —— 壳里那一格空着，那三件在 Notes 自己那一仓里逐字还在。 */
+  台.判('便签那三件不在主程序仓里、在 Notes 那一棵里逐字还在（删干净了，也搬齐了）',
+    !fs.existsSync(path.join(TREE, 'data', 'plugins', 'notes', 'main.js'))
+    && fs.existsSync(path.join(path.dirname(TREE), 'Notes', 'data', 'plugins', 'notes', 'main.js'))
+    && fs.existsSync(path.join(path.dirname(TREE), 'Notes', 'data', 'plugins', 'notes', 'manifest.json')));
   台.判('这颗工具列进了"开发那一层"那份名单（装出去的那一棵里搜不到它）',
     fs.readFileSync(path.join(TREE, 'src', 'pack', 'publish.mjs'), 'utf8')
       .includes('pack-repo|packbox') || fs.readFileSync(path.join(TREE, 'src', 'pack', 'publish.mjs'), 'utf8')
@@ -180,9 +183,9 @@ try{
     /'src\/_wnw\/'/.test(表) && /'src\/_wcustom\/'/.test(表)
     && /内核:\{ 出:'src\/_wnw\/build-kernel\.mjs'/.test(表) && /内核:\{ 出:'src\/_wcustom\/build-kernel\.mjs'/.test(表)
     && /内核:\{ 那颗:'src\/_build\/rp-kernel\.mjs'/.test(表));
-  台.判('铺的时候两样一起看：from 里点名的源码（一整格就一层层走）一并铺，产物拿主仓那份 .gitignore 挡 —— 问不动当场停，不拿"问不出"当"没有"',
+  台.判('铺的时候两样一起看：from 里点名的源码（一整格就一层层走）一并铺，产物拿那一份实际站着的那一棵的 .gitignore 挡 —— 问不动当场停，不拿"问不出"当"没有"',
     /function 列源码/.test(工) && /项\.endsWith\('\/'\)/.test(工) && /check-ignore/.test(工)
-    && /e\.status === 1/.test(工) && /停\('问不了主仓那份 \.gitignore/.test(工));
+    && /e\.status === 1/.test(工) && /停\('问不了那一棵的 \.gitignore（/.test(工) && /问哪一棵 \|\| TREE/.test(工));
   台.判('反证 · 把那道 .gitignore 的闸改成"一份都没命中"，为写那颗产物立刻算进要铺的那几份 —— 挡路的就是这一句',
     (() => {
       const 改 = 工.replace('return new Set(String(出).split(/\\r?\\n/).filter(Boolean));', 'return new Set();');
@@ -239,47 +242,33 @@ try{
     /const 该有 = new Set/.test(工) && /'ls-files', '-z'/.test(工) && /!该有\.has\(p\)/.test(工)
     && /fs\.rmSync\(path\.join\(路, \.\.\.p\.split\('\/'\)\)/.test(工));
   台.判('反证 · 把那道比名单摘掉（谁都不删），挪走的份就永远留在原来那一棵里，两仓同时住一份',
-    (() => { const 改 = 工.replace('.filter(p => !该有.has(p) && !自带(p));', ';');
+    (() => { const 改 = 工.replace('.filter(p => !该有.has(p));', ';');
       return 改 !== 工 && !/该有\.has\(p\)/.test(改); })());
 }
 
-台.题('八、检查跟着代码走：一台只读这一家那几份的探针整台搬过去，在那一棵里要跑绿；搬完再铺一次，不许把它铺没');
+台.题('八、那把尺会问隔壁那一棵：主程序仓里一个插件字节都没有，那一摞检查照样读得到（「到哪儿找那一份」只此一处）');
 {
-  const 工 = rd('src/_build/pack-repo.mjs');
-  台.判('分家那一道认四种「真去读」的写法：rd 单引号、rd 反引号、path.join(TREE,…)、从壳里 import 进来的零件，再加一道 src/… 串的兜底',
-    工.includes("matchAll(/\\brd\\(\\s*'") && 工.includes('matchAll(/\\brd\\(\\s*`') && 工.includes('matchAll(/path\\.join\\(\\s*TREE')
-    && 工.includes('matchAll(/from') && 工.includes("matchAll(/'((?:src|data)"));
-  台.判('反证 · 把「同一格里并排的零件不算外求」那一格摘掉，每一台都会因为 import 了那把尺被判成混着读，一台也搬不走',
-    (() => { const 串 = ".filter(p => !p.startsWith('src/tools/probes/'))";
-      const 改 = 工.replace(串, '.filter(() => true)');
-      return 工.includes(串) && 改 !== 工 && !改.includes(串); })());
-  const 表 = 分自检();
-  const 搬单 = 表.filter(x => x.类 !== '壳' && x.类 !== '混');
-  台.判('量出来的账：跟着搬的那 14 台全在为写与音乐遥控器这两家名下（别的一家一台都没有 —— 那几家的检查本来就只读页面与插件清单）',
-    搬单.length === 14 && [...new Set(搬单.map(x => x.类))].sort().join('、') === 'music-remote、why-not-write',
-    搬单.map(x => x.类 + ':' + x.名).join(' '));
-  台.判('混着读的钉成「不许搬」：test-flicker 那种全仓台账（一行的目录数组里既列为写也列壳）判回来留在壳里改口',
-    (() => { const 混 = 表.filter(x => x.类 === '混').map(x => x.名);
-      return 混.includes('test-flicker.mjs') && 混.includes('gate-bank46.mjs') && !混.includes('test-w37.mjs'); })(),
-    '混 ' + 表.filter(x => x.类 === '混').length + ' 台');
-  /* 真搬一次：铺一棵 → 搬自检 → 在那一棵里跑 → 再铺一次（重铺）→ 还在、还绿 */
-  const 棵 = 铺('why-not-write', 沙盒, { 重铺: true });
-  const 搬 = 搬自检('why-not-write', 沙盒);
-  const 跑 = 跑自检('why-not-write', 沙盒);
-  台.判('搬过去的那一棵里：12 台与那把尺都落在与主仓逐字一样的位置上（所以 rd 里那些路径一个字都不用改）',
-    搬.搬.length === 12 && fs.existsSync(path.join(棵.路, 'src', 'tools', 'probes', 'lib-slice.mjs'))
-    && fs.existsSync(path.join(棵.路, 'src', 'tools', 'probes', 'test-w37.mjs'))
-    && fs.existsSync(path.join(棵.路, '自检.mjs')), '搬 ' + 搬.搬.length + ' 台');
-  台.判('在那一棵里真跑一遍：12 台全绿（读不到主程序任何零件才算这一家自己的检查）',
-    跑.有 && 跑.码 === 0 && /跑通 12 · 抛了 0/.test(跑.尾), 跑.尾 || '跑子没回话');
-  铺('why-not-write', 沙盒, { 重铺: true });
-  const 再跑 = 跑自检('why-not-write', 沙盒);
-  台.判('搬完再铺一次同一棵：自家那一摞自检与顶上那颗跑子都不被「摘掉这一趟不该再有的那几份」那一手扫走（自带那一格挡着）',
-    fs.existsSync(path.join(棵.路, 'src', 'tools', 'probes', 'test-w37.mjs')) && 再跑.码 === 0, 再跑.尾);
-  台.判('反证 · 把「自带」那一格摘掉（重铺时谁都不放过），这一家刚搬过去的检查立刻被自己人扫干净',
-    (() => { const 改 = 工.replace('&& !自带(p)', ''); return 改 !== 工 && !/!自带\(p\)/.test(改); })());
+  const 尺 = rd('src/_build/邻居.mjs'), 库 = rd('src/tools/probes/lib-slice.mjs');
+  台.判('邻居那几棵的名字不抄第二份名单：拿搬仓这一颗的 仓名 现算；那一本问不到（插件仓自己那一棵）就当没有邻居',
+    尺.includes("'pack-repo.mjs'") && /邻 = Object\.values\(仓名\)/.test(尺) && /邻 = \[\]/.test(尺));
+  台.判('先问本仓，本仓没有才问邻居；邻居里也没有就把本仓那一条交回去 —— 让调用方拿到它自己的 ENOENT，不在这儿编一个"看着像对"的空结果',
+    /if\(fs\.existsSync\(本\)\) return 本;/.test(尺) && /return 本;/.test(尺));
+  台.判('探针那把尺（rd / lsd / 有 / rd在）走的就是这一处，不在每台里各算一遍路径',
+    库.includes('_build/邻居.mjs') && /const rd = p => fs\.readFileSync\(__找\(p, ROOT\)/.test(库)
+    && /export const lsd = p => fs\.readdirSync\(__找\(p, ROOT\)\)/.test(库));
+  台.判('这一台跑的时候量一眼：旁边站着几家（0 家 = 这一棵被单独 clone 出来，那几台读插件的台子各自报缺数据，不假绿）',
+    隔壁() === Object.keys(仓名).length, '邻居 ' + 隔壁() + ' 家 / 表上 ' + Object.keys(仓名).length + ' 仓');
+  台.判('真读一份隔壁的：日程那一格的主文件读得到，而且报的是从 Schedule 那一棵读来的',
+    rd('data/plugins/schedule/main.js').length > 1000 && 出自('data/plugins/schedule/main.js') === 'Schedule',
+    出自('data/plugins/schedule/main.js') + ' · ' + rd('data/plugins/schedule/main.js').length + ' 字');
+  台.判('主程序仓里那一格是空的（第四刀删干净了）：data\\plugins 底下一家都没有',
+    lsd('data/plugins').length === 0, lsd('data/plugins').join('、') || '空');
+  台.判('反证 · 把「挨个问邻居」那一行改成问一个空列表，读隔壁那一份立刻撞 ENOENT —— 承重的就是这一句',
+    (() => { const 改 = 尺.replace('for(const 院 of 邻){', 'for(const 院 of []){');
+      return 改 !== 尺 && !/for\(const 院 of 邻\)\{/.test(改); })());
+  台.判('检查一台都不搬：主仓那一摞还是 105 台（第四刀只删插件那几份字节，没从壳里搬走任何一台检查）',
+    分自检().length === 105, '主仓 ' + 分自检().length + ' 台');
 }
-
 清();
 台.数('沙盒已清', fs.existsSync(沙盒) ? '还在：' + 沙盒 : '删干净了：' + 沙盒);
 台.收尾();

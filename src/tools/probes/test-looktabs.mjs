@@ -4,10 +4,11 @@
    这一台把真 subTabs 搬进虚拟机跑（不是照抄一份）：四页在不在、锁着的那页点不动、放开之后点得动、
    左右键跳过锁着的、锁着当前页时会退到第一页没锁的。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
-const SRC = fs.readFileSync(__树根 + '/src/_fd/src/fd4-builtin.js', 'utf8');
+const SRC = rd('src/_fd/src/fd4-builtin.js');
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (x ? ' · ' + x : '')); } };
 
@@ -103,11 +104,11 @@ ok('14 第 4 页是资源那一摊（配色库 + 色卡池），且初始锁着�
 ok('15 从前的七组分屏不再整列摆上屏（那句 box.appendChild 的 for 循环撤了）',
   !/for\(const g of \[gMing, gLook, gCard, gTex, gWall, gGrad, gPal\]\) box\.appendChild/.test(TL));
 ok('16 横向次级标签的样式在页面模板里（.fd-sub-tabs / .off），并且控件那一串名单也收了它（同一档高度只有一处口径）',
-  /\.fd-sub-tabs\{/.test(fs.readFileSync(__树根 + '/src/_fd/template.html', 'utf8'))
-  && fs.readFileSync(__树根 + '/src/_shared/sh-look.js', 'utf8').includes('.fd-sub-tabs button'));
+  /\.fd-sub-tabs\{/.test(rd('src/_fd/template.html'))
+  && rd('src/_shared/sh-look.js').includes('.fd-sub-tabs button'));
 
 /* ---------- 方案分组（作者原话：「方案分组」）---------- */
-const LIB = fs.readFileSync(__树根 + '/src/_fd/src/fd3-lib.js', 'utf8');
+const LIB = rd('src/_fd/src/fd3-lib.js');
 ok('17 分组这一栏三处齐：写文件（fields）、读文件（scheme）、表头那一串',
   LIB.includes("分组:s.分组 || '',") && LIB.includes("分组:n('分组'),") && LIB.includes("'背景图', '分组', '按语言'"));
 const sb2 = { console, String, Array, Object, Set, localeCompare:0 };

@@ -1,11 +1,8 @@
 /* 外27 丙组 · 图8 单格巡航：把 w19-cruise.js 里真的 build() / cells() 抠出来跑，不照抄逻辑 */
-import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const SRC = __树根 + '/src/_wnw/src/w19-cruise.js';
-const txt = fs.readFileSync(SRC, 'utf8');
+const txt = rd('src/_wnw/src/w19-cruise.js');
 
 /* 一个沙箱里同时放真的 cruiseCells / LyricFmt 和被抠出来的方法：它们互相引用，分开编译就找不到彼此 */
 const sb = { console, Math, JSON, Object, Array, Number, String,

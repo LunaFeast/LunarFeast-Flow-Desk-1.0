@@ -6,11 +6,12 @@
      3) 库开不动时到点报错，不许让 await 一直悬着（IDB_MS = 4 秒，这一条要等满 4 秒）；
      4) 失败带回的是翻成人话的原因，不是光一个 error。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const SRC = fs.readFileSync(__树根 + '/src/_shared/sh-store.js', 'utf8');
+const SRC = rd('src/_shared/sh-store.js');
 
 function makeStore(){
   const data = new Map();

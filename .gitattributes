@@ -6,8 +6,6 @@
 # 仓里照旧存 LF，签出到工作区必须是 CRLF。
 *.bat text eol=crlf
 
-# 出片依赖的底座：按行号切片读，绝不能被换行转换改动
-src/_build/rp-base.html -text
 
 # 二进制：别试图做文本 diff
 *.png binary

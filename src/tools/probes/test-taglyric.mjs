@@ -5,12 +5,12 @@
    源码全是切真身，不抄第二份：LyricFmt（明文那一份的读者）、lyricTagLines（标签那份 → 「词 = 」行）、
    MusTag（_shared 那一格）、sh-load 发下去的那一句、music-remote 挂上来的那一句、词格那一排新按钮。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import { 探针沙盒 } from '../本地路径.mjs';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const ROOT = __树根 + '/';
-const rd = p => fs.readFileSync(ROOT + p, 'utf8');
 function tillBrace(src, head){
   const i = src.indexOf(head); if(i < 0) throw new Error('源码里找不到「' + head + '」');
   let d = 0, j = src.indexOf('{', i);

@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { 记账, rd, ROOT } from './lib-slice.mjs';
+import { ROOT, rd, 尺在, 记账 } from './lib-slice.mjs';
 import { 八项, 认这项, 中文名, 分支of, 现在带不带, 合那一棵, 摊打包那一棵, 硬链接一份 } from '../../_build/forward-features.mjs';
 
 const 台 = 记账('gate-forward46');
@@ -38,8 +38,8 @@ const 台文 = rd('src/_build/push-ui.mjs');
   认这项('feature/new/music-dock') === 'music-dock' && 认这项('瞎写') === '' && 中文名('gen-log') === '推演记录' &&
   分支of('card-weight') === 'feature/new/card-weight');
 台.判('这一棵现在带不带是量出来的，不是猜的：整份文件那种看文件在不在',
-  现在带不带(ROOT, 八项.find(x => x.id === 'heat-map')).带 === fs.existsSync(ROOT + 'src/_wnw/src/w21-heat.js') &&
-  现在带不带(ROOT, 八项.find(x => x.id === 'gen-log')).带 === fs.existsSync(ROOT + 'src/_shared/sh-log.js'));
+  现在带不带(ROOT, 八项.find(x => x.id === 'heat-map')).带 === 尺在('src/_wnw/src/w21-heat.js') &&
+  现在带不带(ROOT, 八项.find(x => x.id === 'gen-log')).带 === 尺在('src/_shared/sh-log.js'));
 台.判('八项每一项都登记了怎么量（路径或"哪一份里还有哪一串"），没有一项靠「带着」蒙 —— 屏上那行「这一棵：带着」背后要有凭据',
   八项.every(x => (x.量这份 || []).length || (x.量这句 || []).length) &&
   现在带不带(ROOT, 八项.find(x => x.id === 'lyric-grid')).话.includes('份在盘上') &&
@@ -192,7 +192,7 @@ const 手文 = rd('src/_build/pr.mjs');
   /* 档位字样：说的是「这是哪一版产品」的那几个词。他 2026-10-13 的原话是安装包与装好之后任何地方都不许出现。 */
   const 档 = /简装|完整版|全功能|全部功能|缺失功能/;
   const 壳 = rd('src/pack/sfx.cs'), 发 = rd('src/pack/publish.mjs');
-  const 字 = (() => { try { return fs.readFileSync(ROOT + 'data/ui-text.yaml', 'utf8'); } catch (e) { return ''; } })();
+  const 字 = (() => { try { return rd('data/ui-text.yaml'); } catch (e) { return ''; } })();
   台.判('首装那个窗口那一份 C# 里一个档位字样都没有（那句「便携版」说的是装法，不是档位）',
     !档.test(壳) && 壳.includes('Flow-Desk 便携版'));
   台.判('发布那一格（安装说明.txt 与 flow-desk-install.json 那两份是它写的）里也没有档位字样', !档.test(发));

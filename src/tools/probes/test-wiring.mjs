@@ -1,10 +1,11 @@
 /* 外28 二组接线自检：把 w8-write.js 里真发出去的那几句（logKeys 本体 + dirty 里那一喊）
    原样搬出来跑，不抄第二份。查的是接线，不是编码器（编码器由 test-klog.mjs 管）。 */
 import fs from "node:fs";
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from "node:vm";
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
-const src = fs.readFileSync(__树根 + '/src/_wnw/src/w8-write.js', "utf8");
+const src = rd('src/_wnw/src/w8-write.js');
 const body = /(^|\n)  logKeys\(\)\{[\s\S]*?\n  \}/.exec(src);
 if(!body){ console.log('FAIL 在 w8-write.js 里找不到 logKeys 本体'); process.exit(1); }
 const dirty = /(^|\n)  dirty\(\)\{([\s\S]*?)\n  \}/.exec(src);
@@ -15,7 +16,7 @@ console.log((喊在第一位 ? 'PASS' : 'FAIL') + ' · dirty() 一进来先记�
 let buf = '';
 const FD_APP = { appendPageFile:async(rel, text)=>{ buf += text; }, readPageFile:async()=>buf, pageFileExists:async()=>buf.length > 0 };
 /* 逐字记录问历史那一层要目录（w15-hist.js 的 Hist.dirOf），沙箱照同一个式子给一份 */
-const k = fs.readFileSync(__树根 + '/src/_wnw/src/w20-keystroke.js', "utf8");
+const k = rd('src/_wnw/src/w20-keystroke.js');
 const ctx = { console, DB:{}, Blob, crypto, TextEncoder, WNW_DATA_PRE:'', Img:{ dir:() => '测试书' },
   Hist:{ dirOf:ch => '测试书' + '/history/' + ch },
   Work:{ book:{ id:'bk1' } }, location:{ protocol:'fdapp:' }, FD_APP, window:{ FD_APP }, toast(){}, drawFoot(){},

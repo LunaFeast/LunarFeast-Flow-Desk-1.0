@@ -7,12 +7,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 
-const ROOT = __树根;
-const SRC = fs.readFileSync(path.join(ROOT, 'data/plugins/schedule/main.js'), 'utf8');
-const SHELL = fs.readFileSync(path.join(ROOT, 'src/_fd/src/fd3-shell.js'), 'utf8');
+const SRC = rd('data/plugins/schedule/main.js');
+const SHELL = rd('src/_fd/src/fd3-shell.js');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (extra ? ' · ' + extra : '')); } };
 

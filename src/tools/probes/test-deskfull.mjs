@@ -4,15 +4,11 @@
    根因写在下面第 5 条：外壳那条「占到整块栅格四分之一面积」的线，出厂那张（16 × 7 = 112 格）
    一辈子够不着，所以桌面这一档看着就是「展开模式没了」。
    这一台整份读源码量数，不搬进虚拟机：要真的跑一遍拖拽得开探针浏览器，那半写在最后那句报话里。 */
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 
-const ROOT = __树根;
-const SRC = fs.readFileSync(path.join(ROOT, 'data/plugins/music-remote/main.js'), 'utf8');
-const SHELL = fs.readFileSync(path.join(ROOT, 'src/_fd/src/fd3-shell.js'), 'utf8');
-const TOOLS = fs.readFileSync(path.join(ROOT, 'src/_fd/src/fd8-tools.js'), 'utf8');
+const SRC = rd('data/plugins/music-remote/main.js');
+const SHELL = rd('src/_fd/src/fd3-shell.js');
+const TOOLS = rd('src/_fd/src/fd8-tools.js');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (extra ? ' · ' + extra : '')); } };
 

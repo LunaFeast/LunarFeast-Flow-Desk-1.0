@@ -7,14 +7,11 @@
      宿主那一头确实钉了这几个名字（不然练习器读到的是兜底值，改圆角看不见动）。
    全部从真源码里切，不抄第二份。判之前先把注释剥掉：这一轮故意在注释里写了「从前那一段叫什么、为什么撤」，
    拿原文做「名字不许出现」的判定会把自己的说明当成残留。 */
-import fs from 'node:fs';
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
-const R = __树根 + '/';
-const BASE = fs.readFileSync(R + 'src/_build/rp-base.html', 'utf8');
-const KERNEL = fs.readFileSync(R + 'src/_build/rp-kernel.mjs', 'utf8');
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
+const BASE = rd('src/_build/rp-base.html');
+const KERNEL = rd('src/_build/rp-kernel.mjs');
 const P = {};
-for(const n of ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']) P[n] = fs.readFileSync(R + 'src/_build/' + n + '.js', 'utf8');
+for(const n of ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']) P[n] = rd('src/_build/' + n + '.js');
 
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (x ? ' · ' + x : '')); } };
@@ -43,7 +40,7 @@ const CSS = cssSeg(), HTML = htmlSeg();
 const ALL = Object.values(P).map(剥).join('\n');
 const RAW = Object.values(P).join('\n');
 const P6 = 剥(P.p6);
-const SHELL = 剥(fs.readFileSync(R + 'src/_fd/src/fd3-shell.js', 'utf8'));
+const SHELL = 剥(rd('src/_fd/src/fd3-shell.js'));
 
 /* ---------- 一、界面里那三格撤干净 ---------- */
 for(const id of ['radiusSlider', 'radiusVal', 'ctlRadiusSlider', 'ctlRadiusVal', 'cardFree', 'ctlFree',

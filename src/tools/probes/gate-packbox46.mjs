@@ -12,7 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { rd, 记账, ROOT, 壳注册单 } from './lib-slice.mjs';
+import { rd, rd在, 尺在, 出自, 记账, ROOT, 壳注册单 } from './lib-slice.mjs';
+import { 家 as 各家 } from '../../_build/plugin-repos.mjs';
 import { 打包, 打目录, 试件, 信息段字节, 标记, 格式版本, 头长, 块头长, 签名长 } from '../../_build/packbox.mjs';
 
 const 台 = 记账('gate-packbox46');
@@ -91,9 +92,14 @@ const 包 = 解包(Buffer.from(盘, 'hex'));
   打.includes('没实现就是没实现') && 打.includes('将来要动只动两处'));
 
 台.题('五、用户侧接不到这一颗，也没留半个"打包"的口');
-const 页面层 = ['src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/tools', 'data/plugins'].flatMap(格 => {
-  const 全 = path.join(ROOT, 格);
-  if(!fs.existsSync(全)) return [];
+/* 插件分离第四刀：src/_wnw、src/_wcustom、data/plugins/<id> 都不再住本仓（一家一仓，住在上一层）。
+   所以"这一格在不在、在哪儿、往里头走"全交回尺（src\_build\邻居.mjs），本仓先问、再问隔壁那一棵；
+   data/plugins 那一格在主仓里是空的，名单拿 plugin-repos 那张 家 表算 —— 唯一出处，不抄第二份。 */
+const 那几格 = ['src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/tools',
+  ...各家.map(j => 'data/plugins/' + j.id)];
+const 页面层 = 那几格.flatMap(格 => {
+  if(!尺在(格)) return [];
+  const 全 = rd在(格);
   const 收 = [];
   (function 走(d){ for(const e of fs.readdirSync(d, { withFileTypes: true })){
     const 相 = path.join(d, e.name);
@@ -116,12 +122,14 @@ const 桥 = rd('src/_tauri/ui/fd-bridge.js');
   })());
 
 台.题('六、拿一家现成的目录现场压一份（只在内存里，不落盘）');
-const 家 = path.join(ROOT, 'data', 'plugins', 'notes');
-const 门前 = JSON.stringify(fs.existsSync(家) ? fs.readdirSync(家).sort() : []);
-台.判('data\\plugins\\notes 这一家在（现场量它）', fs.existsSync(家));
+/* 同上：那一家不住本仓了 —— 位置问尺要绝对路径（打目录 那一颗拿的是真路径），
+   清单那一份也走尺；压出来的字节、判据、"量完什么都没留下"那一条一个字没改。 */
+const 家 = rd在('data/plugins/notes');
+const 门前 = JSON.stringify(尺在('data/plugins/notes') ? fs.readdirSync(家).sort() : []);
+台.判('data\\plugins\\notes 这一家在（现场量它：' + 出自('data/plugins/notes') + '）', 尺在('data/plugins/notes'));
 const 真 = 打目录(家);
 const 解 = 解包(真.字节);
-const 单 = JSON.parse(fs.readFileSync(path.join(家, 'manifest.json'), 'utf8'));
+const 单 = JSON.parse(rd('data/plugins/notes/manifest.json'));
 台.数('压出来多大 · 几份', 真.字节.length + ' 字节 · ' + 解.信息.files.length + ' 份（' + 解.信息.files.map(f => f.path).join('、') + '）');
 台.判('信息段那六个必填键跟着这一家的插件清单走（不是打包手自己编的）',
   解.信息.id === 单.id && 解.信息.name === 单.name && 解.信息.version === 单.version

@@ -27,7 +27,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { rd, 记账, ROOT } from './lib-slice.mjs';
+import { ROOT, lsd, rd, 尺在, 记账 } from './lib-slice.mjs';
 import { 家 } from '../../_build/plugin-repos.mjs';
 
 const 台 = 记账('gate-pack46');
@@ -85,7 +85,7 @@ const 让 = (sfx.match(/KeepUserFile\(dest, it\)/g) || []).length;
    这里量的是实物：仓里 data\plugins 顶层一份文件都没有 —— 名单（off.json）与自建词库名单（banks.json）
    都只有装出去那一棵里才有，所以它们不可能出现在这一包里，也就不会被这趟换新动到。 */
 {
-  const 顶层格 = fs.existsSync(ROOT + 'data/plugins')
+  const 顶层格 = 尺在('data/plugins')
     ? fs.readdirSync(ROOT + 'data/plugins', { withFileTypes:true }).filter(d => !d.isDirectory()).map(d => d.name) : ['这一格不在'];
   台.数('仓里 data\\plugins 顶层散着几份文件', 顶层格.length);
   台.判('那两份名单（plugins\\off.json 与 plugins\\banks.json）都不在这一包里，覆盖升级换新碰不到它们',
@@ -121,8 +121,8 @@ try{
   发布 = execFileSync('git', ['log', '-1', '--format=%h', '--grep=^发布 '],
     { cwd: ROOT, encoding: 'utf8' }).trim();
 }catch(e){ 发布 = ''; }
-const 有那一页 = !!发布 && fs.existsSync(ROOT + 'pages')
-  && fs.readdirSync(ROOT + 'pages').some(f => f.endsWith('+build.' + 发布 + '.html'));
+const 有那一页 = !!发布 && 尺在('pages')
+  && lsd('pages').some(f => f.endsWith('+build.' + 发布 + '.html'));
 if(!发布 || !有那一页)
   台.数('五 这一节量不出来：' + (!发布 ? '还没有 发布 那一笔提交' : 'pages\\ 里没有 ' + 发布 + ' 那一号的页')
     + ' —— 这一棵没发过第一版，发完自动跟上');

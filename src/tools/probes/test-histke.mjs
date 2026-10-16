@@ -4,12 +4,13 @@
    这台断的是：① 每一笔都能拿到"那一笔之后的整章全文"；② 一行都不折；③ 提醒那一栏不许是 0；
    ④ 清理那份排法真的"每一章都留得住"。跑的都是真源码（两份文件整份搬进沙箱），不抄第二份。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const KSRC = fs.readFileSync(__树根 + '/src/_wnw/src/w20-keystroke.js', 'utf8');
-const HSRC = fs.readFileSync(__树根 + '/src/_wnw/src/w15-hist.js', 'utf8');
+const KSRC = rd('src/_wnw/src/w20-keystroke.js');
+const HSRC = rd('src/_wnw/src/w15-hist.js');
 
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { if(c){ pass++; console.log('  PASS ' + n); } else { fail++; console.log('  FAIL ' + n + (extra ? ' · ' + extra : '')); } };

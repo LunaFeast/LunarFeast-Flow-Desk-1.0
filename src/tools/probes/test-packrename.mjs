@@ -9,7 +9,8 @@
    不然说明那句闸是空的（回拽那一轮的教训：算了闸门没核落笔）。 */
 import fs from 'node:fs';
 import { execSync } from 'node:child_process';
-import { ROOT, rd, 切方法, 记账 } from './lib-slice.mjs';
+import { ROOT, rd, rd在, 尺在, 出自, 切方法, 记账 } from './lib-slice.mjs';
+import { 家, 子件 } from '../../_build/plugin-repos.mjs';   /* 那七家（加挂在底下的子件）的名单与路径只此一份 */
 import { PACK_RENAME } from '../../_build/pack-rename.mjs';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
@@ -38,19 +39,39 @@ try{ 全 = execSync('git -C "' + __树根 + '" -c core.quotePath=false grep -l -
   { encoding:'utf8' }).trim(); }
 catch(e){ if(String(e.status) !== '1' || e.stdout.trim()) throw e; }
 const 剩 = 全.split(/\r?\n/).filter(x => x && !该留.includes(x));
-台.数('除那张表和这台探针之外还带旧名的文件', 剩.length);
+/* 插件分离第四刀：那几棵插件树搬出主程序仓之后，上面那一趟 git grep 只走得到主仓 —— 判据里那句「插件树里一处旧名不剩」
+   会跟着扫不到东西而空过。所以插件那几格自己再过一遍：要过哪些格照 plugin-repos 那张 家 表（加挂在底下的子件）的 from 算，
+   读哪一份问尺 —— 依旧不抄第二份名单、不弱化这一条，只是把搬走的那一半捡回来。 */
+function 走一格(相, 收 = []){
+  if(!尺在(相)) return 收;                       /* 那一格哪儿都没有：那一条账由上面「货架上有几家」报，不在这里装扫过 */
+  const 绝 = rd在(相);
+  if(fs.statSync(绝).isFile()){ 收.push(相.replace(/\/$/, '')); return 收; }
+  for(const e of fs.readdirSync(绝, { withFileTypes: true })){
+    const 子 = 相.replace(/\/$/, '') + '/' + e.name;
+    if(e.isDirectory()){ if(!['node_modules', '.git', 'dist'].includes(e.name)) 走一格(子 + '/', 收); continue; }
+    收.push(子);
+  }
+  return 收;
+}
+const 插件份 = [...家, ...子件].flatMap(j => j.from).flatMap(相 => 走一格(相)).filter(相 => /\.(js|cjs|mjs|json|html|css|cs|md|yaml|yml|txt|rs|ps1)$/.test(相));
+const 插件旧名 = 插件份.filter(相 => { try{ return 旧名.some(n => rd(相).includes(n)); }catch(e){ return false; } });
+台.数('除那张表和这台探针之外还带旧名的文件', 剩.length + '（主仓 git grep）+ ' + 插件旧名.length + '（搬走的插件树 ' + 插件份.length + ' 份）');
 台.判('源码 / 图标 / 插件树里一处旧名不剩，旧名字只活在改名那张表和这台探针上',
-  剩.length === 0 && 该留.every(n => 全.includes(n)), 剩.join(' | ') || 全 || '（连表里都找不到旧名了，那这张表改了形状）');
-/* 盘上那一格：目录名、插件清单 id、名单三样都得跟着换，缺一样就是「一半新一半旧」 */
-const 格 = ROOT + 'data/plugins';
-const 目录 = fs.readdirSync(格).filter(n => fs.statSync(格 + '/' + n).isDirectory());
+  剩.length === 0 && 插件旧名.length === 0 && 插件份.length >= 30 && 该留.every(n => 全.includes(n)),
+  (剩.join(' | ') || 全 || '（连表里都找不到旧名了，那这张表改了形状）') + (插件旧名.length ? ' · 插件树里还剩：' + 插件旧名.join(' | ') : ''));
+/* 盘上那一格：目录名、插件清单 id、名单三样都得跟着换，缺一样就是「一半新一半旧」。
+   插件分离第四刀（2026-10-16）：data\plugins\<id>\ 一家一格搬去各自那一个仓，主程序仓里那一格现在是空的
+   —— 再拿"扫本地那一格"当出处，量出来永远是 0 家，那本账就成了假的。
+   出处换成 src\_build\plugin-repos.mjs 那张 家 表（唯一一份名单，别处不许抄第二份），
+   逐家问尺：这一家在不在（尺在）、那一份清单读出来（rd）；off.json 还是主程序自己那一格。 */
 const 插件清单 = {};
-for(const d of 目录) if(fs.existsSync(格 + '/' + d + '/manifest.json'))
-  插件清单[d] = JSON.parse(fs.readFileSync(格 + '/' + d + '/manifest.json', 'utf8')).id;
+const 目录 = 家.filter(j => 尺在('data/plugins/' + j.id + '/manifest.json')).map(j => j.id);
+for(const d of 目录) 插件清单[d] = JSON.parse(rd('data/plugins/' + d + '/manifest.json')).id;
+const 中文名 = d => JSON.parse(rd('data/plugins/' + d + '/manifest.json')).name;
 /* off.json = 「被卸掉的那几个」，是程序里卸一家才写出来的：新克隆的一棵上还没有它，
    没有就等于一个都没卸（主进程那一条也是这么认的），照这个意思给空表，不拿读不到当崩。 */
-const 名单 = fs.existsSync(格 + '/off.json') ? JSON.parse(fs.readFileSync(格 + '/off.json', 'utf8')).off : [];
-台.数('插件格', 目录.join('、'));
+const 名单 = 尺在('data/plugins/off.json') ? JSON.parse(rd('data/plugins/off.json')).off : [];
+台.数('插件格', 目录.join('、') + '（' + 目录.length + ' 家 · 清单那一份住在 ' + (目录[0] ? 出自('data/plugins/' + 目录[0] + '/manifest.json') : '哪儿都没有') + '）');
 台.数('卸掉的', 名单.length ? 名单.join('、') : '（一家都没卸）');
 台.判('三家新名字在目录和插件清单两处都对得上，旧名字一处没有；卸掉那份名单不认旧名',
   ['notes','music-remote','singbit-input-practice']
@@ -63,9 +84,8 @@ const 名单 = fs.existsSync(格 + '/off.json') ? JSON.parse(fs.readFileSync(格
   目录.length + ' 格 / 卸掉 ' + 名单.length + ' 项 · 差在：'
   + (名单.filter(x => !目录.includes(String(x))).join('、') || '没有'));
 台.判('插件清单里的中文名一个字没动（界面上叫的还是「你的便签」）',
-  插件清单['notes'] === 'notes' && JSON.parse(fs.readFileSync(格 + '/notes/manifest.json', 'utf8')).name === '你的便签'
-  && JSON.parse(fs.readFileSync(格 + '/music-remote/manifest.json', 'utf8')).name === '音乐遥控器',
-  JSON.parse(fs.readFileSync(格 + '/notes/manifest.json', 'utf8')).name);
+  插件清单['notes'] === 'notes' && 中文名('notes') === '你的便签'
+  && 中文名('music-remote') === '音乐遥控器', 中文名('notes'));
 
 /* ---------- 二 · 表和号被写在页顶 ---------- */
 台.题('二 · 生成那一趟往页顶写的那两句');

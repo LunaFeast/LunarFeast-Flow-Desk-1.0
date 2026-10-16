@@ -4,13 +4,10 @@
      （整条浅色 + 开头一道深色竖线 + 文字后一枚完成度），下级挤在这一条自己那一整段里当细条。
    三层证据：函数层（weekBars / subFracs / nodeProgress）、画法层（真 ganttBar + 真 subInBar 长出的 DOM）、
    接线层（SCH_CSS 里每一条 .sch-* 都被真写过 —— 选择器没人挂就等于没画）。 */
-import fs from "node:fs";
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from "node:vm";
-import { fileURLToPath as __url } from 'node:url';
-const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
-const FILE = __树根 + '/data/plugins/schedule/main.js';
-const src = fs.readFileSync(FILE, "utf8");
+const src = rd('data/plugins/schedule/main.js');
 function grab(name){
   const i = src.indexOf("function " + name + "(");
   if(i < 0) throw new Error("找不到 " + name);

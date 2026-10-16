@@ -5,12 +5,12 @@
    （BookImport.into/clearSeed），用的就是页面里那一份，不抄第二份；序号格式表吃的是 w14 那张 Seq，
    字数口径吃的是 w7 那一份 wordCount。界面那一半（那一屏统计、那两枚落点）另开探针浏览器点。 */
 import fs from 'node:fs';
+import { rd } from './lib-slice.mjs';   /* 到哪儿找那一份只此一处（一家一仓之后那几份在隔壁那一棵） */
 import vm from 'node:vm';
 import { fileURLToPath as __url } from 'node:url';
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
 
 const ROOT = __树根 + '/';
-const rd = p => fs.readFileSync(ROOT + p, 'utf8');
 const W7 = rd('src/_wnw/src/w7-data.js');
 const W14 = rd('src/_wnw/src/w14-num.js');
 const W16 = rd('src/_wnw/src/w16-export.js');
