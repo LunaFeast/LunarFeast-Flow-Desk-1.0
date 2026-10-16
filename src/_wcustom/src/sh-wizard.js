@@ -150,7 +150,8 @@ class GenSheet{
     this.boot();
   }
   blank(){
-    return { id:'', name:'', icon:'pencil', desc:'', bank:Banks.list()[0] || '',
+    /* 词库那一格是一份名单（能勾好几张，4.6 定的多选）：新建时先按名单头一张填上，跟从前一样有个着落 */
+    return { id:'', name:'', icon:'pencil', desc:'', bank:(Banks.list()[0] ? [Banks.list()[0]] : []),
       out:{ mode:'list', join:'\n', template:'' }, keep:{ days:0, max:0 }, ui:[],
       rules: GW_RULES.map(r => Object.assign({ k:r.k, on:!!r.def }, JSON.parse(JSON.stringify(r.p || {})))) };
   }
@@ -162,11 +163,12 @@ class GenSheet{
     await this.loadBank(this.R.bank);
     this.draw();
   }
-  /* 每本词库在这张向导里只读一次，读完重画一回，下拉里才有分类 */
+  /* 每张词库在这张向导里只读一次，读完重画一回，下拉里才有分类（一份、一串都吃） */
   async loadBank(name){
-    if(!name || this.got.has(name)) return;
-    this.got.add(name);
-    try{ await genBank(name).load(); }catch(e){ console.warn('词库没读到：' + name); }
+    const 名 = bankNames(name).filter(n => !this.got.has(n));
+    if(!名.length) return;
+    for(const n of 名) this.got.add(n);
+    for(const n of 名){ try{ await genBank(n).load(); }catch(e){ console.warn('词库没读到：' + n); } }
   }
 
   /* ---------- 小件套 ---------- */
@@ -288,13 +290,30 @@ class GenSheet{
       two('作者', this.txt(R.author, v => { const s = v.trim(); if(s) R.author = s; else delete R.author; }, '谁做的这个功能')),
       two('版本号', this.txt(R.ver, v => { const s = v.trim(); if(s) R.ver = s; else delete R.ver; }, '1.0'))]));
     card.appendChild(this.field('简介', this.txt(R.desc, v => { R.desc = v; }, '介绍一下这个插件')));
-    const row = h('div', { class:'wnw-row' }, [
-      this.selVal(this.banks.map(n => [n, n]), R.bank, async v => { R.bank = v; await this.loadBank(v); this.draw(); }),
-      (typeof BankDlg !== 'undefined') ? this.btn('改词库', () => BankDlg.open(bankWhich(R.bank))) : null,
-      this.btnIT('plus', '新建词库', () => this.newBank(row))
-    ]);
-    card.appendChild(this.field('词库', row));
+    card.appendChild(this.field('词库', this.bankChips()));
     return card;
+  }
+  /* 词库这一格是**一份名单**：勾几张就用几张（插件分离第 4 批 4.6 那条多选）。
+     形状照分类那一串挑子（catChips）走，不另发明一种交互：每张一个小条 —— 条上那颗「改词库」开那一张、
+     那颗叉把这一张从名单里去掉；右边那只下拉是「加词库…」。
+     底下每一块还能各自点自己那一张（bankSel），没点就跟这份名单走。 */
+  bankChips(){
+    const R = this.R, 案 = () => bankNames(R.bank);
+    const row = h('div', { class:'wnw-row sh-chips' });
+    for(const n of 案()){
+      row.appendChild(h('span', { class:'wnw-chip sh-chip', title:n }, [
+        h('span', {}, n),
+        (typeof BankDlg !== 'undefined')
+          ? h('button', { class:'sh-x', title:'改词库「' + n + '」', html:icoMarkup('bank'), onclick:() => BankDlg.open(bankWhich(n)) }) : null,
+        h('button', { class:'sh-x', title:'不用「' + n + '」了', html:icoMarkup('close'),
+          onclick:() => { R.bank = 案().filter(x => x !== n); this.re(); } })]));
+    }
+    const 可加 = this.banks.filter(n => 案().indexOf(n) < 0);
+    const add = this.addSel(可加, '加词库…', async n => { R.bank = 案().concat([n]); await this.loadBank(n); this.re(); });
+    if(add) row.appendChild(add);
+    row.appendChild(this.btnIT('plus', '新建词库', () => this.newBank(row)));
+    if(!案().length) row.appendChild(h('span', { class:'wnw-chip' }, '这张配方还没勾词库'));
+    return row;
   }
   /* 建词库就地在这一行里问名字，写完直接选中它 */
   newBank(row){
@@ -305,7 +324,7 @@ class GenSheet{
       try{
         const nm = await Banks.create(i.value);
         await this.loadBank(nm);
-        this.R.bank = nm; this.banks = Banks.list();
+        this.R.bank = bankNames(this.R.bank).concat([nm]); this.banks = Banks.list();
         toast('词库「' + nm + '」建好了，去「改词库」里填条目');
         this.draw();
       }catch(e){ toast((e && e.message) || String(e)); }
@@ -636,7 +655,7 @@ class GenSheet{
     return s;
   }
   bankSel(n){
-    return this.selVal([['', '跟随组件词库（' + this.R.bank + '）']].concat(this.banks.map(b => [b, b])),
+    return this.selVal([['', '跟这张配方勾的词库（' + bankNames(this.R.bank).join('、') + '）']].concat(this.banks.map(b => [b, b])),
       n.bank || '', async v => { if(v) n.bank = v; else delete n.bank; await this.loadBank(v || this.R.bank); this.draw(); });
   }
   catNames(fn){

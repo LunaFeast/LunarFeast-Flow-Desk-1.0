@@ -1954,9 +1954,10 @@ const Shell = {
       (PACK_META[cid] && PACK_META[cid].settings && typeof setter === 'function')
         ? h('button', { class:'fd-tool', title:'设置 · 「' + def.name + '」', html:icoMarkup('gear'),
             onclick:() => setter(PackLoader.ctxOf(cid) || PackCtx.make(cid)) }) : null,
-      (typeof toolBankWhich === 'function' && toolBankWhich(cid) && typeof BankDlg !== 'undefined')
-        ? h('button', { class:'fd-tool', title:'改「' + def.name + '」用的词库', html:icoMarkup('bank'),
-            onclick:() => BankDlg.open(toolBankWhich(cid)) }) : null
+      /* 这张配方勾了几张词库就摆几颗钮（插件分离第 4 批 4.6 那条多选）：一颗开一张，名字写在悬停那一格里 */
+      ...(typeof toolBankWhichs === 'function' && typeof BankDlg !== 'undefined' && typeof Banks !== 'undefined'
+        ? toolBankWhichs(cid).map(w => h('button', { class:'fd-tool', title:'改词库「' + Banks.name(w) + '」· ' + def.name,
+            html:icoMarkup('bank'), onclick:() => BankDlg.open(w) })) : [])
     ].filter(Boolean);
     if(edits.length) tools.unshift(...edits);
     /* 每张卡一个字体钮（A 带挑脚的图标）：跟着 FD 就用全局那一款，关掉自己挑 */

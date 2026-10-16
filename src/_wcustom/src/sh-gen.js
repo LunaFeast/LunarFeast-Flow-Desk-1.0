@@ -52,7 +52,8 @@ function bkUnder(bank, cat){
   const kids = bkKids(bank, cat);
   return kids.length ? kids : bank.raw(cat).filter(w => w !== RANDOM);
 }
-function genBank(name){ return mkBank(bankWhich(name || '')); }
+/* 一份还是几张都吃：一张就交回那一份的实例，几张就并成一份给取词那几处用（词库多选，4.6） */
+function genBank(name){ return 并几张(name); }
 
 /* ============================================================
    十九种控件功能。每种做出一个 el，并给 parts() 出值：
@@ -1579,11 +1580,22 @@ class GenView{
    运行时既不 fetch 也不 eval，产物里也不拼它 —— 存进这一格就是新的。
    向导保存写的就是这一格（main.js + recipe.json，新建时连插件清单 manifest.json 一起写）。
    ============================================================ */
+/* 一张配方用到了哪几份词库：把整份配方深走一遍，凡写着 bank 的地方都收进来 ——
+   顶层那一格（现在能勾好几个）、界面每一块、每一路规则、每一个维度、每一个联动来源都算。
+   从前这一颗只走 ui 那一棵树，规则 / 维度 / 来源上写的词库是漏的：顶层只选一份时看不出来，
+   顶层能勾好几份之后，漏的那几处就变成"开界面没替它把词库读齐，第一次点它才读"那一类。 */
 function GEN_BANKS(R){
   const out = [];
-  if(R.bank) out.push(R.bank);
-  const walk = arr => { for(const n of arr || []){ if(n.bank && !out.includes(n.bank)) out.push(n.bank); walk(n.items); } };
-  walk(R.ui);
+  const add = v => { for(const n of bankNames(v)) if(out.indexOf(n) < 0) out.push(n); };
+  const walk = x => {
+    if(!x || typeof x !== 'object') return;
+    if(Array.isArray(x)){ for(const e of x) walk(e); return; }
+    for(const k of Object.keys(x)){
+      if(k === 'bank'){ add(x[k]); continue; }
+      walk(x[k]);
+    }
+  };
+  walk(R);
   return out;
 }
 const Gen = {
@@ -1632,7 +1644,12 @@ const Gen = {
     if(g && g.ok) files.push(...(g.removed || [id + '/']));
     else if(g && g.msg && g.msg !== '这一格本来就不在') err.push(g.msg);
     await del((A.logDir || 'gen-log/') + id + '.json');
-    if(opt && opt.bank && R.bank) await Banks.remove(R.bank).then(nm => files.push(nm + '/'), e => err.push('词库：' + ((e && e.message) || e)));
+    /* 这张配方勾过的词库，问过了就一张一张连目录带走（从前这里只删顶层那一份的名字）。
+       自带的那几张不动 —— Banks.remove 自己也会拦，这一头先跳过是为了不往回执里塞一句没用的错。 */
+    if(opt && opt.bank) for(const n of bankNames(R.bank)){
+      if(Banks.isBuiltin(n)) continue;
+      await Banks.remove(n).then(nm => files.push(nm + '/'), e => err.push('词库：' + ((e && e.message) || e)));
+    }
     await A.kv.del('gen-recipe.' + id);
     const ids = ((await A.kv.get('gen-local', [])) || []).filter(x => x !== id);
     await A.kv.put('gen-local', ids);
@@ -1645,11 +1662,14 @@ const Gen = {
     return { ok:!err.length, msg:err.join('；'), files:files, wrote:!!(g && g.ok) || !!(app && app.compDelete) };
   }
 };
-/* 这个功能用的是哪份词库：配方上写的那一份 */
-function toolBankWhich(kind){
+/* 这个功能用的是哪几份词库（顶层勾了好几个之后，界面上就一个名字一颗钮，不猜头一份）：
+   名单 = GEN_BANKS 深走那一份，颗颗都换算成 which。 */
+function toolBankWhichs(kind){
   const R = typeof Gen !== 'undefined' ? Gen.get(kind) : null;
-  return (R && R.bank) ? bankWhich(R.bank) : '';
+  return R ? GEN_BANKS(R).map(n => bankWhich(n)) : [];
 }
+/* 头一份：老写法与检查台还在按这一颗问"这个功能到底有没有词库"，留着不动 */
+function toolBankWhich(kind){ const 名 = toolBankWhichs(kind); return 名.length ? 名[0] : ''; }
 /* 一份词库还被几个组件在用（删词库之前要说清楚，别让别的组件空着） */
 function genBankUsers(bankName, exceptId){
   return Gen.list().filter(R => R.id !== exceptId && GEN_BANKS(R).includes(bankName));
@@ -1681,21 +1701,29 @@ async function genApply(id){
   return r && r.ok ? { ok:true, msg:'已经按这一份重载，桌上那张卡跟着重画了' }
     : { ok:true, msg:'文件存好了，可这一家没加载起来：' + ((r && r.msg) || '') + '（改坏了就再存一次，或者把自己手里那一份包重装）' };
 }
-/* 删除确认：带词库的问一句连不连，顺便报还有几家在用 */
+/* 删除确认：带词库的问一句连不连，顺便报还有几家在用。
+   一张配方能勾几张词库（插件分离第 4 批 4.6 那条多选）—— 几张都列出来，各报各的"还有谁在用"；
+   自带的那几张（出厂模型）不参与这一问，删组件不动它们。 */
 function genDeleteAsk(R, after){
-  const users = R.bank ? genBankUsers(R.bank, R.id) : [];
+  const 名 = bankNames(R.bank);
+  const 可删 = 名.filter(n => !Banks.isBuiltin(n));
+  const 自带 = 名.filter(n => Banks.isBuiltin(n));
   const cb = h('input', { type:'checkbox' });
   const box = h('div', { class:'wnw-col' });
   box.appendChild(h('div', { class:'wnw-hint' },
     '「' + R.name + '」是推演组件定制做出来的配方组件。删除是完全删除：这一家跑的代码、配方、插件清单，'
     + '推演记录里它的历次记录、插件名单里它那一格，一并抹掉，然后刷新这一页。'));
-  if(R.bank && !Banks.isBuiltin(R.bank)){
-    const tip = users.length ? '这份词库还有 ' + users.length + ' 个组件在用（' +
-      users.map(u => u.name).join('、') + '），删了它们就空了' : '只有这一个组件在用';
+  if(可删.length){
+    const 一家一句 = 可删.map(n => {
+      const u = genBankUsers(n, R.id);
+      return '「' + n + '」' + (u.length ? '还有 ' + u.length + ' 个组件在用（' + u.map(x => x.name).join('、') + '），删了它们就空了'
+        : '只有这一个组件在用');
+    }).join(' · ');
     box.appendChild(h('label', { class:'wnw-switch' },
-      [cb, h('span', {}, '连词库「' + R.bank + '」一起删 · ' + tip)]));
-  } else if(R.bank) box.appendChild(h('div', { class:'wnw-hint' },
-    '词库「' + R.bank + '」是自带的模型，删组件不动它。'));
+      [cb, h('span', {}, '连这几张词库一起删：' + 可删.join('、') + ' · ' + 一家一句)]));
+  }
+  if(自带.length) box.appendChild(h('div', { class:'wnw-hint' },
+    '词库「' + 自带.join('、') + '」是自带的模型，删组件不动它。'));
   H().dlg.open('删除组件 · ' + R.name, box, [
     h('button', { class:'wnw-btn primary', onclick:async () => {
       const r = await Gen.remove(R.id, { bank:cb.checked });
@@ -2080,9 +2108,13 @@ function genPaint(){
 }
 function genBind(name){
   const b = genBank(name);
-  if(GEN_BOUND.has(b.which)) return b;
-  GEN_BOUND.add(b.which);
-  Banks.bind(b);
-  Bus.on('bank:' + b.which, genPaint);
+  /* 一份就绑那一份；几张的话那张合视图自己不发保存事件（事件名底下带的是各张自己的号），
+     所以逐张绑：哪一张改了都要重画，也别把同一张绑两遍 */
+  for(const 份 of (b.张 && b.张.length ? b.张 : [b])){
+    if(GEN_BOUND.has(份.which)) continue;
+    GEN_BOUND.add(份.which);
+    Banks.bind(份);
+    Bus.on('bank:' + 份.which, genPaint);
+  }
   return b;
 }

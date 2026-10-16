@@ -884,14 +884,15 @@ const Desk = {
     /* 设置 / 改词库这几个钉在标题条上，和「常驻」并排：Flow-Desk 卡上有这几个，停靠不能缺。
        设置这个只给插件清单点了 settings 的那几家（插件的设置回归插件自己，不在程序设置里另开一页）。
        「改代码」那颗跟着插件分离第 2 批撤了：装着的插件不在程序里开改代码的口。 */
-    const which = (typeof toolBankWhich === 'function') ? toolBankWhich(it.kind) : '';
+    /* 词库几张就摆几颗（插件分离第 4 批 4.6 那条多选），名字写在悬停那一格里 */
+    const 哪几张 = (typeof toolBankWhichs === 'function') ? toolBankWhichs(it.kind) : [];
     const tdef = (typeof Tools !== 'undefined') ? Tools.get(it.kind) : null;
     const edits = [
       (PACK_META[it.kind] && PACK_META[it.kind].settings && tdef && typeof tdef.settings === 'function')
         ? h('button', { class:'b', title:'设置 · ' + (it.label || tdef.name || it.kind),
             onclick:() => tdef.settings(PackLoader.ctxOf(it.kind) || PackCtx.make(it.kind)) }, '设置') : null,
-      (which && typeof BankDlg !== 'undefined') ? h('button', { class:'b', title:'改这个功能用的词库',
-        onclick:() => BankDlg.open(which) }, '改词库') : null
+      ...(typeof BankDlg !== 'undefined' ? 哪几张.map(w => h('button', { class:'b',
+        title:'改词库「' + (typeof Banks !== 'undefined' ? Banks.name(w) : w) + '」', onclick:() => BankDlg.open(w) }, '改词库')) : [])
     ].filter(Boolean);
     const head = h('div', { class:'wnw-dock-bar' }, [
       h('span', { class:'ic', html:icoFor(it.kind, def && def.icon) }),

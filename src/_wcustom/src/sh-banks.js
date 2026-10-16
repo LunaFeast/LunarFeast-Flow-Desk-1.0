@@ -54,6 +54,13 @@ function bankSync(){
    和内置那两份一模一样的形状。名单记在 plugins/banks.json，两个宿主读同一份。 */
 const BANK_CUSTOM = [];
 
+/* 一份词库名还是一串词库名，一律归成一份没有重复的名单（老配方里那一串名字照旧读得动：当一张） */
+function bankNames(v){
+  const out = [];
+  for(const n of (Array.isArray(v) ? v : (v ? [v] : []))) if(n && out.indexOf(n) < 0) out.push(n);
+  return out;
+}
+
 /* 每个词库要能按名字反查 which：向导里选词库、配方里写词库名，都走这个 */
 function bankWhich(name){
   const k = Object.keys(BANK_NAME).find(w => BANK_NAME[w] === name);
@@ -370,5 +377,49 @@ function mkBank(which){
     names(){ return [...this.cats.keys()].sort() }
   };
   BANK_INS[which] = b;
+  return b;
+}
+
+/* 一个功能勾了**几张**词库时用的那一份合起来的视图（插件分离第 4 批 4.6 · 词库多选）。
+   底下每张还是各读各的、各存各的明文，这一颗只是把取词的口子（cats / raw / opts / pool / subs / names）
+   并到一起：同一分类名对上就合，同一条词不重复收 —— 生成器那头照旧叫这几颗，不用知道底下一份还是几张。
+   只有一份时直接交回那一份的实例（编辑器与 Bus 那一条 'bank:' + which 认的就是它，别拿合的顶掉）。
+   同一串名单拿到的合视图是同一个对象：底下任何一张重新取文（ver 跳一格），这份的并表才重算，平时吃缓存。 */
+const BANK_MUL = {};
+function 并几张(v){
+  const 名 = bankNames(v).map(n => bankWhich(n));
+  if(!名.length) return mkBank(bankWhich(''));
+  if(名.length === 1) return mkBank(名[0]);
+  const 钥 = 名.slice().sort().join('|');
+  if(BANK_MUL[钥]) return BANK_MUL[钥];
+  const 张 = 名.map(n => mkBank(n));
+  const 合 = 取 => { const out = []; for(const b of 张) for(const w of 取(b)) if(w && out.indexOf(w) < 0) out.push(w); return out; };
+  const b = {
+    which:张.map(x => x.which).join('、'), 张, _并:null, _版:-1,
+    get file(){ return 张.map(x => x.file).join('、'); },
+    get ver(){ return 张.reduce((s, x) => s + x.ver, 0); },
+    get loaded(){ return 张.every(x => x.loaded); },
+    /* 并表：哪一张重新读过了（总版号一变）就重并一次，否则吃缓存 —— 别每次取词都重算一遍整本 */
+    get cats(){
+      const v = this.ver;
+      if(this._并 && v === this._版) return this._并;
+      const m = new Map();
+      for(const x of 张) for(const [cat, lines] of x.cats){
+        const 有 = m.get(cat) || [];
+        for(const w of lines) if(w && 有.indexOf(w) < 0) 有.push(w);
+        m.set(cat, 有);
+      }
+      this._并 = m; this._版 = v; return m;
+    },
+    async load(){ for(const x of 张) await x.load(); return this; },
+    async reload(){ for(const x of 张) await x.reload(); return this; },
+    parse(){ return this; },
+    raw(cat){ return this.cats.get(cat) || []; },
+    opts(cat){ return ['随机'].concat(this.raw(cat).filter(w => w !== '随机')); },
+    pool(cat){ return 合(x => x.pool(cat)); },
+    subs(parent){ return 合(x => x.subs(parent)); },
+    names(){ return [...this.cats.keys()].sort(); },
+  };
+  BANK_MUL[钥] = b;
   return b;
 }
