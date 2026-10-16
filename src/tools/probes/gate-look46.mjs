@@ -71,14 +71,15 @@ function 假为写(格, 环){
   const 播 = [];
   const 表 = {
     表:格 || {}, 名:环 && 环.名 || 两套,
-    挑的(包){ const 格 = this.表[包]; return (格 && 格.案) || ''; },
+    挑的(包){ const 格 = this.表[包]; return (格 && 格.案 && 格.跟 !== true) ? 格.案 : ''; },
     算一份(包){ const 案 = this.挑的(包); const s = this.名.find(x => x.方案名 === 案); if(!s) return null;
       return { 案:s.方案名, 名:s.方案名, 色:{ name:s.配色, mode:s.配色 === '绿' ? 'light' : 'dark' },
         明暗:s.配色 === '绿' ? 'light' : 'dark', dark:s.配色 !== '绿',
         角:{ card:s.卡片圆角, ctl:s.控件圆角 }, 模式:'material', 纹理:'none',
         表:{ '--page-bg':'#f00', '--card-bg':'#0f0', '--indep':'独立那份' } }; },
-    定(包, 案){ if(案) this.表[包] = { 案 }; else delete this.表[包]; },
-    改(包, 案){ this.定(包, 案); 播.push(案); },
+    定(包, 案, 跟){ if(案) this.表[包] = 跟 === true ? { 案, 跟:true } : { 案 }; else delete this.表[包]; },
+    改(包, 案, 跟){ this.定(包, 案, 跟); 播.push(案 + (跟 === true ? '（先跟）' : '')); },
+    记的(包){ const 格 = this.表[包]; return (格 && 格.案) || ''; },
     名单(){ return this.名.map(s => ({ 案:s.方案名, 名:s.方案名, 明暗:s.配色 === '绿' ? 'light' : 'dark',
       色:{ name:s.配色, mode:s.配色 === '绿' ? 'light' : 'dark' }, 预览:{ bg:'#f00', card:'#0f0', accent:'#33f', text:'#222' } })); },
   };
@@ -98,6 +99,22 @@ function 假为写(格, 环){
   return { T, 元, 播, 格 };
 }
 
+台.题('〇、两条规矩（2026-10-16 他当面纠正的，这一台先钉这两条）');
+{
+  台.判('规矩一：独立那一套只涂展开模式那一片 —— 卡片上那一句写在「展开才画」的条件里，桌面那张卡归 Flow-Desk',
+    /if\(expanded\) PackLooks\.画到\(card, PackLooks\.包of\(def\.id\)\);/.test(壳)
+    && 壳.split(/\r?\n/).filter(l => l.includes('PackLooks.画到(card')).length === 1,
+    壳.split(/\r?\n/).filter(l => l.includes('PackLooks.画到')).map(l => l.trim().slice(0, 60)).join(' ⁄ '));
+  台.判('规矩二：挑过的那一条不因为"回到跟随"就消失 —— 那一格记两样 {案, 跟}，跟随只动「跟」这一样',
+    /定\(包, 案, 跟\)/.test(壳) && /this\.表\[包\] = 跟 === true \? \{ 案, 跟:true \} : \{ 案 \}/.test(壳)
+    && /记的\(包\)/.test(壳) && /挑的\(包\)\{ const 格 = this\.表\[包\]; return \(格 && 格\.案 && 格\.跟 !== true\) \? 格\.案 : ''/.test(壳));
+  台.判('规矩二在界面那两处都落了：外观那一屏选回「跟随主程序」把记着的那一条一起递过去；为写那颗勾也一样',
+    /PackLooks\.改\(m\.id, 留, !案\)/.test(屏) && /PackLooks\.改\('why-not-write', 留, !!v\)/.test(为写皮));
+  台.判('目前不允许随机：为写那一栏里那颗「随机换一套」整颗撤掉，那一屏里连「随机」两个字都不留',
+    !/随机/.test(为写) && !/Math\.random/.test(为写),
+    '为写那一屏搜「随机」：' + (/随机/.test(为写) ? '还在' : '一处不剩') + '；搜 Math.random：' + (/Math\.random/.test(为写) ? '还在' : '一处不剩'));
+}
+
 台.题('一、名单：只有声笔练习那一家不列（为写 2026-10-16 迁进这张表，他点的是「统一一只口」）');
 {
   const P = 拿(假壳({}));
@@ -110,6 +127,16 @@ function 假为写(格, 环){
     && P.包of('tool-why-not-write') === 'why-not-write' && P.包of('没这一家') === '');
   台.判('那张表里为写占的就是「why-not-write」这一格（和插件清单、出厂布局那张表同一个名字）',
     (() => { const 格 = {}; 拿(假壳(格)).定('why-not-write', '甲案'); return 格['why-not-write'].案 === '甲案'; })());
+  台.判('真跑「跟」这一格：挑了甲案 → 独立生效；再把跟随打开 → 生效回空，但记着的那一条还是甲案；关掉跟随 → 甲案回来',
+    (() => { const 格 = { 'notes':{ 案:'甲案' } }; const Q = 拿(假壳(格));
+      const 头 = Q.挑的('notes') === '甲案' && Q.记的('notes') === '甲案';
+      Q.定('notes', '甲案', true);
+      const 中 = Q.挑的('notes') === '' && Q.记的('notes') === '甲案' && Q.算一份('notes') === null && Q.独立().length === 0;
+      Q.定('notes', '甲案', false);
+      return 头 && 中 && Q.挑的('notes') === '甲案' && Q.算一份('notes') !== null; })());
+  台.判('从没挑过的一家选回「跟随主程序」= 那一格整个撤掉，不留 {案:"",跟:true} 那种空壳',
+    (() => { const 格 = {}; const Q = 拿(假壳(格)); Q.定('notes', '', true);
+      return !('notes' in 格) && Q.记的('notes') === ''; })());
 }
 
 台.题('二、独立那一家写在自己卡上；没挑的一家一个字都不写');
@@ -181,11 +208,19 @@ function 假为写(格, 环){
         && /PackLooks\.算一份\('why-not-write'\)/.test(只代码)
         && /PackLooks\.(定|改)\('why-not-write'/.test(只代码); })(),
     '扫的是去掉注释之后的代码（那两个旧名字出现在说明里是写给后面看代码的人的，不算还在用）');
-  台.判('写也写这张表：挑一套走那只口点名一套方案，回到跟随走同一只口交空名；'
-    + '关掉跟随那一刻落的是当前这一轴名单里的头一套（不留在"没有一套"的状态上）',
-    (() => { const { T:丙, 播 } = 假为写({}); 丙.select('乙案'); 丙.setFollow(true);
-      丙.setFollow(false); const 案 = 丙.案();
-      return 播.join('|') === '乙案||甲案' && 案 === '甲案' && 丙.follows() === false; })(), '落笔顺序：乙案 → 跟随 → 甲案');
+  台.判('写也写这张表，而且挑过的那一条不丢：挑一套 → 独立生效；勾回跟随 → 那一条留着、只是先不生效；'
+    + '再取消跟随 → 回来的还是他挑的那一条（不是名单里碰巧的头一条）',
+    (() => {
+      const { T:丙, 播, 格 } = 假为写({});
+      丙.select('乙案');
+      const 挑了 = 丙.案() === '乙案' && 丙.follows() === false;
+      丙.setFollow(true);
+      const 跟了 = 丙.案() === '' && 丙.记的() === '乙案' && 丙.follows() === true
+        && 格['why-not-write'].跟 === true && 格['why-not-write'].案 === '乙案';
+      丙.setFollow(false);
+      丙.报 = 播.join(' → ');
+      return 挑了 && 跟了 && 丙.案() === '乙案' && 丙.follows() === false && 丙.报 === '乙案 → 乙案（先跟） → 乙案';
+    })(), '三次落笔的顺序写在读回里');
   台.判('明暗那一轴换了：独立正用的那套不归新的这一池，就地换成同池那一套并说一句，'
     + '换的那一笔也走同一只口（重画桌面 + 播回去，和用户点的是同一条路）；跟随的时候这一趟一个字都不写',
     (() => { const { T:丁, 播, 格 } = 假为写({ 'why-not-write':{ 案:'甲案' } });
@@ -223,7 +258,7 @@ function 假为写(格, 环){
   台.判('统一那颗做的是一件事：把跟着那几家各自卡上钉过的字体收回（fontFollow 回真、font 清空），不碰布局与尺寸',
     /it\.fontFollow = true; it\.font = '';/.test(屏) && !/it\.w =|it\.h =|it\.x =|it\.y =/.test(屏.slice(屏.indexOf('const 统一'), 屏.indexOf('const 统一') + 2200)));
   台.判('挑完一套走的是那一只口（改），不在这一头自己拼第二套落账 + 重画',
-    /onchange:ev => \{ PackLooks\.改\(m\.id, ev\.target\.value\);/.test(屏) && !/PackLooks\.定\(m\.id/.test(屏));
+    /onchange:ev => \{ const 案 = ev\.target\.value/.test(屏) && !/PackLooks\.定\(m\.id/.test(屏));
   台.判('为写那一处的两只手也走同一只口：勾那颗调 setFollow、名单那颗调 select，界面那一屏不再自己读 cfg.follow',
     为写.includes('Theme.setFollow(fol.checked)') && 为写.includes('e.id === Theme.案()')
     && !/Theme\.cfg\.follow/.test(为写) && !/Theme\.cfg\.scheme/.test(为写) && !/Theme\.pool\.length/.test(为写));
@@ -280,7 +315,7 @@ function 假为写(格, 环){
   const 撞 = 忌.filter(w => 新句.some(l => l.includes(w)));
   台.判('这一批新加的这几句里没有"缺失"那一类字样（那一家没加载就整行不列，不解释、不告错）',
     撞.length === 0 && 新句.length >= 6, 撞.join('、') + ' / 扫到 ' + 新句.length + ' 行');
-  const 为写句 = 为写.split(/\r?\n/).filter(l => /已跟随 Flow-Desk 主外观|改用为写自己挑的那一套方案|这份名单和 Flow-Desk 外观那一屏|等你把跟随关掉|本池内抽的|没有可随机换的/.test(l));
+  const 为写句 = 为写.split(/\r?\n/).filter(l => /已跟随 Flow-Desk 主外观|改用为写自己挑的那一套方案|这份名单和 Flow-Desk 外观那一屏|等你把跟随关掉|只摆本池那|这份名单先不筛/.test(l));
   台.判('为写那一处改口的这几句里也没有"缺失"那一类字样，而且一句都不提"表""口""字段"这种内部话',
     撞.every(w => !为写句.some(l => l.includes(w)))
     && !为写句.some(l => /字段|表里|一只口|内存|存档/.test(l)) && 为写句.length >= 4, 为写句.length + ' 句');

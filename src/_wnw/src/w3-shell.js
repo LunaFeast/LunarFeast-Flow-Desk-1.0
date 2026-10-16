@@ -1397,7 +1397,6 @@ const Settings = {
           '<i style="background:' + (t[k] || t['--' + k] || '#888') + '"></i>').join('');
       }
       sel.disabled = Theme.follows();
-      rnd.disabled = Theme.follows();
       const a = Theme.axis(), all = Theme.poolNow().length;
       const an = (typeof MING_NAME !== 'undefined' && MING_NAME[a]) || (a === 'dark' ? '黑暗' : '明亮');
       hint.textContent = (a === 'light' || a === 'dark')
@@ -1407,15 +1406,8 @@ const Settings = {
         : 'Flow-Desk 还没把明暗那一轴递过来，这份名单先不筛。';
     };
     sel.addEventListener('change', () => { Theme.select(sel.value); fill(); });
-    /* 随机换一套：也只在本池里抽（外13-M 那条「自动随机同一池」），和 Flow-Desk 那头同名一个 */
-    const rnd = h('button', { class:'wnw-btn mini', title:'在当前这一轴的那一池里随机挑一套', onclick:() => {
-      const list = Theme.poolNow().filter(e => e.id !== Theme.案());
-      if(!list.length){ toast('本池里就这一套（或者一套也没有），没有可随机换的'); return; }
-      Theme.select(list[Math.floor(Math.random() * list.length)].id); fill();
-      toast('随机换到「' + ((Theme.cur() || {}).name || '') + '」（本池内抽的）');
-    }}, '随机换一套');
     box.appendChild(h('label', { class:'wnw-field' }, [h('span', {}, '配色'),
-      h('div', { class:'wnw-row', style:'flex-wrap:nowrap' }, [sel, dots, rnd])]));
+      h('div', { class:'wnw-row', style:'flex-wrap:nowrap' }, [sel, dots])]));
     box.appendChild(hint);
 
     /* 从前这里有一个「读 Rime 配色」：拿 Rime 用户目录里现成的 weasel yaml 灌进为写自己的池。

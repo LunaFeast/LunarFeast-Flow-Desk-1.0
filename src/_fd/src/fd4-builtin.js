@@ -2104,10 +2104,11 @@ function tabLook(){
     h('span', { class:'fd-hint' }, '只回数值：两档圆角回到出厂那一档、卡片间距回到自动，配色、方案名和方案清单一概不动。')])));
   /* ---------- 每一家自己的外观 + 一键统一（插件分离第 4 批 4.4 · #36）----------
      色号那三份资料只有主程序一份；这一格只管"哪一家挑了哪一套方案"：默认跟随，挑一套就是独立。
-     独立那一家的配色 + 外观模式 + 纹理 + 两档圆角写在它自己那张卡上（PackLooks.画到），
-     主程序换主题写的是根元素那一层，盖在它上面 —— 所以"不下发"不用第二套判定。
-     声笔练习那一家不列（test-rplook 钉着它不许有自己的外观）；为写那一家 2026-10-16 迁进这张表，
-     它自己设置里那一处与这里写的是同一格，两只手一张表。 */
+     独立那一家的配色 + 外观模式 + 纹理 + 两档圆角，只涂**这一家展开以后那一片**（卡片铺到展开那一档时
+     由 PackLooks.画到 写在它自己那张卡上；为写那一家挂在封面里，自己读这张表算出来的同一份）。
+     桌面上没展开的那张卡一律跟 Flow-Desk 的调令走，插件不许自己涂 —— 2026-10-16 他当面纠正的规矩。
+     选回「跟随主程序」只把「跟」这一格打开，挑过的那一套方案名留着。
+     声笔练习那一家不列（test-rplook 钉着它不许有自己的外观）。 */
   const 统一 = () => {
     const 家 = PackLooks.可挑(), 名 = m => m.name || m.id;
     const 跟 = 家.filter(m => !PackLooks.挑的(m.id)), 跳 = 家.filter(m => PackLooks.挑的(m.id));
@@ -2133,12 +2134,15 @@ function tabLook(){
     const 家 = PackLooks.可挑();
     if(!家.length) return;
     那一家.appendChild(h('div', { class:'fd-hint' },
-      '每一家自己用哪一套：默认跟着主程序这一套动；挑一套就是独立 —— 主程序换主题和按一键统一都不下发给它。'));
+      '每一家自己用哪一套：默认跟着主程序这一套动；挑一套就是独立 —— 主程序换主题和按一键统一都不下发给它。'
+      + '独立那套只管这一家展开以后的样子，桌面上那张卡片还是跟 Flow-Desk 走。选回「跟随主程序」不会丢掉你挑过的那一套。'));
     for(const m of 家){
-      const 挑 = PackLooks.挑的(m.id);
+      const 挑 = PackLooks.挑的(m.id), 记 = PackLooks.记的(m.id);
       那一家.appendChild(row(m.name || m.id, h('select', { class:'fd-input', style:'max-width:240px',
-        onchange:ev => { PackLooks.改(m.id, ev.target.value);
-          toast(ev.target.value ? '「' + (m.name || m.id) + '」改成独立用「' + ev.target.value + '」' : '「' + (m.name || m.id) + '」回到跟随主程序'); } },
+        onchange:ev => { const 案 = ev.target.value, 留 = 案 ? 案 : PackLooks.记的(m.id);
+          PackLooks.改(m.id, 留, !案);
+          toast(案 ? '「' + (m.name || m.id) + '」改成独立用「' + 案 + '」'
+            : (留 ? '「' + (m.name || m.id) + '」先跟主程序，自己挑的那一条「' + 留 + '」留着' : '「' + (m.name || m.id) + '」回到跟随主程序')); } },
         [h('option', { value:'', selected:!挑 }, '跟随主程序'),
          ...LookLib.list.map(s => h('option', { value:s.方案名, selected:挑 === s.方案名 }, s.方案名))])));
     }
