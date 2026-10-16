@@ -85,8 +85,11 @@ function 全扫(认){
 台.判('没有插件清单的那一家不列（不编一个号出来）',
   rd('src/_tauri/src/core/about_info.rs').includes('pub fn 算一家'));
 台.判('关于那一行把每一家列出来，没写号的照实说', 页.includes('r.packs') && 页.includes('清单里没写号'));
-台.判('压零卖的包时把插件清单那一格换成发布传进来的号（号只有一处真身）',
-  /function packZip\(p, 用了号\)/.test(公) && /Object\.assign\(\{\}, m, \{ version: 用了号 \}\)/.test(公));
+/* 2026-10-16：货架那一颗从 zip 改成自有格式的容器（打包手那颗），"包内件"这一颗留下 ——
+   插件清单那一格还是换成发布传进来的号，只是不再有 packZip 这个名字。 */
+台.判('压容器时把插件清单那一格换成发布传进来的号（号只有一处真身）',
+  /function 包内件\(p, 用了号\)/.test(公) && /Object\.assign\(\{\}, m, \{ version: 用了号 \}\)/.test(公)
+  && /const 容 = 打容器\(件\.map/.test(公));
 台.判('货架清单和安装标记里那一份号同源（都吃传进来的那一串）', /version: 出/.test(公) && /plugins: shelf\.map/.test(公));
 台.判('关于那一格不再吃更新包的信息（只报本机是什么，updVersions 那一颗名整棵源码里一处不剩）',
   全扫(s => /updVersions/.test(s)).length === 0, 全扫(s => /updVersions/.test(s)).join(' | '));

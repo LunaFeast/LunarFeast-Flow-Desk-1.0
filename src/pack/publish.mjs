@@ -12,18 +12,22 @@
    这一颗只出 Tauri 那一枚壳：桥、命令表、硬地板那份名单都编在 exe 里面，
    没有 Electron 那一份 resources\app 镜像要铺，运行时就是那颗 exe 加旁边那颗加载器。
 
-   三份产物：
-     dist\tauri\plugins\<id>.zip                 一个包一包，货架上摆的零卖货（解开文件夹 → 压平，插件清单重新序列化一遍）
-     dist\tauri\index.json                       货架清单：每个包的名字/版本/大小/最低外壳版本/图标/作者来源，页面里挂货架就读它
-     dist\tauri\Flow_Desk_setup_<fd>.exe         首装那一个：Windows 自带的 csc 编出来的小壳 + 粘在屁股后面这一整棵树的出厂内容
+   出货的东西（插件分离做完的形状：主程序是空壳，插件一家一颗）：
+     dist\tauri\<id>.fdpkg                       一家一颗**自有格式**的容器（头 12 字节 + 信息段 + 每一份一块 + 签名段；
+                                                 信息段里逐份记路径、字节数与 SHA-256，壳装之前整个查一遍）。
+                                                 不出 zip，也不出"压完改个后缀"的假件 —— 后缀那一枚全仓只写在壳里（pack_box.rs）
+     dist\tauri\index.json                        货架清单：每家的名字/版本/大小/最低外壳版本/图标/作者来源，页面里挂货架就读它
+     dist\tauri\Flow_Desk_setup_<fd>.exe          空壳主程序的首装：Windows 自带的 csc 编出来的小壳 + 粘在屁股后面这一整棵树的出厂内容
 
    这一棵树里进发布物的、和不进的，口径写死在下面几段：
      进：运行时（那颗 exe 改名叫整棵树唯一的门牌 + WebView2 那颗加载器）、
          pages\ 只带当前这一支号那一张（老版本一张都不带）和非产物文件、
          src\（重新生成页面要用，node_modules 不带）、
-         icons\ 与 material\（取 src\pack\ 里出厂那一份，铺到树根同名那一格 —— 运行时只认树根那一层）、
-         data\plugins\<id>\（外46：七家插件跟着本体一起出门；从前还多一份 data\plugins-factory\，插件分离第 2 批 2.6 整格撤了）
-     不进：data\ 里除上面那一格以外的一切（用户写的书、词库副本、userdata-*、日志、这台机器的 off.json —— 私密，也不该跟着版本走）、
+         icons\ 与 material\（取 src\pack\ 里出厂那一份，铺到树根同名那一格 —— 运行时只认树根那一层）
+     不进：**data\ 底下的一切**（空壳那一棵里没有任何一家的代码 —— 插件分离第 5 批之前那一段放行过
+           data\plugins\ 那一层、让本体带着七家一起出门，分离做完这一条收回来了；
+           装出来那一格是空的，用户把哪一家的容器放进去才有哪一家。
+           还有用户写的书、词库副本、userdata-*、日志、这台机器的 off.json —— 私密，也不该跟着版本走）、
            update\（那是一台机器自己的更新账）、树根现在那两格 icons\ 与 material\（是他自己换过的图，出厂那一份另走一路）、
            老版本的 html（用户那棵树里想留几份留几份，发布物只带当前这一版）
    ============================================================ */
@@ -33,6 +37,7 @@ import zlib from 'node:zlib';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { scan as packScan, writeZip } from '../_build/packs.mjs';
+import { 打包 as 打容器, 扩展名 as 容器后缀 } from '../_build/packbox.mjs';
 import { assertClean } from '../_build/scan-packs.mjs';
 import { 号, 页名 } from '../_build/version.mjs';
 
@@ -176,20 +181,24 @@ addLayer('src/', path.join(TREE, 'src'), rel => inNodeModules(rel) || /(^|\/)\.[
    树根现在那一格不直接取：里面是他自己换过的图，出厂那一份才跟着版本走（覆盖升级也不盖他的，见 sfx 的 KeepUserFile）。 */
 addLayer('icons/', path.join(TREE, 'src', 'pack', 'icons'));
 addLayer('material/', path.join(TREE, 'src', 'pack', 'material'));
-/* 五、插件：外46 起七家跟着本体一起进这一棵树（他 2026-10-10 定：取消发布物零插件）。
-   铺到 data\plugins\<id>\、开机就能跑。从前还顺手铺一格「原版」（data\plugins-factory\<id>\，
-   给那颗「恢复出厂」取用）—— 插件分离第 2 批 2.5 撤了那颗钮，第 2.6 把这一格整格撤了：
-   没有用户装机，要换回原版就把自己手里那一份包重装。
-   包内件取自下面「货架」那一段压零卖包的同一批字节，所以两处一个号、一份字节。
-   卸没卸过那一格（off.json）不进包 —— 那是每台机器自己的状态，不在发布物里带。 */
+/* 五、插件：**不进这一棵树**（主程序那一枚是空壳）。
+   这一段从前铺的是 data\plugins\<id>\（外46 起七家跟着本体一起出门，他 2026-10-10 定"取消发布物零插件"）；
+   插件分离第 5 批做完，形状回到第一版讨论就定的那一条 —— 装出来那一格是空的，
+   一家一颗自有格式的容器与那颗 setup 一起摆在产物那一格，用户要哪一家放哪一颗。
+   再往前还铺过一格「原版」（data\plugins-factory\，给那颗「恢复出厂」取用）—— 第 2 批 2.5 撤了那颗钮、2.6 整格撤了。
+   卸没卸过那一格（off.json）也不进包 —— 那是每台机器自己的状态，不在发布物里带。 */
 /* 出货之前再过一遍越界这道门（和两个构建同一把尺）：货架上发的源码是要给别人看的，
    组件和主程序之间只能有接口调用，不能有内部耦合。 */
 if(!assertClean(PACKS_DIR, '发插件')){ console.error('插件越界没清完，publish 停下。'); process.exit(1); }
 const packs = packScan(PACKS_DIR).filter(p => !SKIP.has(p.id));
 
-/* ---------- 货架：一个包压成一包 zip，清单里写清它是什么来路 ---------- */
-/* 一个包里有哪些件（名字 → 字节）。货架压 zip 和首装那棵树铺插件两处都取这一里，
-   所以零卖的包与树里活的那一份 —— 两处字节相同，不会各铺各的。 */
+/* ---------- 货架：一家一颗自有格式的容器（不是 zip 改后缀）----------
+   容器那一套的格式与那份规格同源（src\_build\packbox.mjs 与 src\_tauri\src\core\pack_box.rs）：
+   头 12 字节 + 信息段 + 每一份一块 + 签名段，信息段里逐份记路径、字节数与 SHA-256 ——
+   壳那一头装之前整个查一遍，改一个字节就对不上（第 3 批那一整批定的就是这个）。
+   zip 那一档从前是"运输件"，本体的那一棵树与它一起出门；插件分离做完之后主程序是空壳，
+   出货只走自有格式这一条道，不再摆一份 zip 让人以为是两种东西。 */
+/* 一个包里有哪些件（名字 → 字节）：压容器取这一里 */
 function 包内件(p, 用了号){
   const m = p.manifest;
   const names = Array.from(p.files.keys()).sort();
@@ -205,35 +214,35 @@ function 包内件(p, 用了号){
   }));
   return entries;
 }
-function packZip(p, 用了号){ return writeZip(包内件(p, 用了号)); }
 const shelf = [];
+if(!DRY) fs.mkdirSync(OUT_DIR, { recursive: true });
 for(const p of packs){
   if(p.error) continue;
   const m = p.manifest;
   /* 发布脚本传进来的那一家自己的那一串优先；没传（单独跑 publish）才退回插件清单那一格 */
   const 出 = (递来的家 && 递来的家[m.id] && 递来的家[m.id].version) || m.version;
   const 件 = 包内件(p, 出);
-  const buf = writeZip(件);
+  /* 自有格式那一颗容器：信息段那六个必填键 + 逐份的路径、字节数、SHA-256 都在里面（壳装之前整个查一遍） */
+  const 容 = 打容器(件.map(e => ({ 路径: e.name, 字节: e.data })), {
+    id: m.id, name: m.name, version: 出, min_shell: m.minShell || '0',
+    author: m.author || '', source: m.source || '',
+    kernels: Array.isArray(m.kernels) && m.kernels.length ? m.kernels.map(String) : undefined
+  }, 0);
   shelf.push({
     id: m.id, name: m.name, desc: m.desc || '',
     version: 出,
     author: m.author || '', source: m.source || '', icon: m.icon || '',
     host: m.host || ['fd'], order: m.order || 100, minShell: m.minShell || '0',
-    file: 'plugins/' + m.id + '.zip',
-    bytes: buf.length, size: (buf.length / 1024).toFixed(1) + ' KB',
+    file: m.id + '.' + 容器后缀(),
+    bytes: 容.字节.length, size: (容.字节.length / 1024).toFixed(1) + ' KB',
     bank: m.bank || null, sharedKeys: m.sharedKeys || [], dataKeys: m.dataKeys || [], kvKeys: m.kvKeys || [],
     /* 这个包自己带的随行文件（监听脚本、桥插件那种），货架上照着摆，用户才知道装它要多拿几份 */
     assets: m.assets || {},
-    files: Array.from(p.files.keys()).sort()
+    files: 容.信息.files.map(f => f.path)
   });
-  if(!DRY){ fs.mkdirSync(path.join(OUT_DIR, 'plugins'), { recursive: true }); fs.writeFileSync(path.join(OUT_DIR, 'plugins', m.id + '.zip'), buf); }
-  /* 外46（他 2026-10-10 定：取消发布物零插件）：这一家跟着本体一起进首装那一棵树。
-     data\plugins\<id>\ 是开机就能跑的那一份。版本号那一格用的就是上面传进来的那串，
-     所以「关于」、零卖的包、树里活的三处一个串。
-     卸没卸过那一格（off.json）不进包：那是每台机器自己的状态。 */
-  for(const e of 件){
-    made.set('data/plugins/' + m.id + '/' + e.name, e.data);
-  }
+  /* 容器落在产物那一格里，一家一颗；**不铺进首装那棵树** —— 主程序那一枚是空壳，
+     装出来插件那一格是空的，要哪一家由用户把那一颗容器放进去（第 5 批定的形状）。 */
+  if(!DRY) fs.writeFileSync(path.join(OUT_DIR, m.id + '.' + 容器后缀()), 容.字节);
 }
 shelf.sort((a, b) => a.order - b.order || (a.id < b.id ? -1 : 1));
 const minShell = shelf.reduce((a, x) => (!a || cmpVer(verNum(x.minShell), verNum(a)) > 0 ? x.minShell : a), '') || VER.fd;
@@ -243,7 +252,8 @@ const index = {
   shell: { fd: VER.fd, minShell: minShell, engine: 'tauri' },
   setup: { file: setup名(VER.fd), bytes: 0, size: '' },
   packs: shelf,
-  note: '货架清单：dist\\plugins\\<id>.zip 是零卖的插件，导入用；setup 那一个是首装整棵树。data\\ 里的用户内容从不参与发布。'
+  note: '货架清单：与主程序同一格摆着的那几颗 <id>.' + 容器后缀() + ' 是一家一颗的插件容器（自有格式，不是 zip 改的后缀），导入用；'
+    + 'setup 那一个是**空壳**主程序的首装树（树里一家的代码都没有）。data\\ 里的用户内容从不参与发布。'
 };
 
 /* ---------- 树根上现生成的两份：给人看的说明 + 给壳读的那个标记 ---------- */
@@ -256,7 +266,9 @@ made.set('flow-desk-install.json', Buffer.from(JSON.stringify({
   versions: VER, packs: shelf.map(p => p.id),
   /* 每一家插件这一趟带的是哪一串号、它要的外壳最低是哪一号（发布脚本传进来的，不取插件清单那一格） */
   plugins: shelf.map(p => ({ id:p.id, name:p.name, version:p.version, 兼容外壳:p.minShell })),
-  note: '这一棵树是首装摊出来的：整文件夹删掉就算卸载，不写注册表。插件跟着本体一起带（' + shelf.length + ' 家，都在 data\\plugins\\），换新版本再双击一颗新的 setup 指到同一棵就是覆盖升级。'
+  note: '这一棵树是首装摊出来的：整文件夹删掉就算卸载，不写注册表。**主程序那一枚是空壳** —— 树里没有任何一家的代码，装出来 data\\plugins\\ 是空的；'
+    + '这一趟一起出货的 ' + shelf.length + ' 家放在旁边那一格里，一家一颗自有格式的容器（.' + 容器后缀() + '），要哪一家就把哪一颗放进 data\\plugins\\。'
+    + '换新版本再双击一颗新的 setup 指到同一棵就是覆盖升级（你放进去的那几颗不动）。'
 }, null, 2) + '\n', 'utf8'));
 made.set('安装说明.txt', Buffer.from([
   'Flow-Desk · 便携版（首装）',
@@ -272,11 +284,12 @@ made.set('安装说明.txt', Buffer.from([
   '  update\\   覆盖升级那一摊自己待着：backups\\（每一趟换下来的旧东西，照原样挪回去就还是上一版）',
   '  src\\      Flow-Desk 自己的源码：只有改了它才需要重新生成页面（功能模块不在这里，装卸不用这一趟）',
   '',
-  '这一份发布物带着插件（' + shelf.length + ' 家：' + shelf.map(p => p.name).join('、') + '）—— 本体和插件一起出门，开箱就有：',
-  '  data\\plugins\\ 是开机就能跑的那一份。',
-  '再装一家新的（拿到的是 <id>.zip 或解开的文件夹）：',
-  '  顶栏的「插件管理」→ 按「安装」，挑那个压缩包或那个带插件清单的文件夹；',
-  '  或者直接把那一格丢进 data\\plugins\\，重启一次软件就认（压缩包会当场摊开）。',
+  '主程序这一枚是空壳（第一版讨论就定的那一条）：装完打开，桌面是空的，data\\plugins\\ 那一格里一家都没有。',
+  '要哪一家就放哪一家 —— 这一趟一起出货的 ' + shelf.length + ' 家，一家一颗自有格式的容器（.' + 容器后缀() + '），都在产物那一格里：',
+  '  ' + shelf.map(p => p.id + '.' + 容器后缀() + '（' + p.name + '）').join('、'),
+  '放进去有两条路：',
+  '  顶栏的「插件管理」→ 按「安装」，挑那颗容器（壳会先把里面每一份的字节数与校验数整个查一遍，对不上就一个字节不落）；',
+  '  或者直接把那颗容器丢进 data\\plugins\\，重启一次软件就认（当场摊开成解开的样子）。',
   '插件的代码不在程序里改：要换回早先那一份，把自己手里那一个包重装一次。',
   '这一屏上四颗动作：安装（放进路径）· 加载（请进使用页）· 卸载（从使用页撤下来）· 删除（连文件一起清掉）。',
   '  卸载 = 下一次开机不再加载它那一份代码（改名单 + 刷新这一页），包留在路径里；勾选「同步清除数据」才会连它存的词库和记录一起清。',
@@ -286,7 +299,7 @@ made.set('安装说明.txt', Buffer.from([
   '它会先把要换的旧的挪进 update\\backups\\<时间戳>\\ 再摊新的：src\\ 那一层整层挪（那一格里没有你写的东西），',
   'pages\\ 只换这一个包里带的那几个名 —— 你放在那一格里的稿子原地不动；data\\ 从头到尾一个字节不碰。',
   '这一棵正开着的时候它一个字节都不动，会让你先退干净（右下角托盘图标上右键 → 退出）。',
-  '<id>.zip 那种包是给插件用的运输件，主程序换版用上面那一颗 exe。',
+  '插件包只有一种：自有格式那一颗（.' + 容器后缀() + '，一个文件带齐插件清单、代码与每一份的校验数）。不再出 zip，也不出"压完改个后缀"的那种假件。',
   '',
   '图标：icons\\FD_Icon.png、WNW_Icon.png、RP_Icon.png，想换成自己的图就用同名正方形 PNG（256×256 起）覆盖它，重启后换成你的图。',
   '这一份发布物只带 Flow-Desk.exe 一个：写作和练习是从 FD 的启动卡里开的，页面跟着 pages\\ 走。',
@@ -299,23 +312,23 @@ made.set('安装说明.txt', Buffer.from([
   ''
 ].join('\r\n'), 'utf8'));
 
-/* ---------- 一道硬闸：data\ 底下只许插件那一格跟着本体出门 ----------
-   外46 之前这一道闸是「data\ 一个字节都不许进」；现在七家插件跟着本体走，放行的只有
-   data\plugins\ 那一层（从前还放行 data\plugins-factory\ 那一格，插件分离第 2 批 2.6 整格撤了）。
-   其余（用户写的书、词库副本、userdata-*、日志、这台机器卸没卸过的 off.json）进一个字节就当场停下 ——
-   那些是私密，也不该跟着版本走。 */
+/* ---------- 一道硬闸：data\ 底下一个字节都不进（主程序那一枚是空壳）----------
+   插件分离第 5 批之前那一段放行过 data\plugins\ 那一层（本体带着七家一起出门）。
+   分离做完的形状是第一版讨论就定下的那一条：**主程序 = 空壳** —— 那一棵里没有任何一家的代码，
+   装出来插件那一格是空的，用户把哪一家的容器放进去才有哪一家（规划第五节那五步）。
+   所以放行那一串现在是空的：用户写的书、词库副本、userdata-*、日志、这台机器卸没卸过的 off.json，
+   以及任何一家的代码 —— 进一个字节就当场停下。 */
 {
-  const 放行 = k => k.startsWith('data/plugins/');
   const 全部 = [...files.keys(), ...made.keys()];
-  const dirty = 全部.filter(k => (k === 'data' || k.startsWith('data/')) && !放行(k));
+  const dirty = 全部.filter(k => k === 'data' || k.startsWith('data/'));
   if(dirty.length){
-    console.error('首装那棵树里出现了数据层的格子（插件那一格之外一律不进）：\n  ' + dirty.slice(0, 12).join('\n  '));
+    console.error('首装那棵树里出现了数据层的格子（主程序那一枚是空壳，一个字节都不许带）：\n  ' + dirty.slice(0, 12).join('\n  '));
     process.exit(1);
   }
-  /* 正向再钉一条：货架上有几家，树里就得有每一家那一格 —— 漏铺一家就是用户装完少一个功能。 */
-  const 缺 = shelf.filter(p => !made.has('data/plugins/' + p.id + '/manifest.json'));
-  if(缺.length){ console.error('插件没铺进首装那棵树：' + 缺.map(p => p.id).join('、')); process.exit(1); }
-  console.log('  data\\ 那道闸过了：' + 全部.length + ' 份路径里落在 data\\ 底下的只有插件那一格 · ' + shelf.length + ' 家齐');
+  /* 反向再钉一条：货架上那几家一颗容器都没少（少一家就是有人放不进插件路径） */
+  const 少 = packs.filter(p => !p.error && !shelf.some(s => s.id === p.id));
+  if(少.length){ console.error('货架上少了那几家：' + 少.map(p => p.id).join('、')); process.exit(1); }
+  console.log('  data\\ 那道闸过了：' + 全部.length + ' 份路径里一落在 data\\ 底下的都没有（空壳）· 货架 ' + shelf.length + ' 家各一颗容器');
 }
 
 /* ---------- 体积先看一眼：整包里最肥的是那个 200MB 的 exe，不划算就别真打 ---------- */
@@ -453,5 +466,5 @@ fs.writeFileSync(path.join(OUT_DIR, 'index.json'), JSON.stringify(index, null, 2
 console.log('WROTE ' + out);
 console.log('  壳 ' + (stubBuf.length / 1024).toFixed(0) + 'KB + 树 ' + (copied / 1048576).toFixed(1) + 'MB = ' + index.setup.size);
 /* 那两格落在哪一格，按实际的产物格说 —— 原先写死「dist\」，产物出到 dist\tauri\ 时这句话就是假的 */
-console.log('  货架 ' + shelf.length + ' 个包在 ' + path.join(OUT_DIR, 'plugins') + ' · 清单 ' + path.join(OUT_DIR, 'index.json'));
-console.log('  插件跟着本体走：' + shelf.length + ' 家都在 data\\plugins\\ · 零卖的包另在产物格那一个 plugins\\ 里');
+console.log('  货架 ' + shelf.length + ' 颗容器就在 ' + OUT_DIR + ' 这一格里（一家一颗 <id>.' + 容器后缀() + '）· 清单 ' + path.join(OUT_DIR, 'index.json'));
+console.log('  主程序那一枚是空壳：树里 ' + 'data\\plugins\\ 一家的代码都没铺，装出来那一格是空的，容器由用户自己放进去');

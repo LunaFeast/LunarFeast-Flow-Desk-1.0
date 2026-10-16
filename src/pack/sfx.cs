@@ -449,6 +449,11 @@ static class Sfx
             j.Code = 6; j.Msg = "摊完了，可这棵树的根上没有 Flow-Desk.exe —— 这一包不全，换个下载来源再试。";
             return j;
         }
+        /* 主程序那一枚是空壳：这一包里不带 data\ 底下任何东西，装完先替用户把插件那一格开出来 ——
+           里面是空的，要哪一家就把哪一颗容器丢进这一格（或在「插件管理」里按「安装」指给它）。
+           已经有了就一个字节不动：覆盖升级不许碰用户自己放进去的那几颗。
+           开不出来不算装失败（那一格程序自己要用的时候还会再开一次），所以这一趟不拦。 */
+        try{ Directory.CreateDirectory(Path.Combine(Path.Combine(dest, "data"), "plugins")); }catch(Exception){ }
         j.Code = 0; j.Files = r.Files; j.Bytes = r.Bytes;
         MemoWrite(dest);
         j.Msg = (up ? UiDidUp : UiDidNew) + r.Files + UiFilesOf + MB(r.Bytes) + " → " + dest +

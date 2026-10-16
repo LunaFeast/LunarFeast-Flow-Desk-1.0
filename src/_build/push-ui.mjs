@@ -79,6 +79,21 @@ function 包的账(){
     return new Map((对.列 || []).map(x => [x.文件, x])); }
   catch(e){ return new Map(); }
 }
+/* 产物那一格里现在有安装程序的几个名字（从 产物格 数过去的相对路径）。
+   每一趟出货落在自己那个「主程序版本号」命名的子格里（他 2026-10-16 定：主安装包与那几颗插件容器同一年纪摆着），
+   所以这一颗走两层：产物那一格本身 + 它下面那一层子格。
+   名单是现量的 —— 屏上递回来的名字先与这份名单对一遍，对不上就拒，不拿它拼路径。 */
+function 列安装包(){
+  const 出 = [];
+  const 扫 = (格, 前) => {
+    let 项 = []; try{ 项 = fs.readdirSync(格, { withFileTypes:true }); }catch(e){ return; }
+    for(const d of 项) if(d.isFile() && /^Flow_Desk_setup_.*\.exe$/i.test(d.name)) 出.push(前 ? 前 + '/' + d.name : d.name);
+  };
+  扫(产物格, '');
+  let 子 = []; try{ 子 = fs.readdirSync(产物格, { withFileTypes:true }).filter(d => d.isDirectory()); }catch(e){}
+  for(const d of 子) 扫(path.join(产物格, d.name), d.name);
+  return 出;
+}
 function 现场(){
   const 问脏 = 跑git(['status', '--porcelain']);
   const 问站 = 跑git(['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -142,9 +157,12 @@ function 现场(){
     产物: (() => {
       const 账 = 包的账();
       try{
-        return fs.readdirSync(产物格).filter(f => /^Flow_Desk_setup_.*\.exe$/i.test(f)).map(f => {
-          const s = fs.statSync(path.join(产物格, f)), 记 = 账.get(f);
-          return { 名: f, MB: +(s.size / 1048576).toFixed(1), ms: s.mtimeMs,
+        return 列安装包().map(相 => {
+          /* 账上那一条按相对路径认；老账（每一枚都躺在 产物格 顶层那一段时间）记的是光板文件名，
+             所以拿_basename 再兜一层，别把已经记过的那几枚读成"没标" */
+          const 记 = 账.get(相) || 账.get(相.split('/').pop());
+          const s = fs.statSync(path.join(产物格, ...相.split('/')));
+          return { 名: 相, MB: +(s.size / 1048576).toFixed(1), ms: s.mtimeMs,
             时候: new Date(s.mtimeMs).toLocaleString('zh-CN', { hour12: false }),
             档: 记 ? 记.档 : '', 支: 记 ? 记.支 : '', 功能: 记 && 记.功能 ? 记.功能 : [],
             不带: 记 && 记.不带插件 ? 记.不带插件 : [] };
@@ -551,14 +569,15 @@ const 服务器 = http.createServer(async (req, res) => {
      只认这一格里现量出来的那几个文件名：屏上递回来的名字先与 readdir 的结果对一遍，对不上就拒（不拿它拼路径）。 */
   if(路 === '/api/开产物'){
     const 身 = await 读体(req);
-    const 挑 = String((身 && 身.名) || '').trim();
-    let 单 = []; try{ 单 = fs.readdirSync(产物格); }catch(e){}
-    const 名 = 挑 ? (单.includes(挑) ? 挑 : '') : (单.filter(f => /^Flow_Desk_setup_.*\.exe$/i.test(f))
-      .sort((a, b) => fs.statSync(path.join(产物格, b)).mtimeMs - fs.statSync(path.join(产物格, a)).mtimeMs)[0] || '');
-    if(挑 && !名){ 发(res, 400, '「' + 挑 + '」不在 ' + 产物格 + ' 这个文件夹里 —— 只能打开这个文件夹里现在实际有的那几个文件名。'); return; }
+    const 挑 = String((身 && 身.名) || '').trim().replace(/\\/g, '/');
+    const 单 = 列安装包();          /* 现量的名单（含版本号那一层子格里的），递回来的名字只对这一份，不拿它拼路径 */
+    const 名 = 挑 ? (单.includes(挑) ? 挑 : '') : (单
+      .sort((a, b) => fs.statSync(path.join(产物格, ...b.split('/'))).mtimeMs
+        - fs.statSync(path.join(产物格, ...a.split('/'))).mtimeMs)[0] || '');
+    if(挑 && !名){ 发(res, 400, '「' + 挑 + '」不在 ' + 产物格 + ' 这一格（连它下面那一层版本号命名的子格）里 —— 只能打开这一格里现在实际有的那几个文件名。'); return; }
     try{
       /* explorer 挑中那枚时返回码是 1（它的老毛病），不代表没开成 —— 所以只看叫得动叫不动 */
-      spawn('explorer.exe', 名 ? ['/select,' + path.join(产物格, 名)] : [产物格], { stdio:'ignore', detached:true }).unref();
+      spawn('explorer.exe', 名 ? ['/select,' + path.join(产物格, ...名.split('/'))] : [产物格], { stdio:'ignore', detached:true }).unref();
       JSON发(res, { 好:true, 话:'已打开这个文件夹：' + 产物格 + (名 ? '（选中的是 ' + 名 + '）' : '（这个文件夹里还没有安装程序）') });
     }catch(e){ 发(res, 500, '打不开资源管理器：' + ((e && e.message) || e)); }
     return;

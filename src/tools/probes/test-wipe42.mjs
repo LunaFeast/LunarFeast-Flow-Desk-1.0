@@ -133,16 +133,23 @@ const pub = rd('src/pack/publish.mjs');
       铺进去的是树里的 data\plugins\ 那一格，不是 app 那一层。
    从前还铺第二格 data\plugins-factory\（导入那一下留的原版，给那颗「恢复出厂」与随行文件兜底取），
    那颗钮随插件分离第 2 批 2.5 撤了、那一格随 2.6 整格撤 —— 要换回早先那一份就把自己手里那一个包重装。 */
-台.题('五 · 插件走发布物那三条路（两条堵着、一条外46 铺开；第 2 批 2.6 之后只有活的这一格）');
+台.题('五 · 插件走发布物那一条道（空壳这一枚不铺任何一家的代码，出货只走自有格式的容器）');
 const comp = rd('src/pack/comp-files.cjs'), serve = rd('src/_fd/fd-serve.mjs');
-台.判('首装那棵树现在铺插件：只落地 data\\plugins\\ 那一格（外46 起本体和插件一起打包）',
-  pub.indexOf("made.set('data/plugins/'") >= 0 && pub.indexOf("made.set('data/plugins-factory/'") < 0);
-台.判('插件进产物只有 data\\plugins\\ 那一条前缀（程序代码那一层 src\\ 不带插件字节）',
-  /const 放行 = k => k\.startsWith\('data\/plugins\/'\);/.test(pub)
+/* 2026-10-16 改口（规划第五节：主程序那一仓打出来的是空壳，第一版讨论就定的那一条）：
+   外46 那一段"本体带着七家一起出门"收回来了 —— 树里一家的代码都不铺，
+   一家一颗自有格式的容器与那颗 setup 摆在同一格里（那一格的名字是主程序的版本号）。 */
+台.判('首装那棵树里不铺插件（made 那一本没有 data/plugins 那一路；plugins-factory 那一名也没有）',
+  pub.indexOf("made.set('data/plugins/'") < 0 && pub.indexOf("made.set('data/plugins-factory/'") < 0);
+台.判('出货只走自有格式那一颗容器（打包手在产物那一格里一家写一颗，不再压 zip）',
+  /const 容 = 打容器\(/.test(pub) && /fs\.writeFileSync\(path\.join\(OUT_DIR, m\.id \+ '\.' \+ 容器后缀\(\)/.test(pub)
+  && !/function packZip/.test(pub));
+台.判('data 那道闸回到零放行（空壳这一枚连插件那一格也不放过；程序代码那一层照旧不收插件字节）',
+  !/const 放行 = k => k\.startsWith\('data\/plugins\/'\)/.test(pub)
+  && /const dirty = 全部\.filter\(k => k === 'data' \|\| k\.startsWith\('data\/'\)\);/.test(pub)
   && !/addLayer\('src\/',[^)]*packs/.test(pub));
 const 插件落点 = [...pub.matchAll(/made\.set\('([^']+)' \+ m\.id/g)].map(x => x[1]);
-台.判('插件字节只有一个落点（活的这一格），没有第二格（原版那一格整格撤了，程序代码那一层也不收插件）',
-  插件落点.join(' ') === 'data/plugins/', 插件落点.join(' '));
+台.判('插件字节在树里没有落点（一家都不铺），也没有第二格（原版那一格整格撤了，程序代码那一层也不收插件）',
+  插件落点.join(' ') === '', 插件落点.join(' ') || '零个落点');
 台.判('开机不再把自带那一层铺成插件（seedMissing 那一颗整棵源码里一处不剩）',
   扫树(l => /seedMissing/.test(fs.readFileSync(l, 'utf8'))).length === 0 && !/seedMissing/.test(comp));
 /* 从前这里还钉着「铺插件那一步换成给老树搬家」（adoptOldFactory 从 resources\app\data\plugins 取底）
@@ -159,6 +166,7 @@ const 留底 = rd('src/_tauri/src/tauri_bind/pack_cmds.rs');
   !rd('src/_tauri/src/tauri_bind/media_cmds.rs').includes('原厂那一格'));
 台.判('一键清理那张名单里不再有那一格（书名闸也不认它是一条数据）',
   !/"plugins-factory"/.test(rd('src/_tauri/src/core/data_path.rs')));
-台.判('首装那份说明改口了（不再说一个插件都不带，改说跟着本体一起出门）',
-  !/这一份发布物里一个插件都没有/.test(pub) && !/出厂带的那些包/.test(pub) && /这一份发布物带着/.test(pub));
+台.判('首装那份说明说的是空壳（不再说"发布物带着插件"，也不说"一个插件都没有"这种旧口径）',
+  !/这一份发布物里一个插件都没有/.test(pub) && !/出厂带的那些包/.test(pub) && !/这一份发布物带着/.test(pub)
+  && /主程序这一枚是空壳/.test(pub) && /data\\\\plugins\\\\ 那一格里一家都没有/.test(pub));
 台.收尾();

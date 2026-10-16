@@ -35,35 +35,48 @@ const pub = rd('src/pack/publish.mjs');
 const sfx = rd('src/pack/sfx.cs');
 const 闸 = rd('src/tools/audit.mjs');
 
-台.题('一、每一家铺活的这一格，用的是零卖那包同一批字节');
-台.判('包内件这一颗在（把一家拆成名字→字节）', pub.includes('function 包内件(p, 用了号){'));
-台.判('压零卖的包走的就是这一批字节（packZip 只剩一行）',
-  pub.includes('function packZip(p, 用了号){ return writeZip(包内件(p, 用了号)); }'));
-台.判('活的那一格铺进树', pub.includes("made.set('data/plugins/' + m.id"));
-/* 从前这里还钉着「原版那一格（data\plugins-factory\）铺进树」—— 那颗「恢复出厂」随插件分离第 2 批 2.5 撤了，
-   那一格跟着 2.6 整格撤，发布这一趟只剩一个落点（认代码不认注释：顶上那几句交代历史的照旧留著）。 */
+台.题('一、一家一颗自有格式的容器（不是 zip、也不是"压完改个后缀"）；主程序那一棵树里不铺任何一家的代码');
+台.判('包内件这一颗在（把一家拆成名字→字节，插件清单那一格换成发布传进来的号）',
+  pub.includes('function 包内件(p, 用了号){') && pub.includes('version: 用了号'));
+/* 2026-10-16 改口（规划第五节：主程序那一仓打出来的是空壳，第一版讨论就定的那一条）。
+   这两条从前钉的是「packZip 只剩一行」与「活的那一格铺进树」—— zip 那一档撤了，出货只走自有格式；
+   树里那一格也不再铺，一家一颗容器与那颗 setup 摆在同一格里（那一格的名字是主程序的版本号）。 */
+台.判('压的那一颗用的是打包手那颗（src/_build/packbox.mjs 的 打包），zip 那一颗整颗撤了',
+  /import \{ 打包 as 打容器, 扩展名 as 容器后缀 \} from/.test(pub) && /const 容 = 打容器\(/.test(pub)
+  && !/function packZip/.test(pub));
+台.判('后缀不吃第二份：容器那颗叫什么问打包手要（全仓唯一那一枚住在壳里 pack_box.rs）',
+  /m\.id \+ '\.' \+ 容器后缀\(\)/.test(pub) && !/\.fdpkg'/.test(pub));
+台.判('信息段那六个必填键与 kernels 都递到了（壳装之前整个查一遍，kernels 点了一份而包里没这份就当场停）',
+  /id: m\.id, name: m\.name, version: 出, min_shell:/.test(pub) && /kernels: Array\.isArray\(m\.kernels\)/.test(pub));
+台.判('树里**不铺**任何一家的代码（made 那一本里不再有 data/plugins 那一路，"铺进首装那棵树"那一句也撤了）',
+  !/made\.set\('data\/plugins\//.test(pub)
+  && !/铺进首装那棵树/.test(pub.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')));
 台.判('第二格不再铺（去掉注释之后，"plugins-factory" 那一名在发布这一本里一处不剩）',
   !pub.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ').includes('plugins-factory'));
-台.判('铺件那一个循环只剩一格（不再读第二遍磁盘）', pub.includes('for(const e of 件){'));
-台.判('插件清单那一格换成传进来的号（三处一个串：关于、零卖的包、树里活的）', pub.includes('version: 用了号'));
 
-台.题('二、data 那道闸：只放那一格，还正向钉齐不齐');
-台.判('放行只看那一个前缀',
-  pub.includes("const 放行 = k => k.startsWith('data/plugins/');"));
-台.判('旧那句「一个字节都不许进」没了', !pub.includes('份路径里没有一个落在'));
-台.判('报错话改成「插件那一格之外一律不进」', pub.includes('插件那一格之外一律不进'));
-台.判('正向钉：哪一家缺格就报名字并停工',
-  pub.includes('插件没铺进首装那棵树：') && pub.includes('process.exit(1)'));
+台.题('二、data 那道闸：空壳这一枚一个字节都不进（连插件那一格也不放行）');
+台.判('放行那一串现在是空的（从前放行 data/plugins/ 那一条收回来了）',
+  !/const 放行 = k => k\.startsWith\('data\/plugins\/'\)/.test(pub)
+  && /const dirty = 全部\.filter\(k => k === 'data' \|\| k\.startsWith\('data\/'\)\);/.test(pub));
+台.判('报错话说的是这件事：主程序那一枚是空壳，一个字节都不许带', pub.includes('主程序那一枚是空壳，一个字节都不许带'));
+台.判('正向钉：货架上少一家容器就报名字并停工（用户就少一家能装）',
+  pub.includes('货架上少了那几家：') && pub.includes('process.exit(1)'));
+台.判('反证 · 把那条放行加回去（老规矩"插件那一格跟着本体出门"），上面第一条立刻红 —— 钉的确实是这一句收回了',
+  (() => { const 老 = pub.replace("const dirty = 全部.filter(k => k === 'data' || k.startsWith('data/'));",
+    "const dirty = 全部.filter(k => (k === 'data' || k.startsWith('data/')) && !k.startsWith('data/plugins/'));");
+    return 老 !== pub && /!k\.startsWith\('data\/plugins\/'\)/.test(老); })());
 
-台.题('三、安装壳覆盖升级：自带那几家插件代码换新，用户自己写的那些碰不到');
+台.题('三、安装壳：护住 icons 与 material 那两格；data\\ 那一层空壳本来就不带，覆盖升级也不写它');
 台.判('KeepUserFile 这一颗在', sfx.includes('static bool KeepUserFile(string dest, Entry it)'));
 /* 那颗判定只掐那一份函数体：注释里出现过的旧前缀不算数（这一节的反证要改的就是那一句代码） */
 const 那颗 = (sfx.match(/static bool KeepUserFile\(string dest, Entry it\)[\s\S]*?\n    \}/) || [''])[0];
 台.数('这一颗抓到了（抓空了整节就是假绿）', 那颗.length);
-台.判('data/plugins/ 那条「目标已有同一个名字就不搬不写」的前缀撤了（2026-10-16 他指着覆盖升级后那几张旧版卡改的：程序换新、自带的插件代码却留在上一版）',
+台.判('data/plugins/ 那条护住的前缀不在这一颗里（空壳那一枚根本不带插件代码，谈不上"盖掉用户那一份"；他 2026-10-16 指着覆盖升级后那几张旧版卡改的：程序换新、代码却留在上一版）',
   !/StartsWith\("data\/plugins\/"\)/.test(那颗));
 台.判('icons/ 与 material/ 那两条照旧护住：他自己换过的那一张、加进去的那一张，覆盖升级都不许盖',
   /StartsWith\("icons\/"\)/.test(那颗) && /StartsWith\("material\/"\)/.test(那颗));
+台.判('装完替用户把插件那一格开出来（空壳装出来那一格是空的，他要放进去才有东西）',
+  /CreateDirectory\(Path\.Combine\(Path\.Combine\(dest, "data"\), "plugins"\)\)/.test(sfx));
 const 让 = (sfx.match(/KeepUserFile\(dest, it\)/g) || []).length;
 台.数('让路那一手出现在几处', 让);
 台.判('正好三处：占用检查、旧的搬备份、新的摊出去（少一处就是要么白搬走要么强覆盖）', 让 === 3);
@@ -92,7 +105,8 @@ for(const f of ['src/pack/publish.mjs', 'src/pack/comp-files.cjs',
   台.判(f + ' 里不再说「一个插件都不带 / 一棵都不进 / 不许带插件代码」',
     !/一个插件都不|一棵都不进这一棵树|发布物里不许带插件代码/.test(rd(f)));
 }
-台.判('安装说明改口成「带着插件」', pub.includes('这一份发布物带着插件（'));
+台.判('安装说明改口成「主程序这一枚是空壳 + 一家一颗容器」（从前那一句是"这一份发布物带着插件"）',
+  !pub.includes('这一份发布物带着插件（') && pub.includes('主程序这一枚是空壳'));
 台.判('自查那条「程序代码这一层不收插件」还钉着（盯的地方从出厂镜像那一格换成 src\\ 那一层）',
   闸.includes('底下有插件的形状') && 闸.includes('程序代码这一层不收') && !/MIRROR/.test(闸));
 

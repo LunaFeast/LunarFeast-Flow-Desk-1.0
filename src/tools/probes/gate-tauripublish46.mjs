@@ -77,12 +77,16 @@ const 源 = () => (包.清单 || []).filter(k => k.startsWith('src/'));
 台.判('src 层里没有一个 node_modules 与一个藏文件',
   源().every(k => !k.split('/').includes('node_modules') && !/(^|\/)\.[^/]/.test(k)));
 const 各家 = 家.map(j => j.id);
-/* 从前这里核的是「活的 + 原版两格齐」—— 原版那一格（data\plugins-factory\）随插件分离第 2 批 2.6 整格撤了 */
-const 缺家 = 各家.filter(id => !有('data/plugins/' + id + '/manifest.json').length);
-台.判('这一棵上那 ' + 各家.length + ' 家插件那一格齐（活的这一格），一家不缺', 缺家.length === 0, 缺家);
+/* 2026-10-16 改口（规划第五节：主程序那一枚是空壳）：从前这两条一条核"树里七家那一格齐"、
+   一条核"data\ 底下除插件那一格之外零份" —— 现在树里连插件那一格都没有，
+   七家改成核「货架上七颗自有格式的容器一颗不缺」，data\ 那一道闸回到零放行。 */
+const 在架 = Number((包.全文.match(/货架 (\d+) 家各一颗容器/) || [])[1] || 0);
+台.判('货架上那 ' + 各家.length + ' 家一颗容器都不缺（发布那一趟当场报的数，不是照屏上勾的）',
+  在架 === 各家.length, '报的是 ' + 在架 + ' 家');
+台.判('树里一家的代码都没有（空壳：data\\plugins 那一路零份）', 有('data/plugins/').length === 0, 有('data/plugins/').slice(0, 4));
 台.判('树根那份说明在包里', 有('安装说明.txt').length === 1, 有('安装说明.txt'));
-const 脏 = () => (包.清单 || []).filter(k => (k === 'data' || k.startsWith('data/')) && !k.startsWith('data/plugins/'));
-台.判('data\\ 底下除插件那一格之外零份（那道硬闸）', 脏().length === 0, 脏().slice(0, 6));
+const 脏 = () => (包.清单 || []).filter(k => k === 'data' || k.startsWith('data/'));
+台.判('data\\ 底下一份都不带（空壳那一枚的硬闸：连插件那一格也不放行）', 脏().length === 0, 脏().slice(0, 6));
 
 台.题('五、产物落哪一格、那颗 exe 没编出来时怎么停、名字上那一段档位的字只管文件名');
 台.判('产物格是 dist\\tauri', /产物在 .*[\\/]dist[\\/]tauri/.test(包.全文), (包.全文.match(/产物在 .*/) || [''])[0]);
