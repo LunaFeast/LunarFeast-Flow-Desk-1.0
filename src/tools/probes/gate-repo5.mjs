@@ -10,8 +10,10 @@
    ⑥ 这一颗不推、不删主程序仓那一份 —— 那两刀都要他点头；
    ⑦ 一家一仓的形状（规划第五节：主程序那一仓打出来的是空壳）：那一家的**源码**进那一仓、内核**产物**不进那一仓
       （由那一家的出包命令第一步现出），号取自那一仓自己那一笔，跑完那一棵 git status 仍干净。
-   外加两件：再铺一次同一棵要报"逐字没动"（幂等，别一次跑落两笔），以及一条反证：
-   把那条出包命令里"找不到主程序那颗打包手就停"摘掉，它就不再给那句白话，而是撞进一个不存在的路径。
+   外加三件：再铺一次同一棵要报"逐字没动"（幂等，别一次跑落两笔），一条反证：
+   把那条出包命令里"找不到主程序那颗打包手就停"摘掉，它就不再给那句白话，而是撞进一个不存在的路径；
+   还有一件 2026-10-16 补的 —— 挂在某一家底下的**子件**（MusicBee 那一格）也占一仓：只铺源码、不给出包命令，
+   而表里挪走的那几份，重铺时必须从原来那一棵摘掉（只覆盖不删 = 同一份住两仓）。
    沙盒落在主程序那一棵的旁边（现算，不写死盘符），跑完当场删掉。
    ============================================================ */
 import fs from 'node:fs';
@@ -35,8 +37,9 @@ const 清 = () => { try{ fs.rmSync(沙盒, { recursive: true, force: true }); }c
     'notes': 'Notes', 'your-sentences': 'Your-Sentences', 'schedule': 'Schedule',
     'singbit-input-practice': 'Singbit-Input-Practice', 'music-remote': 'Music-Remote',
     'why-not-write': 'Why-Not-Write', 'wnw-custom': 'Why-Not-Write-plugins-Deduce-Custom',
+    'musicbee': 'Music-Remote-plugins-MusicBee',
   };
-  台.判('七家一格不多一格不少，仓名逐字照截图（挂在谁底下的子件叫 <所属>-plugins-<子件>，各段首字母大写）',
+  台.判('七家插件加 MusicBee 那一格子件，一张表八仓一格不多一格不少，仓名逐字照截图（挂在谁底下的子件叫 <所属>-plugins-<子件>，各段首字母大写）',
     JSON.stringify(Object.keys(仓名).sort()) === JSON.stringify(Object.keys(该有).sort())
     && Object.keys(该有).every(k => 仓名[k] === 该有[k]), Object.values(仓名).join('、'));
   台.判('远程一律是 LunarFeast 名下那一串（SSH，不经手凭据）',
@@ -159,13 +162,15 @@ try{
     && 情.通道.length === 0, 情.手.join('、') + ' ⁄ 通道 ' + 情.通道.join('、'));
   台.判('它只有一份数据文件（notes.json），没有表单键、没有内核产物',
     (情.清单.dataKeys || []).join() === 'notes.json' && (情.清单.kvKeys || []).length === 0 && !情.清单.kernels);
-  台.判('七家都量得出这份账（谁有通道、谁带内核，搬的时候顺序不一样，这张表要一次能拉出来）',
+  台.判('八仓都量得出这份账（七家插件 + MusicBee 那一格子件：谁有通道、谁带内核，搬的时候顺序不一样，这张表要一次能拉出来）',
     (() => { const 表 = Object.keys(仓名).map(id => { const x = 看一家(id);
-      return { id, 手: x.手.length, 通道: x.通道.length, 内核: (x.清单.kernels || []).length, 份: x.份.length }; });
-      return 表.length === 7 && 表.every(x => x.份 > 0 && Number.isFinite(x.手))
+      return { id, 手: x.手.length, 通道: x.通道.length, 内核: ((x.清单 || {}).kernels || []).length, 份: x.份.length, 源码: x.源码.length, 子: x.子 }; });
+      const 蜂 = 表.find(x => x.id === 'musicbee');
+      return 表.length === 8 && 表.filter(x => !x.子).every(x => x.份 > 0 && Number.isFinite(x.手))
+        && !!蜂 && 蜂.子 && 蜂.份 === 0 && 蜂.源码 === 3
         && 表.find(x => x.id === 'why-not-write').内核 >= 1 && 表.find(x => x.id === 'wnw-custom').内核 >= 1
         && 表.find(x => x.id === 'notes').通道 === 0; })(),
-    Object.keys(仓名).map(id => id + ' ' + 看一家(id).份.length + ' 份').join(' · '));
+    Object.keys(仓名).map(id => id + ' ' + 看一家(id).份.length + ' 份 + 源码 ' + 看一家(id).源码.length + ' 份').join(' · '));
 }
 
 台.题('六、一家一仓的形状：源码进那一仓、内核产物不进那一仓、号取自自己那一仓（规划第五节：主程序那一仓打出来的是空壳）');
@@ -210,6 +215,32 @@ try{
       catch(e){ return false; } })(),
     (() => { try{ return execFileSync('git', ['-C', 一棵.路, 'status', '--porcelain'], { encoding: 'utf8' }).trim().replace(/\r?\n/g, ' ⏎ ') || '干净'; }
       catch(e){ return '问不出 git'; } })());
+}
+
+台.题('七、挂在一家底下的子件（MusicBee 那一格）：只铺源码、不给出包命令；表里挪走的份，重铺时从原来那一棵摘掉');
+{
+  const 工 = rd('src/_build/pack-repo.mjs'), 表 = rd('src/_build/plugin-repos.mjs');
+  const 蜂 = 铺('musicbee', 沙盒, { 重铺: true });
+  台.判('那三份都在它自己那一棵里（两份 C# 与那颗编译脚本），路径与主仓逐字一样',
+    fs.existsSync(path.join(蜂.路, 'src', 'pack', 'plugin', 'MBHeader.cs'))
+    && fs.existsSync(path.join(蜂.路, 'src', 'pack', 'plugin', 'FlowDeskBridge.cs'))
+    && fs.existsSync(path.join(蜂.路, 'src', 'pack', 'plugin', 'build-plugin.ps1')) && 蜂.源码 === 3,
+    '源码 ' + 蜂.源码 + ' 份 / ' + 蜂.字节 + ' 字节');
+  台.判('它没有运行时那一格，也不给它生成出包命令（它不出容器），但 .gitignore 照给 —— 那颗脚本把 dll 落在 dist 那一格',
+    蜂.运行时 === 0 && !fs.existsSync(path.join(蜂.路, '出包.mjs'))
+    && /(^|\n)dist\//.test(fs.readFileSync(path.join(蜂.路, '.gitignore'), 'utf8')));
+  台.判('那三份从音乐遥控器那张登记里挪走了（同一份不许住两仓）',
+    (() => { const 段 = 表.slice(表.indexOf("id:'music-remote'"), 表.indexOf("id:'singbit-input-practice'"));
+      return !/src\/pack\/plugin/.test(段) && /export const 子件[\s\S]*src\/pack\/plugin\/MBHeader\.cs/.test(表); })());
+  台.判('反证 · 把"子件不给出包命令"那一句的闸摘掉，它立刻给一棵没有容器可出的仓塞进一份出包命令',
+    (() => { const 改 = 工.replace("if(!情.子) fs.writeFileSync(path.join(路, '出包.mjs')", "fs.writeFileSync(path.join(路, '出包.mjs')");
+      return 改 !== 工 && !/if\(!情\.子\) fs\.writeFileSync\(path\.join\(路, '出包\.mjs'/.test(改); })());
+  台.判('重铺会摘掉「这一趟不该再有」的那几份：拿那一仓进了版本的名单比，不在名单里的从盘上删掉再落笔',
+    /const 该有 = new Set/.test(工) && /'ls-files', '-z'/.test(工) && /!该有\.has\(p\)/.test(工)
+    && /fs\.rmSync\(path\.join\(路, \.\.\.p\.split\('\/'\)\)/.test(工));
+  台.判('反证 · 把那道比名单摘掉（谁都不删），挪走的份就永远留在原来那一棵里，两仓同时住一份',
+    (() => { const 改 = 工.replace('.filter(p => !该有.has(p));', ';');
+      return 改 !== 工 && !/该有\.has\(p\)/.test(改); })());
 }
 
 清();

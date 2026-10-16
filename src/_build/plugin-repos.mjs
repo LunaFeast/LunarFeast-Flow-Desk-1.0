@@ -88,8 +88,7 @@ export const 家 = [
   { id:'notes',                  中文:'你的便签',       支:'plugin/notes',                  仓:'', from:[pack('notes')] },
   { id:'schedule',               中文:'日程',           支:'plugin/schedule',               仓:'', from:[pack('schedule')] },
   { id:'your-sentences',         中文:'你的句子',       支:'plugin/your-sentences',         仓:'', from:[pack('your-sentences')] },
-  { id:'music-remote',           中文:'音乐遥控器',     支:'plugin/music-remote',           仓:'', from:[pack('music-remote'),
-      'src/pack/plugin/FlowDeskBridge.cs', 'src/pack/plugin/MBHeader.cs', 'src/pack/plugin/build-plugin.ps1'] },
+  { id:'music-remote',           中文:'音乐遥控器',     支:'plugin/music-remote',           仓:'', from:[pack('music-remote')] },
   { id:'singbit-input-practice', 中文:'声笔输入法练习', 支:'plugin/singbit-input-practice',  仓:'', from:[pack('singbit-input-practice'),
       'src/_build/rp-kernel.mjs', 'src/_build/rp-base.html',
       'src/_build/p1.js', 'src/_build/p2.js', 'src/_build/p3.js', 'src/_build/p4.js', 'src/_build/p5.js', 'src/_build/p6.js'],
@@ -98,6 +97,17 @@ export const 家 = [
     内核:{ 出:'src/_wcustom/build-kernel.mjs', 产物:'src/_wcustom/wnw-custom-kernel.js', 装名:'wnw-custom-kernel.js' } },
   { id:'why-not-write',          中文:'为写',           支:'plugin/why-not-write',           仓:'', from:[pack('why-not-write'), 'src/_wnw/'],
     内核:{ 出:'src/_wnw/build-kernel.mjs', 产物:'src/_wnw/wnw-kernel.js', 装名:'wnw-kernel.js' } },
+];
+
+/* 挂在某一家底下的**子件**：它不是插件（没有 data\plugins\<id>\ 那一格、不出自己的容器），
+   但按已定的命名规矩单独占一仓，仓名叫 <所属插件>-plugins-<子件名>。
+   MusicBee 播放器适配就是这一类：那两份 C# 与那颗编译脚本在音乐遥控器那一格里住了很久，
+   它自己那一仓（GitHub 上 2026-10-16 建的）建出来是空的 —— 2026-10-16 把这三份挪过去。
+   from 里全是源码，没有运行时那一格；产物（mb_FlowDesk.dll）由 build-plugin.ps1 现编，落 src\pack\plugin\dist\，
+   那一格 .gitignore 第五节挡着，不进任何一仓。 */
+export const 子件 = [
+  { id:'musicbee', 中文:'MusicBee 播放器适配', 挂在:'music-remote', from:[
+      'src/pack/plugin/FlowDeskBridge.cs', 'src/pack/plugin/MBHeader.cs', 'src/pack/plugin/build-plugin.ps1'] },
 ];
 
 /* 2026-10-13 他定的：为写不再搞独立那一棵 —— 基础的为写回到插件这一格，和其余六家一起进出厂那一层。
