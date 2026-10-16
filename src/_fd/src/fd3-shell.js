@@ -2147,7 +2147,9 @@ const Shell = {
     const draw = async () => {
       const kw = q.trim().toLowerCase();
       const d = await PackOps.disk();
-      const 加载中 = new Set((await PackOps.ids()) || []);
+      /* 「上了没」问的是**这一轮真加载进页面了没有**（登记表里有它才算），不是问那份名单 ——
+         从前这里读的是 PackOps.ids()（名单），于是运输形状那几种（还摊不开的 .fdpkg 与 zip）
+         明明一行代码都没进页面，格子上却写着「已加载」、那颗钮还是灰的（他 2026-10-16 指着那一片问：插件无法加载）。 */
       const 桌上 = new Set(this.layout.items.map(i => i.widget));
       grid.innerHTML = '';
       const 家 = ((d && d.packs) || [])

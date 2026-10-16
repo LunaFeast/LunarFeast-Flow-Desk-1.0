@@ -206,6 +206,12 @@ pub fn 开页面窗口(壳: &AppHandle) -> Result<String, String> {
         .min_inner_size(720.0, 480.0)
         .initialization_script(门牌)
         .initialization_script(桥)
+        /* 系统那一圈标题栏撤掉（他 2026-10-16 指着那两层「最小化 / 最大化 / 关闭」问的）：
+           这一张页自己画顶栏（fd9-title.js：左上角一个菜单 + 右上角窗口三个），
+           Electron 那一版走的就是 titleBarStyle:'hidden' —— 转 Tauri 时这一句漏了，
+           于是系统那一圈与页面自己那一行叠成两层，页面顶不满的地方还露出一条底色。
+           顶栏的拖动区因此归页面：pointerdown 上请一次 startDragging（桥里那颗 winDrag）。 */
+        .decorations(false)
         .visible(false)
         .build()
         .map_err(|e| format!("窗口开不起来：{}", e))?;

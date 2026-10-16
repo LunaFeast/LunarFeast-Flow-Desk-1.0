@@ -317,6 +317,81 @@ fn 摊开一家(格: &str, 名: &str, 种: &'static str) -> Option<一个包> {
     }
 }
 
+/* ---------- 开机把运输形状摊成运行用的那一格 ----------
+   他 2026-10-16 装空壳那一次量到的：装出去那一棵里 data\plugins\ 是空的（主程序那一枚本来就不带插件），
+   安装说明上写着「把那颗包丢进这一格、重启一次就认」，可这一趟从前只列名不摊，
+   页面那一头两种运输形状都不当运行形状使 —— 丢进去的容器于是永远加载不上。
+   与导入那两路的分别只有两条：那一份包本身已经在这一格里了（不再拷第二份），
+   以及「同名已占」这一判反过来用 —— 那一格已经在了就说明摊过，这一趟一个字节都不动。
+   容器照旧先整包检查：不过检一个字节不落（报不动手），那一行带着那一句原话进管理页。 */
+fn 开机摊一家(格: &str, 名: &str, 种: &'static str) {
+    let 到 = 并路(格, 名);
+    if 盘上有(&到) {
+        return;
+    }
+    let 后缀 = if 种 == 容器那种 { crate::fd_core::pack_box::带点后缀 } else { 压包后缀 };
+    let 节 = match fs::read(并路(格, &format!("{}{}", 名, 后缀))) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+    if 种 == 容器那种 {
+        let 出 = 整包检查(&节, &crate::version(), 钥匙表);
+        if !出.ok {
+            return;     /* 不过检：一个字节不落；列名那一头把这一句原话报出来 */
+        }
+        let 信 = match &出.信息 {
+            Some(v) => v.clone(),
+            None => return,
+        };
+        /* 目录名必须与信息段那一栏一样（规格那张表），对不上就不摊：
+           摊出去会造出一格与包上那一名不符的目录，管理页两行说不清谁是谁 */
+        if 信.id.trim() != 名 {
+            return;
+        }
+        if 信.files.iter().any(|份| 份.加密) {
+            return;     /* 带加密块这一版不摊（明文不许写盘那条硬规矩） */
+        }
+        for (位, 份) in 出.块.iter().zip(信.files.iter()) {
+            let 文 = match 节.get(位.数据起点..位.数据起点.saturating_add(位.长度)) {
+                Some(v) => v,
+                None => {
+                    抹掉半截(&到);
+                    return;
+                }
+            };
+            let mut 落 = 到.clone();
+            for 一 in 拆成段(&份.路径) {
+                落 = 并路(&落, 一);
+            }
+            if 落 != 到 && !落.starts_with(&format!("{}\\", 到)) {
+                抹掉半截(&到);
+                return;
+            }
+            if let Some(父) = Path::new(&落).parent() {
+                if !父.as_os_str().is_empty() {
+                    if let Err(_) = fs::create_dir_all(父) {
+                        抹掉半截(&到);
+                        return;
+                    }
+                }
+            }
+            if let Err(_) = fs::write(&落, 文) {
+                抹掉半截(&到);
+                return;
+            }
+        }
+        return;
+    }
+    /* zip 那一支：读名册 → 一份份摊；摊不动抹掉半截，那份 zip 留着，下一趟开机再试 */
+    let (目, _) = match 包里的清单与名册(&节) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+    if 摊成一家(格, &节, &目, 名).is_err() {
+        抹掉半截(&到);
+    }
+}
+
 /* ---------- packScan：扫一遍那一列（原件 1797~1839 行） ---------- */
 
 /// 两趟收：文件夹那一趟先走、压缩包那一趟后走，同名让开判断与「只有真列出来的才算占上」
@@ -351,13 +426,18 @@ fn 扫一遍(格: &str) -> 一次扫描 {
         }
     }
     /* 两趟运输形状：zip 先、容器后（同一格里两种都放着时，谁先露面谁占名 —— 与原件那条「文件夹赢」同一把尺，
-       赢的永远是那一格，不是谁先露面；这一趟只列名，装载那头两种运输形状都不当运行形状使） */
+       赢的永远是那一格，不是谁先露面）。
+       2026-10-16 加一手：列之前先把那一格摊出来（开机摊一家），摊成了就报**文件夹**那一行 ——
+       页面那一头只吃摊开的那一格，从前这里只列名不摊，丢进这一格的容器于是永远加载不上。
+       摊不成（不过检、带加密块、名对不上）才留运输形状那一行，带着那一句原话给管理页说。 */
     for 包名 in &压包那一批 {
         /* 文件夹赢同名 zip（原件 if(seen.has(id)) continue）；seen 只记真列进这一列的那几家 */
         if 同名那格已占(&扫到, 包名) {
             continue;
         }
-        if let Some(包) = 摊开一家(格, 包名, 压包那种) {
+        开机摊一家(格, 包名, 压包那种);
+        let 包 = 摊开一家(格, 包名, 文件夹那种).or_else(|| 摊开一家(格, 包名, 压包那种));
+        if let Some(包) = 包 {
             列.push(包);
             扫到.push(包名.clone());
         }
@@ -366,7 +446,9 @@ fn 扫一遍(格: &str) -> 一次扫描 {
         if 同名那格已占(&扫到, 包名) {
             continue;
         }
-        if let Some(包) = 摊开一家(格, 包名, 容器那种) {
+        开机摊一家(格, 包名, 容器那种);
+        let 包 = 摊开一家(格, 包名, 文件夹那种).or_else(|| 摊开一家(格, 包名, 容器那种));
+        if let Some(包) = 包 {
             列.push(包);
             扫到.push(包名.clone());
         }
@@ -933,6 +1015,40 @@ mod 临时落盘验 {
         let 行: Vec<&str> = 扫["packs"].as_array().unwrap().iter()
             .filter(|p| p["id"] == "notes").map(|p| p["kind"].as_str().unwrap()).collect();
         assert_eq!(行, vec!["dir"], "{:?}", 扫["packs"]);
+        let _ = fs::remove_dir_all(&沙);  /* 清不干净不算这一颗失败：Windows 上刚写的文件可能被索引器短暂占着 */
+    }
+
+    /* 他 2026-10-16 装空壳那一次量到的那一件：说明上写着「把那颗包丢进 data\plugins\，重启一次就认」，
+       可扫这一趟从前只列名不摊，页面那一头两种运输形状都不当运行形状使 —— 丢进去的那一颗永远加载不上。 */
+    #[test]
+    fn 开机把丢进来的容器摊成那一格_不过检的一字节不落() {
+        let 沙 = 沙盒("开机摊");
+        let 沙串 = 沙.to_string_lossy().to_string();
+        fs::write(沙.join(format!("notes.{}", crate::fd_core::pack_box::扩展名)), 字节()).unwrap();
+        let 扫 = serde_json::to_value(扫一遍(&沙串)).unwrap();
+        let 行: Vec<&str> = 扫["packs"].as_array().unwrap().iter()
+            .filter(|p| p["id"] == "notes").map(|p| p["kind"].as_str().unwrap()).collect();
+        assert_eq!(行, vec!["dir"], "丢进来的那一颗要摊成那一格、并按文件夹那一行报出去：{:?}", 扫["packs"]);
+        for 份 in ["main.js", "manifest.json", "box-kernel.js"] {
+            assert!(沙.join("notes").join(份).exists(), "摊开那一格里少了 {}", 份);
+        }
+        /* 第二趟开机：那一格已在，一个字节都不许多动（拿内容比，不比时间） */
+        let 前 = fs::read(沙.join("notes").join("main.js")).unwrap();
+        let _ = 扫一遍(&沙串);
+        assert_eq!(fs::read(沙.join("notes").join("main.js")).unwrap(), 前, "那一格已在就不许再动它");
+        /* 改一个字节的那一颗：整包检查不过 → 一个字节不落，那一行带着那一句原话进管理页 */
+        let 字 = 字节();
+        let mut 坏 = 字.clone();
+        let 数据起 = 12 + u32::from_be_bytes([字[8], 字[9], 字[10], 字[11]]) as usize + 6;
+        坏[数据起] ^= 0xff;
+        fs::write(沙.join(format!("notes2.{}", crate::fd_core::pack_box::扩展名)), &坏).unwrap();
+        let 二 = serde_json::to_value(扫一遍(&沙串)).unwrap();
+        assert!(!沙.join("notes2").exists(), "不过检的那一颗不许摊出格来");
+        let 那 = 二["packs"].as_array().unwrap().iter()
+            .find(|p| p["id"] == "notes2")
+            .expect("不过检的那一颗也要列出来，好把原话说给用户");
+        assert_eq!(那["kind"].as_str().unwrap(), "box", "{:?}", 那);
+        assert!(那["error"].as_str().unwrap().contains("对不上号"), "{:?}", 那);
         let _ = fs::remove_dir_all(&沙);  /* 清不干净不算这一颗失败：Windows 上刚写的文件可能被索引器短暂占着 */
     }
 

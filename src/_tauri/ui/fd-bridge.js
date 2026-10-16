@@ -485,6 +485,10 @@ window.FD_APP = {
      动作名见 main.cjs 的 winCtl；返回的是最新窗口状态 { maximized, fullscreen }。
      没打包在 Electron 里跑（直接开 html）时 invoke 会抛，页面那边当没这功能就行。 */
   async winCtl(act){ try{ return await ipcRenderer.invoke('win:ctl', String(act || '')); }catch(e){ return null; } },
+  /* 顶栏那一条的拖动区：模板上那句 -webkit-app-region:drag 是 Electron 那一版认的写法，WebView2 不认 ——
+     系统那一圈标题栏撤掉之后（壳里 decorations:false），窗口全靠这一手拖着走。
+     startDragging 要在用户手势里请一次，所以页面挂在 pointerdown 上叫这颗（别处偷偷调没有意义）。 */
+  winDrag(){ try{ const 壳 = 拿壳(); 壳.window.getCurrentWindow().startDragging(); return true; }catch(e){ return false; } },
   async winState(){ try{ return await ipcRenderer.invoke('win:ctl', 'state'); }catch(e){ return null; } },
   /* ---------- SMTC 媒体桥：主进程那位常驻子进程把事件一行一条推上来 ----------
      开机不主动起，页面第一次问状态时才 spawn；订阅者收到的是 { supported, msg, state, ev }。 */

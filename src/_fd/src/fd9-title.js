@@ -36,6 +36,22 @@ const Title = {
       ctl('fdCoverMax', 'max', '最大化', 'winMax');
       if(window.FD_APP.onWinState) window.FD_APP.onWinState(s => this.paint(s));
       window.FD_APP.winCtl('state').then(s => this.paint(s));
+      /* 顶栏那一条与封面条那一截是窗口的拖动区。模板上那句 -webkit-app-region:drag 是 Electron 那一版
+         认的写法，WebView2 不认；系统那一圈标题栏撤掉之后（壳里 decorations:false），窗口全靠这一手拖 ——
+         startDragging 要在用户手势里请，所以挂在 pointerdown 上；控件自己（按钮、输入框、链接）不算拖动区。 */
+      const 拖 = 元 => { if(!元 || 元.dataset.dragging) return; 元.dataset.dragging = '1';
+        元.addEventListener('pointerdown', ev => {
+          if(ev.button !== 0 || !ev.target) return;
+          if(ev.target.closest('button,input,select,textarea,a,[data-nodrag]')) return;
+          try{ window.FD_APP.winDrag(); }catch(e){ /* 没这颗（不在壳里）就拖不动，不报错 */ }
+        }); };
+      拖(document.querySelector('.fd-top'));
+      拖(document.querySelector('.fd-cover-bar'));
+      /* 浏览器那一套右键菜单整片撤掉（他 2026-10-16 指着「另存为 / 打印 / 共享」那一片问：我什么时候要过这些）。
+         那是 WebView2 自带的页面菜单，产品里一处都不该露；各家自己要的右键菜单（为写那几处）先自己
+         preventDefault 并摆自己的菜单，这一颗只兜住它们没管的地方。 */
+      if(!window.__右键闸){ window.__右键闸 = '1';
+        addEventListener('contextmenu', ev => { if(!ev.defaultPrevented) ev.preventDefault(); }); }
     } else {
       const c = document.getElementById('fdWctl');
       if(c) c.remove();
