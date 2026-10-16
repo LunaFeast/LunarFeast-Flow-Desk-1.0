@@ -31,7 +31,17 @@ export const 格式版本 = 1;
 export const 头长 = 12;
 export const 块头长 = 6;
 export const 签名长 = 72;
-/* 扩展名不在这里再写一遍：壳里那一枚 pack_box::扩展名 是全仓唯一的一处，这一颗的 --出 由人给整个落点 */
+/* 扩展名不在这里再写一遍：壳里那一枚 pack_box::扩展名 是全仓唯一的一处，这一颗的 --出 由人给整个落点。
+   但发布与搬仓那两趟总得把文件落到一个有后缀的名字上 —— 所以这一颗不抄第二份，而是**去问那一处**：
+   读壳里那一句常量。读不到就当场停（宁可打不出包，也不许悄悄落一份后缀写错、装不进去的东西）。 */
+export function 扩展名(){
+  const 相 = path.join(TREE, 'src', '_tauri', 'src', 'core', 'pack_box.rs');
+  let 文 = '';
+  try{ 文 = fs.readFileSync(相, 'utf8'); }catch(e){ 停('读不到壳里那一枚扩展名的出处：' + 相); }
+  const 中 = /pub const 扩展名:\s*&str\s*=\s*"([A-Za-z0-9]+)"/.exec(文);
+  if(!中) 停('壳里那一枚 pack_box::扩展名 读不出来（那一句的写法变了，这一颗跟着改）');
+  return 中[1];
+}
 
 const 折 = n => Buffer.from(n);
 const 停 = 句 => { throw new Error('打包停下：' + 句); };

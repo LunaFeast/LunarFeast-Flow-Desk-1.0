@@ -101,7 +101,7 @@ const 页面层 = ['src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/to
     if(/\.(js|cjs|mjs)$/.test(e.name)) 收.push(相);
   } } )(全);
   return 收;
-}).filter(p => !p.includes('gate-packbox46'));
+}).filter(p => !/[\\/]probes[\\/]/.test(p));      /* 检查台自己不算"接得到"：它不点名要查的东西就没法查（从前只排 gate-packbox46 一份，加一台就得改一行，现在整层排掉） */
 const 喊过 = 页面层.filter(p => /packbox|打目录|打包手/.test(fs.readFileSync(p, 'utf8')));
 台.数('用户侧那几棵里提到这一颗的几处', 喊过.length + ' 处' + (喊过.length ? '：' + 喊过.join(' ') : '（一处都没有）'));
 台.判('页面、插件、开发那台服务器都请不到这一颗', 喊过.length === 0);

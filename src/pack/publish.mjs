@@ -142,7 +142,7 @@ const inNodeModules = rel => rel.split('/').includes('node_modules');
    打包那颗只在发布环节用，用户侧任何界面、任何工具都不许有"把一个包另存成压好的包 / 加密包"的口（插件分离规划第八节）。 */
 export const 开发层 = [
   /^tools\//,
-  /^_build\/(plugin-repos|pr|release|push-ui|push-list|public-scan|forward-features|ico-index|packs|packbox)\.(mjs|html)$/,
+  /^_build\/(plugin-repos|pr|release|push-ui|push-list|public-scan|forward-features|ico-index|packs|packbox|pack-repo)\.(mjs|html)$/,
 ];
 const 是开发层 = rel => 开发层.some(打 => 打.test(rel));
 /* 没进版本的一律不带走：这台自己的位置记在 src\tools\ 底下那一颗不进仓的路径表里（ Rust 与那几格素材、工区、
