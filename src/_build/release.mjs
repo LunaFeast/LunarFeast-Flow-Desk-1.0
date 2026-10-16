@@ -59,7 +59,7 @@ import { 存档落点, 工区 } from '../tools/本地路径.mjs';
 import { 清单名, 清单路, 读盘清单, 读清单, 拼清单, 写清单, 合法基线, 支名默认, 确认词, 认支类, 集成分支名 } from './push-list.mjs';
 /* 推支与建 PR 那一整手住在 pr.mjs 里；这一颗只借它两道只读的闸：支名形状、合并状态那一眼 */
 import { 校验支名, 查合并 } from './pr.mjs';
-import { 八项, 认这项, 中文名 as 中文名of, 分支of, 分支在不在, 摊打包那一棵 } from './forward-features.mjs';
+import { 八项, 认这项, 中文名 as 中文名of, 分支of, 分支在不在, 现在带不带, 摊打包那一棵 } from './forward-features.mjs';
 import uitext from '../pack/uitext.cjs';    /* 生成产物那几趟的次序只在它那一颗里说一次，这一头不抄第二份 */
 
 /* 但「哪几趟」是**这一棵**的事，不是 main 的事（2026-10-14 打八项合回那一棵时量到的）：
@@ -260,9 +260,15 @@ if(自测){
   const 跑在 = 那棵 ? 那棵.目录 : TREE;
   /* 这一枚会带着八项里的哪几项，先实量出来（"它那条支的最新一笔在不在这一枚的基点里"，不是照屏上勾了什么）：
      下面文件名那一段与最后记进那本账的那一句用的是同一份实量 —— 名字先不许虚报。
-     （2026-10-14 他「完整版打包没打上」：那一枚叫 full 的里面只合上 4 项 —— 名字在撒谎。） */
-  const 带了 = 八项.filter(x => { try{ git(TREE, ['merge-base', '--is-ancestor', x.分支, 基点笔]); return true; }catch(e){ return false; } })
-    .map(x => x.中文);
+     （2026-10-14 他「完整版打包没打上」：那一枚叫 full 的里面只合上 4 项 —— 名字在撒谎。）
+     那一根支不在了（八项都合回 main、那 12 条本地支 2026-10-16 清掉了）就换第二把尺：这一项登记的那几份文件
+     或那几句代码还在不在这一棵里 —— 拿"支不在了"当成"没带"是把整理仓库当成撤功能，
+     当天那一枚就这么报出"一项都没有（这就是基础版）"，而那一棵里八项一个不少。 */
+  const 带这一项 = x => {
+    try{ git(TREE, ['merge-base', '--is-ancestor', x.分支, 基点笔]); return true; }catch(e){ }
+    return 现在带不带(跑在, x).带 === true;
+  };
+  const 带了 = 八项.filter(带这一项).map(x => x.中文);
   const 齐 = 带了.length === 八项.length;
   let 出事 = '';
   try{
