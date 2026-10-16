@@ -122,8 +122,8 @@ const 壳 = rd('src/pack/sfx.cs');
   /IsTree/.test(壳) && /Path\.Combine\(dest, "Flow-Desk\.exe"\)/.test(壳));
 台.判('覆盖升级整层挪走的是 src\\ 那一层，逐件挪的那一圈跳过 src/',
   /Path\.Combine\(dest, "src"\)/.test(壳) && /it\.Name\.StartsWith\("src\/"\)/.test(壳));
-台.判('data\\ 那一层还是从头到尾不碰（包里一个 data\\ 开头的路径都没有，除插件那两格）',
-  /data\/plugins\//.test(壳) && 脏().length === 0);
+台.判('data\\ 那一层只碰自带那几家的代码，别的一律不碰（包里 data\\ 开头的路径只有插件那一格；那颗"已有就不动"的判定里 data/plugins/ 这条前缀 2026-10-16 撤了，覆盖升级要换新那几家的代码）',
+  !/StartsWith\("data\/plugins\/"\)/.test(壳) && 脏().length === 0);
 
 台.题('七、开发那一层与这台自己的位置，一个字节都不许跟着包出门（2026-10-14 他量出来的那一件）');
 {

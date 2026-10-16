@@ -151,8 +151,11 @@ for(const 名 of 名单){
 台.判('fail 里那句 m.error = msg 撤了', !/if\(m\) m\.error = msg;/.test(载));
 台.判('reload 里那句 delete PACK_META[id].error 撤了', !载.includes('delete PACK_META[id].error'));
 台.判('错话还是留在加载器自己那张 errs 表里（信息页要说得出为什么）', 载.includes('this.errs.set(id, msg)'));
-台.判('整份装载器里再没有一处往登记表上写字（PACK_META[..].字段 = 那种）',
-  !/PACK_META\[[^\]]+\]\.\w+ *=/.test(载), (载.match(/PACK_META\[[^\]]+\]\.\w+ *=/g) || []));
+/* 这一颗只抓"往表上写字"，比较不算（PACK_META[id].home === false 那种读法要放过）：
+   等号后面还跟等号的是比较，中间夹一个 += -= 那类复合赋值才是要抓的。 */
+const 往表上写 = /PACK_META\[[^\]]+\]\.\w+\s*(?:[+\-*/|&^]|>>|<<)?=(?!=)/g;
+台.判('整份装载器里再没有一处往登记表上写字（PACK_META[..].字段 = 那种；=== 那种读法不算）',
+  !往表上写.test(载), ((载.match(往表上写) || []).join(' | ')));
 台.判('冻尺只此一份（别处没抄第二颗 sealDeep）',
   (rd('src/_shared/sh-load.js').match(/function sealDeep/g) || []).length === 1);
 台.判('装载器开头那段说清了它现在管运行时能调什么（跟"只关这一家改代码入口"两件事）',

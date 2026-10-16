@@ -33,6 +33,7 @@ const PackLoader = {
   stamp:'',
   errs:new Map(),            /* 这一轮没加载起来的那几家：id → 错话 */
   kernelsDone:new Set(),     /* 这一页里已经注过的内核：id/件名 —— 同一页不跑第二遍 */
+  内核账:new Map(),           /* 内核注不进来的那几家：id → 那一句（点开的那一刻会再试一次） */
   /* 每一家开机做好的那份插件上下文留着，宿主按需再递回去：
      卡片/停靠面板上的「设置」按钮要调 def.settings(ctx)，那份 ctx 就是这一份（带门的），不用现做一份新的。 */
   ctxs:new Map(),
@@ -86,9 +87,16 @@ const PackLoader = {
       dataKeys:m.dataKeys || [], kvKeys:m.kvKeys || [], sharedKeys:m.sharedKeys || [], stateKeys:m.stateKeys || [],
       desc:m.desc || '', bank:m.bank || null, assets:m.assets || {},
       type:m.type || 'widget', settings:!!m.settings, appChannels:m.appChannels || [],
-      /* 这一家自己带的内核（为写、推演组件定制、声笔输入法练习三家有）：按顺序在 import 那份定义表
-         之前一份份注进来。它们不是 ES module，是自己把把手挂到窗口上的那种一段（见各家 build-kernel）。 */
+      /* 这一家上不上首页那张桌面（默认上）。写了 home:false 就是"这张卡不摆"——
+         它的入口在别家内部（推演定制 2026-10-16 那一改：它为的是为写那台工作台，不占首页一格）。
+         注册那一趟照做（内核、插件清单、卸载入口都在），只跳过"往桌面挂一张卡"这一步。 */
+      home:m.home !== false,
+      /* 这一家自己带的内核（为写、推演组件定制、声笔输入法练习三家有）：各家 build-kernel 的产物。
+         默认改成"点开那一刻才注"—— 首页那张只是快捷方式，不该为它去要内核。
+         kernelBoot:true 的那一家例外：别人的注册过程要用它那份代码（推演定制：用户自己做的组件
+         开机就靠那份代码登记上桌），那一颗内核开机就得注。 */
       kernels:Array.isArray(m.kernels) ? m.kernels.map(String) : [],
+      kernelBoot:!!m.kernelBoot,
       where:id + '/'
     });
   },
@@ -167,9 +175,7 @@ const PackLoader = {
   /* ---------- 一家自己带的内核：注一份经典脚本，等它 onload ----------
      内核不是 ES module，是自己把把手挂到窗口上的那一段（各家 build-kernel 的产物），
      所以只能按 <script src> 请进来，不能 import()。这是全仓唯一"运行时拿代码"的第二条路，
-     跟 import() 同级：没有 eval、没有 new Function。
-     读不进来就抛，让外面那一层 fail(id) 立一张错误卡 —— 报的是"这一家的内核没读进来"，
-     不是"这一家没装"：没装的压根不在名单里，走不到这一步。 */
+     跟 import() 同级：没有 eval、没有 new Function。 */
   script(id, 件名){
     return new Promise((resolve, reject) => {
       const url = new URL(this.base + id + '/' + 件名 + '?v=' + this.stamp, document.baseURI).href;
@@ -180,17 +186,52 @@ const PackLoader = {
       document.head.appendChild(s);
     });
   },
-  async one(id){
-    const m = PACK_META[id];
-    /* 先注这一家自己带的内核，再请它那份定义表：定义表 mount 的时候要用 ctx.wnw 那类把手，
-       而把手是内核挂上来的 —— 顺序反了就变成"卡先到位、内核还在路上"。
-       同一份内核在一页里只注一次（kernelsDone 记着）：换内核要刷新这一页，
-       不在同一页里把同一段跑两遍 —— 跑两遍会把监听和统计挂成双份。 */
-    for(const k of (m.kernels || [])){
+  /* ---------- 注这一家的内核：可反复叫，注过的那几份不重注 ----------
+     2026-10-16 那一改（他指着首页那三张卡说的）：开机那一趟不再为"快捷方式"那几家注内核。
+     首页那张卡上不写内核的任何东西，内核注不注得动都不该动它 —— 从前注不进就走 fail(id)
+     立一张错误卡，把快捷方式整张顶掉，连卸载那颗钮一起没了，还得教用户去别的屏卸自己刚装的东西。
+     今天只有插件清单上写了 kernelBoot 的那一家在开机注：那一家那份代码是页面自己要用的
+     （推演定制：用户自己做的组件开机就靠它登记上桌）。其余各家等"点开"那一刻由宿主那几只把手
+     叫 内核就绪。注不进也不再掀桌：记一笔，点下去那一刻照实报那一句。 */
+  async 注内核(id){
+    const ks = (PACK_META[id] && PACK_META[id].kernels) || [];
+    for(const k of ks){
       const 键 = id + '/' + k;
       if(this.kernelsDone.has(键)) continue;
       await this.script(id, k);
       this.kernelsDone.add(键);
+    }
+    this.内核账.delete(id);
+    return this;
+  },
+  /* 要用这一家的内核之前叫这一颗：还没注就注，注不动就抛 —— 抛给点下去那一下的 toast，不抛到卡面。
+     一家带两份内核时，注成的那几份记在 kernelsDone 里，下一次再点从失败那一份重试，不重跑第一份。 */
+  async 内核就绪(id){
+    id = String(id);
+    try{ await this.注内核(id); }
+    catch(e){ const msg = (e && e.message) || String(e); this.内核账.set(id, msg); throw new Error(msg); }
+    return this;
+  },
+  /* 这份内核产物归哪一家：翻各家插件清单里点名的那几份，不在宿主这一头抄第二份名字 */
+  哪家带(件名){
+    for(const id of Object.keys(PACK_META)) if((PACK_META[id].kernels || []).indexOf(String(件名)) >= 0) return id;
+    return '';
+  },
+  /* 宿主那几只把手用这一颗：「我要用这份内核产物」→ 先把带它的那一家请进来 */
+  async 请内核(件名){
+    const id = this.哪家带(件名);
+    if(!id) throw new Error('这一版里没有哪一家带这份内核：' + 件名);
+    return this.内核就绪(id);
+  },
+  async one(id){
+    const m = PACK_META[id];
+    /* 内核不在开机这一趟注，除了插件清单写了 kernelBoot 的那一家（理由写在 注内核 上面那一段）。
+       开机注的这一家注不进也只记一笔：这一趟不许因为它把别家带倒，也不许因为它把卡顶成错误卡。 */
+    if(m.kernelBoot && m.kernels.length){
+      await this.注内核(id).catch(e => {
+        this.内核账.set(id, (e && e.message) || String(e));
+        console.warn('这一家的内核开机没注进来：' + id + ' · ' + ((e && e.message) || e));
+      });
     }
     const ent = (m.entry && m.entry[0]) || 'main.js';
     /* 说明符先转成绝对 URL 再 import：ES module 里不以 '/' './' '../' 打头的那串算裸名，
@@ -238,6 +279,9 @@ const PackLoader = {
        原先真兜不住：全仓没有 window.onerror（2026-10-12 量的），一家在 mount 里抛，Shell.render()
        那张卡卡在这里，整张桌面画不下去。 */
     this.guard(id, def);
+    /* 这一家不上首页（插件清单写了 home:false）：代码、内核、卸载入口都照旧，只不往桌面挂那张卡。
+       它的入口在别家内部 —— 推演定制挂的为写那台工作台的停靠栏，见 src/_wnw/src/w3-shell.js 的 gen 那一格。 */
+    if(PACK_META[id].home === false) return;
     if(type === 'tool') registerTool(def);
     else if(type === 'recipe'){ if(typeof Gen !== 'undefined') Gen.def(def); }
     else if(typeof registerWidget === 'function') registerWidget(def);
@@ -245,11 +289,17 @@ const PackLoader = {
   /* 「这一家出错了」那张卡面：装载失败和运行中出错共用这一份写法，别抄第二份 */
   errCard(id, msg, 哪一句){
     const nm = (PACK_META[id] && PACK_META[id].name) || id;
+    /* 卡上直接给一颗卸载：出错那一家最不该逼着用户换一屏去撤它（2026-10-16 他那句「旧版卡片没有卸载按钮」）。
+       没有主进程那层桥（本地开发那台服务器）就摆不出这颗，那句话照旧指着插件管理。 */
+    const 撤 = (typeof PackOps !== 'undefined' && typeof PackOps.can === 'function' && PackOps.can())
+      ? PackOps.unloadButton(id, null) : null;
     return h('div', { class:'fd-empty' }, [
       h('div', {}, '「' + nm + '」' + 哪一句),
       h('div', { style:'font-size:.86em;opacity:.75;margin-top:4px' }, msg),
-      h('div', { style:'font-size:.86em;opacity:.6;margin-top:4px' }, '要撤它就去插件管理那一屏卸载，或者用自己手里那一份包重装')
-    ]);
+      h('div', { style:'font-size:.86em;opacity:.6;margin-top:4px' },
+        撤 ? '就地撤它，或者用自己手里那一份包重装' : '要撤它就去插件管理那一屏卸载，或者用自己手里那一份包重装'),
+      撤
+    ].filter(Boolean));
   },
   /* ---------- 崩溃记录与"同一家连崩三次就别再叫它"（外46 批十一）----------
      那一格账：data\logs\崩溃.txt，一行一笔「时间 · 哪家 · 哪一面 · 一句原话」

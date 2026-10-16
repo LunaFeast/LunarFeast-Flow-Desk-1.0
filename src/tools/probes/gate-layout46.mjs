@@ -33,8 +33,18 @@ function 造机(表, 注, 已在){
 台.题('一、那张表住在主程序，且此刻一格数值都没填（他定的是"先不设计数值"）');
 const 表源 = 切(壳源, '出厂布局');
 const 表行 = [...表源.matchAll(/\['([a-z-]+)',\s*\{([^}]*)\}\]/g)];
-台.判('出厂布局那张表在 src/_fd/src/fd3-shell.js 里，七家各一行（现在 ' + 表行.length + ' 行）',
-  表行.length === 7 && 七家.every(id => 表行.some(r => r[1] === id)), 表行.map(r => r[1]).join('、'));
+/* 上不上首页由各家插件清单自己说（home 那一格，默认上）：推演定制 2026-10-16 起写了 home:false，
+   它的入口挂进为写那台工作台的停靠栏，主程序这张表就不给它一行。这里量的是盘上那七份清单，不抄名单。 */
+const 插件清单 = id => JSON.parse(rd('data/plugins/' + id + '/manifest.json'));
+const 上首页 = 七家.filter(id => 插件清单(id).home !== false);
+const 不上首页 = 七家.filter(id => 插件清单(id).home === false);
+台.数('七家里今天有几家上首页 / 几家不上', 上首页.length + '/' + 不上首页.length);
+台.判('出厂布局那张表在 src/_fd/src/fd3-shell.js 里，上首页的各家各一行（表里 ' + 表行.length + ' 行，上首页 ' + 上首页.length + ' 家）',
+  表行.length === 上首页.length && 上首页.every(id => 表行.some(r => r[1] === id)), 表行.map(r => r[1]).join('、'));
+台.判('反证：假装插件清单上没写过 home 那一格（当成七家都上首页），上面那条"各一行"立刻对不上 —— 这张表跟着各家插件清单走，不是谁拍的一行数',
+  表行.length !== 七家.length);
+台.判('不上首页那几家（现在就是推演定制）在主程序这张表里一名不剩',
+  不上首页.every(id => !表行.some(r => r[1] === id)), 不上首页.join('、'));
 const 填了 = 表行.filter(r => /(?:w|h|x|y):\s*[0-9]/.test(r[2]));
 台.判('数值那一栏一格都没填（w / h / x / y 全是 null —— 他还没设计，谁都不许先替他填）',
   填了.length === 0, 填了.map(r => r[1]).join('、'));
@@ -42,11 +52,24 @@ const 填了 = 表行.filter(r => /(?:w|h|x|y):\s*[0-9]/.test(r[2]));
   七家.every(id => !/出厂布局\s*=\s*new (Map|Set)/.test(rd('data/plugins/' + id + '/main.js'))));
 
 台.题('二、插件那一头不再写默认尺寸（数不许两头各存一份）');
-for(const id of 七家){
+for(const id of 上首页){
   const 源 = rd('data/plugins/' + id + '/main.js');
   const 那行 = 源.split(/\r?\n/).filter(l => /minW\s*:/.test(l) && /minH\s*:/.test(l));
   台.判(id + ' 那份定义里 minW / minH 还在（那是它自己答的最小大小），声明这一行不再写 def:{w,h}',
     那行.length === 1 && !/def\s*:\s*\{/.test(那行[0]), 那行.join(' ⏎ '));
+}
+/* 不上首页的那几家反过来：那一对最小尺寸不用写 —— 主程序不会为一张不摆的卡来问"最小要多大"；
+   定义里连 mount 都没有（登记那一趟走到"这一家不上首页"那句就收尾，那份 mount 没人叫）。 */
+for(const id of 不上首页){
+  const 源 = rd('data/plugins/' + id + '/main.js');
+  台.判(id + ' 不上首页：那份定义里不写 minW / minH，也不写 mount',
+    !/minW\s*:/.test(源) && !/mount\s*[:(]/.test(源));
+  台.判(id + ' 的插件清单上 home 那一格确实写成 false（不是靠主程序点名把它撤下）',
+    插件清单(id).home === false);
+}
+{
+  const 还写 = 七家.filter(id => /def:\s*\{\s*w:/.test(rd('data/plugins/' + id + '/main.js')));
+  台.判('七家里没有一家还留着默认尺寸那一对（一处不剩，不是"留在注释里交代一下"）', 还写.length === 0, 还写.join('、'));
 }
 {
   const 还写 = 七家.filter(id => /def:\s*\{\s*w:/.test(rd('data/plugins/' + id + '/main.js')));

@@ -14,11 +14,12 @@
   "kernels": [
     "wnw-custom-kernel.js"
   ],
+  "kernelBoot": true,
+  "home": false,
   "order": 25,
   "icon": "⚙",
   "type": "widget",
-  "desc": "一张卡，点了开推演组件定制向导；改配方、导出导入都在向导自己那一屏里",
-  "first": 50,
+  "desc": "不在首页摆卡：做组件、改配方、重报推演名单那一格挂在为写工作台的右栏停靠里；这一家的内核开机就注（你自己做的组件靠它登记上桌）",
   "dataKeys": [],
   "kvKeys": []
 }

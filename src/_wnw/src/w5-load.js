@@ -30,6 +30,9 @@ function wnwBindTools(){
   for(const [id, def] of TOOL_DEFS){
     const m = Packs.info(id);
     if(!m || (m.host || []).indexOf('wnw') < 0) continue;
+    /* 为写这一层自己先占了那个名字的不顶（推演定制那一格就叫 wnw-custom，见 w3-shell.js 顶上）：
+       万一用户在向导里做出一张同代号的配方，它在首页那张卡照旧，这一层的入口仍归带内核的那一家人。 */
+    if(Tools.has(id)) continue;
     registerTool(Object.assign({}, def, { id:id, name:def.name || m.name || id }));
   }
 }

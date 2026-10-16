@@ -32,32 +32,35 @@ PackCtx.parts({
     rerenderDesktop(){ Shell.render(); },
     rerenderClock(){ Shell.tickClock(); },
     /* 为写内核：搬进这一张页之后它是一个可调用的一份，收一个容器、拆干净再走。
-       这一份答卷排在闭包之前求值，那时候内核还没挂上来，所以只能到用的时候再去认，
-       认不到就给一句实话 —— 插件禁止自己摸窗口上的名字，这条通道必须由宿主递过去。 */
+       内核不再开机就注（插件分离第 5 批 · 2026-10-16 他指着首页那张卡说的：快捷方式不该为它去要内核）——
+       所以这三颗手到用的时候先叫 请内核 把带这份内核的那一家请进来，再认窗口上那一份。
+       认不到内核这件事报的是"这一家的内核没读进来"，报在点下去那一下，不报在卡面上。 */
     wnw:{
-      start(host){ const k = window.WNW_KERNEL; if(!k) throw new Error(WNW_MISSING); return k.start(host); },
-      stop(){ const k = window.WNW_KERNEL; if(!k) throw new Error(WNW_MISSING); return k.stop(); },
+      async start(host){ await PackLoader.请内核('wnw-kernel.js'); const k = window.WNW_KERNEL; if(!k) throw new Error(WNW_MISSING); return k.start(host); },
+      async stop(){ if(!window.WNW_KERNEL) return; const k = window.WNW_KERNEL; return k.stop(); },
       get running(){ const k = window.WNW_KERNEL; return k ? k.running() : false; },
       get version(){ const k = window.WNW_KERNEL; return k ? k.version : WNW_MISSING; },
       get available(){ return typeof window.WNW_KERNEL === 'object' && window.WNW_KERNEL !== null; }
     },
     /* 声笔输入法练习内核：和上面那一条同一个形状（同一趟搬法，见 _build/rp-kernel.mjs）——
-       也是收一个容器、拆干净再走，也是到用的时候才认窗口上那一份。 */
+       也是收一个容器、拆干净再走，也是到用的时候才请进来、再认窗口上那一份。 */
     rp:{
-      start(host){ const k = window.RP_KERNEL; if(!k) throw new Error(RP_MISSING); return k.start(host); },
-      stop(){ const k = window.RP_KERNEL; if(!k) throw new Error(RP_MISSING); return k.stop(); },
+      async start(host){ await PackLoader.请内核('rp-kernel.js'); const k = window.RP_KERNEL; if(!k) throw new Error(RP_MISSING); return k.start(host); },
+      async stop(){ if(!window.RP_KERNEL) return; const k = window.RP_KERNEL; return k.stop(); },
       get running(){ const k = window.RP_KERNEL; return k ? k.running() : false; },
       get version(){ const k = window.RP_KERNEL; return k ? k.version : RP_MISSING; },
       get available(){ return typeof window.RP_KERNEL === 'object' && window.RP_KERNEL !== null; }
     },
-    /* 推演组件定制内核（外39 分离，形状照为写那一套）：源码住 src\_wcustom\src\ 那四份，
-       由那一棵自己的 build-kernel.mjs 出成一颗产物，生成时贴进整页顶层。
-       和上面两条不一样的一处：它不套闭包，名字（GenWizard / Gen / codeEntry…）本来就落在顶层，
-       外壳那几只入口判的就是「这个名字在不在」—— 理由写在那棵的 build-kernel.mjs 开头。
-       所以这里认内核在不在，也照同一个判法。 */
+    /* 推演组件定制内核（外39 分离，形状照为写那一套）：源码住 src\_wcustom\src\ 那几份，
+       由那一棵自己的 build-kernel.mjs 出成一颗产物。和上面两条不一样的一处：
+       它不套闭包，名字（GenWizard / Gen / codeEntry…）本来就落在顶层，外壳那几只入口判的是
+       「这个名字在不在」—— 理由写在那棵的 build-kernel.mjs 开头。
+       它也唯一一家在插件清单上写了 kernelBoot：用户自己做的组件开机登记就要用那份代码（Gen.def），
+       所以它的内核不许到点开才注。 */
     wcustom:{
       get available(){ return typeof GenWizard !== 'undefined'; },
-      open(onSaved){
+      async open(onSaved){
+        await PackLoader.请内核('wnw-custom-kernel.js');
         if(!this.available) throw new Error(WCUSTOM_MISSING);
         GenWizard.onSaved = onSaved || null;
         GenWizard.open('');

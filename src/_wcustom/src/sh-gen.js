@@ -1604,13 +1604,8 @@ const Gen = {
     GEN_DEFS.set(R.id, R);
     /* 顺手报一份给主程序那一份登记处（插件分离第 4 批 4.3 · #35）：为写那一屏和推演记录面板读的都是这一份，
        不再伸手摸这一家的顶层名字。开机加载器一家家 import 就是「每次启动登记一次」，
-       向导存新配方、完全删除也走这两颗，所以「有变动自动更新」是这一处的副作用，不另设轮询。
-       两颗手（替别人把向导打开、整户重报一遍）也在这里挂 —— 挂重不挂漏，主程序那边覆盖的是同一格。 */
-    if(typeof GenReg !== 'undefined'){
-      GenReg.登(R, 'wnw-custom');
-      /* 三颗手的名字用英文（wizard / rescan / importer）：那是两家之间的协议名，不是给人看的句子 */
-      GenReg.挂手({ wizard:id => GenWizard.open(id), rescan:genRescan, importer:重画 => genImportAsk(重画) }, 'wnw-custom');
-    }
+       向导存新配方、完全删除也走这一颗，所以「有变动自动更新」是这一处的副作用，不另设轮询。 */
+    if(typeof GenReg !== 'undefined') GenReg.登(R, 'wnw-custom');
     const ready = Banks.loadReg().then(() => Promise.all(GEN_BANKS(R).map(n => genBind(n).load().catch(() => null))));
     const info = [R.desc || '按配方生成', genMeta(R)].filter(Boolean).join(' · ');
     registerTool({
@@ -1662,6 +1657,15 @@ const Gen = {
     return { ok:!err.length, msg:err.join('；'), files:files, wrote:!!(g && g.ok) || !!(app && app.compDelete) };
   }
 };
+/* ---------- 三颗手交给主程序那一份登记处：这一棵一加载就挂，不等第一张配方 ----------
+   从前这一句挂在 Gen.def 里面，于是「一台机器上一张组件都还没做过」的时候登记处没有手：
+   为写那一头的入口整块摆不出来（有向导() 回 false），第一次做组件反倒没地方点。
+   2026-10-16 推演定制从首页撤下、入口改挂为写右栏停靠，那条路就成了唯一的入口，这一处必须提前。
+   三颗手的名字用英文（wizard / rescan / importer）：那是两家之间的协议名，不是给人看的句子。
+   箭头的身体到按下去那一刻才读 GenWizard / genRescan / genImportAsk 那三个名字，
+   它们在本棵后面那两份里定义（同一趟拼装的顶层声明），这一句跑在它们之前也不要紧。 */
+if(typeof GenReg !== 'undefined')
+  GenReg.挂手({ wizard:id => GenWizard.open(id), rescan:genRescan, importer:重画 => genImportAsk(重画) }, 'wnw-custom');
 /* 这个功能用的是哪几份词库（顶层勾了好几个之后，界面上就一个名字一颗钮，不猜头一份）：
    名单 = GEN_BANKS 深走那一份，颗颗都换算成 which。 */
 function toolBankWhichs(kind){

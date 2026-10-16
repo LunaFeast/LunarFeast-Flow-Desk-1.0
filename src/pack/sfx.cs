@@ -201,16 +201,20 @@ static class Sfx
     /* ---------- 正事：把尾巴上那一包摊到 dest 里 ---------- */
     class Result { public int Files; public long Bytes; public string Error; }
 
-    /* 外46：本体带着插件一起出门（他 2026-10-10 定）。这一格（data\plugins\）是用户自己改过、
-       推演定制存过东西的地方 —— 目标已经有了同一个名字就不再动它：覆盖升级把用户那一份换回出厂那一份
-       就是弄丢他写的东西。要换回早先那一份，把自己手里那一个包重装一次（那颗「恢复出厂」与
-       data\plugins-factory\ 那一格随插件分离第 2 批撤了，覆盖升级这边照旧只护活的这一格）。
-       图标与素材那两格（icons\、material\）同一道理：他自己换过的那一张、加进去的那一张，覆盖升级都不许盖 ——
+    /* 外46：本体带着插件一起出门（他 2026-10-10 定）。
+       2026-10-16 改口（他指着覆盖升级后那几张旧版卡说的）：data\plugins\ 这一层从前整层护住，
+       于是覆盖升级把程序换新了、把自带的这几家插件代码留在上一版 —— 旧代码里那句"这一版页面里没有某某内核，
+       开不了"就是这么冒出来的，卡的形状也是旧的。现在按「这一包里带没带」判：
+         · 包里带着的那几份（自带的那几家插件代码）照 src\ 一样换新，旧的挪进备份；
+           用户自己写的东西不在这几份里 —— 词库明文在 data\<库名>\data.txt、正文与历史在 data\<书名>\、
+           桌面与设置那几份明文在 data\userdata-fd\，这一颗管不着，一个字节都不动；
+         · 包里没带的那几格（他自己装的包、向导现做的组件、plugins\banks.json）不在这趟的循环里，碰不到。
+       图标与素材那两格（icons\、material\）照旧护住：他自己换过的那一张、加进去的那一张，覆盖升级都不许盖 ——
        和生成页面那一趟铺这两格的规矩一个口径（已有的一律不动）。
        占用检查、旧的搬备份、新的摊出去三处共用这一颗判定 —— 少管一处就是丢东西。 */
     static bool KeepUserFile(string dest, Entry it)
     {
-        if(!it.Name.StartsWith("data/plugins/") && !it.Name.StartsWith("icons/") && !it.Name.StartsWith("material/")) return false;
+        if(!it.Name.StartsWith("icons/") && !it.Name.StartsWith("material/")) return false;
         return File.Exists(Path.Combine(dest, it.Name.Replace('/', Path.DirectorySeparatorChar)));
     }
 
@@ -331,7 +335,7 @@ static class Sfx
     static readonly string UiDropTo = "摊到这儿（整个文件夹挪走就算卸载，不写注册表）：";
     static readonly string UiUpHave = "这一棵已经装了 ";
     static readonly string UiUpInto = "这一次覆盖成 ";
-    static readonly string UiUpStash = " · 旧的先挪进 update\\backups\\<这一趟>，data\\ 一个字节不动";
+    static readonly string UiUpStash = " · 旧的先挪进 update\\backups\\<这一趟>；程序自带那些插件的代码跟着这一版换新，你自己装的包、你写的词库与数据都不动";
     static readonly string UiUpHere = "就是这儿：";
     static readonly string UiBusyHead = "这一棵正在开着，先别动它：";
     static readonly string UiBusyFiles = "正被咬住的文件：";

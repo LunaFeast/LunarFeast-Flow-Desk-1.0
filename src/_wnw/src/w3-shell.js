@@ -26,6 +26,38 @@ const Views = {
   async title(kind, ref){ const d = this.get(kind); return (d && (await (d.title ? d.title(ref) : d.name))) || kind; }
 };
 
+/* ---------- 推演组件定制：入口挂在这一层（插件分离第 5 批 · 2026-10-16 他那一条）----------
+   这一家在首页不摆卡（插件清单上写了 home:false）：它为的是这一台工作台 —— 做一张组件、改它的配方
+   都是在为写里用，首页摆一张卡反倒看不出它跟谁配。所以那份「设置 · 功能」屏幕底下的整块搬到这里，
+   登记成为一个功能：「＋打开内容」的辅助功能那一组里有它一行，右栏停靠挂得上，那一行尾跟着卸载那颗钮
+   （那一行认的是"这一行是哪一家带的"，用的名字就是插件清单里那一格的 id）。
+   整块只在推演定制那颗内核把三颗手挂上登记处之后才登记（GenReg.有向导()）：那一家没加载就是没这一格，
+   不登记、也不提示"缺失"（#30 同口径）。名单与三颗手都向主程序那一份登记处要（第 4 批 4.3 · #35），
+   为写不读那一家的顶层名字。 */
+if(typeof GenReg !== 'undefined' && GenReg.有向导()) registerTool({
+  id:'wnw-custom', name:'推演组件定制', icon:'gear',
+  desc:'做一张组件、改它的配方、重报推演名单',
+  mount(host){
+    const 画 = () => {
+      host.innerHTML = '';
+      host.appendChild(h('button', { class:'wnw-btn mini w-txt', style:'justify-self:start;margin:2px 0 8px',
+        onclick:() => GenReg.开向导(''), html:icoMarkup('plus') + '用推演组件定制做一个插件' }));
+      for(const R of GenReg.名单())
+        host.appendChild(h('div', { class:'wnw-ci', title:'改「' + R.name + '」的配方', onclick:() => GenReg.开向导(R.id) }, [
+          h('span', { class:'nm' }, R.name), h('span', { style:'flex:1' }),
+          h('span', { class:'wnw-hint' }, R.id),
+          h('button', { class:'wnw-btn mini', onclick:ev => { ev.stopPropagation(); GenReg.开向导(R.id); } }, '改')]));
+      /* 手动重报缓存那颗钮（#35 点名的那一条）：吃登记者自己那颗「重扫」，报的是重报之后的张数 */
+      host.appendChild(h('button', { class:'wnw-btn mini', style:'justify-self:start;margin-top:8px',
+        onclick:async () => { const 张 = await GenReg.刷新(); 画(); toast('推演名单重报了一遍：现在 ' + 张 + ' 张'); } },
+        '重新读一遍推演名单'));
+    };
+    画();
+    /* 不做订阅：这份名单是点开这一格时现从登记处取的，向导存完新组件那一趟已经重报过（#35 那条副作用），
+       这一格重新打开就是新的 —— 从前那块垫在「设置 · 功能」底下的也一样是重开一遍才新，口径不变。 */
+  }
+});
+
 /* ---------- 顶栏书标签：几本书同时开着，点标签切过去，只点 × 才关 ---------- */
 const BookTabs = {
   MAX:8,
@@ -1312,28 +1344,8 @@ const Settings = {
       cb.addEventListener('change', () => State.set('tool-' + id, cb.checked));
       box.appendChild(h('label', { class:'wnw-switch' }, [cb, h('span', {}, t.name), h('span', { class:'wnw-hint', style:'margin-left:6px' }, t.desc || '')]));
     }
-    /* 这块空白给生成器：向导在这儿开，建出来的组件和其他功能一样能停靠。
-       名单向主程序那一份登记处要（插件分离第 4 批 4.3 · #35）—— 为写不再读推演定制那一家的顶层名字；
-       整块只在登记处挂着「开向导」那颗手时才摆：定制那一趟没加载，这一屏就没有这一块，不弹一句"缺失"。 */
-    if(typeof GenReg !== 'undefined' && GenReg.有向导()){
-      const 画这一版 = 容器 => {
-        容器.innerHTML = '';
-        容器.appendChild(h('button', { class:'wnw-btn mini w-txt', style:'justify-self:start;margin-top:10px',
-          onclick:() => GenReg.开向导(''), html:icoMarkup('plus') + '用推演组件定制做一个插件' }));
-        for(const R of GenReg.名单())
-          容器.appendChild(h('div', { class:'wnw-ci', title:'改「' + R.name + '」的配方', onclick:() => GenReg.开向导(R.id) }, [
-            h('span', { class:'nm' }, R.name), h('span', { style:'flex:1' }),
-            h('span', { class:'wnw-hint' }, R.id),
-            h('button', { class:'wnw-btn mini', onclick:ev => { ev.stopPropagation(); GenReg.开向导(R.id); } }, '改')]));
-        /* 手动刷新缓存那颗钮（#35 点名的那一条）：吃登记者自己那颗「重扫」，报的是重报之后的张数 */
-        容器.appendChild(h('button', { class:'wnw-btn mini', style:'justify-self:start;margin-top:6px',
-          onclick:async () => { const 张 = await GenReg.刷新(); 画这一版(容器); toast('推演名单重报了一遍：现在 ' + 张 + ' 张'); } },
-          '重新读一遍推演名单'));
-      };
-      const 那一格 = h('div', { style:'display:grid;gap:2px' });
-      画这一版(那一格);
-      box.appendChild(那一格);
-    }
+    /* 推演组件定制那一块不在这一屏了（2026-10-16 他那一条）：它成为一个功能，挂在「＋打开内容」的
+       辅助功能那一组里，右栏停靠挂得上，那一行尾还跟着卸载那颗钮 —— 登记写在下面 gen 那一格。 */
     return box;
   },
   /* ---------- 第 24 条：快捷键 ----------

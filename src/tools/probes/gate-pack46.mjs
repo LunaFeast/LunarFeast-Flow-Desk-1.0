@@ -8,8 +8,13 @@
         那一格跟着 2.6 整格撤，这一条改成钉「第二格一名不剩」；
      二、data\ 那道硬闸从「一个字节都不许进」改成「只许插件那一格」，再加一条正向钉：
         货架上有几家，树里就得有几家，缺一家当场停工报名字；
-     三、安装壳覆盖升级遇到 data\plugins\ 里已经有同一个名字的文件就不搬不写
-        —— 那一格是用户自己改过、推演定制存过东西的地方，换回出厂那一份就是弄丢他写的东西；
+     三、安装壳覆盖升级把这一包里带来的那几件自带插件代码换新（旧的先挪进 update\backups\），
+        icons\ 与 material\ 那两格照旧护住他自己换过的那一张 —— 2026-10-16 改的这一口：
+        从前 data\plugins\ 整层护住，于是程序换新了、自带的几家代码留在上一版，
+        界面上就是那几张形状不对、又没有卸载按钮的旧版卡；
+        用户自己写的东西本来就不在这一包里（词库明文在 data\<库名>\、正文在 data\<书名>\、
+        桌面与设置在 data\userdata-fd\、他自己装的包与向导现做的组件是这一格里的另一批名字），
+        这一颗循环只看包里带着的路径，碰不到那些。
      四、旧口径那几句话（一个插件都不带 / 一棵都不进 / 不许带插件代码）在所有说明和报错里消失；
      五、真跑一趟 publish --dry：树里报出的家数与货架上的包数对得上，且一个字节没写；
      六、每一家那一格不许挂占位死号，且每一家那个号都有一枚 tag 钉在号里那笔提交上（七家都在这一个仓里）。
@@ -50,12 +55,35 @@ const 闸 = rd('src/tools/audit.mjs');
 台.判('正向钉：哪一家缺格就报名字并停工',
   pub.includes('插件没铺进首装那棵树：') && pub.includes('process.exit(1)'));
 
-台.题('三、安装壳让开用户改过的那一份');
+台.题('三、安装壳覆盖升级：自带那几家插件代码换新，用户自己写的那些碰不到');
 台.判('KeepUserFile 这一颗在', sfx.includes('static bool KeepUserFile(string dest, Entry it)'));
-台.判('认的就是活的这一格那一条前缀', sfx.includes('StartsWith("data/plugins/")'));
+/* 那颗判定只掐那一份函数体：注释里出现过的旧前缀不算数（这一节的反证要改的就是那一句代码） */
+const 那颗 = (sfx.match(/static bool KeepUserFile\(string dest, Entry it\)[\s\S]*?\n    \}/) || [''])[0];
+台.数('这一颗抓到了（抓空了整节就是假绿）', 那颗.length);
+台.判('data/plugins/ 那条「目标已有同一个名字就不搬不写」的前缀撤了（2026-10-16 他指着覆盖升级后那几张旧版卡改的：程序换新、自带的插件代码却留在上一版）',
+  !/StartsWith\("data\/plugins\/"\)/.test(那颗));
+台.判('icons/ 与 material/ 那两条照旧护住：他自己换过的那一张、加进去的那一张，覆盖升级都不许盖',
+  /StartsWith\("icons\/"\)/.test(那颗) && /StartsWith\("material\/"\)/.test(那颗));
 const 让 = (sfx.match(/KeepUserFile\(dest, it\)/g) || []).length;
 台.数('让路那一手出现在几处', 让);
 台.判('正好三处：占用检查、旧的搬备份、新的摊出去（少一处就是要么白搬走要么强覆盖）', 让 === 3);
+/* 换新这一手伤不到用户写的东西，是因为那一趟循环只看这一包里带着的路径；
+   这一包里带哪几份由发布脚本定，它只铺货架上那几家自己那一格（上面第二节钉着）。
+   这里量的是实物：仓里 data\plugins 顶层一份文件都没有 —— 名单（off.json）与自建词库名单（banks.json）
+   都只有装出去那一棵里才有，所以它们不可能出现在这一包里，也就不会被这趟换新动到。 */
+{
+  const 顶层格 = fs.existsSync(ROOT + 'data/plugins')
+    ? fs.readdirSync(ROOT + 'data/plugins', { withFileTypes:true }).filter(d => !d.isDirectory()).map(d => d.name) : ['这一格不在'];
+  台.数('仓里 data\\plugins 顶层散着几份文件', 顶层格.length);
+  台.判('那两份名单（plugins\\off.json 与 plugins\\banks.json）都不在这一包里，覆盖升级换新碰不到它们',
+    顶层格.length === 0 || !顶层格.some(n => n === 'off.json' || n === 'banks.json'), 顶层格.join('、') || '一份没有');
+}
+台.判('反证：把那一条前缀加回去（老规矩"已有就不动"），这一节头一条立刻红 —— 测的确实是那一句',
+  (() => {
+    const 老 = 那颗.replace(/if\(!it\.Name\.StartsWith\("icons\/"\)/,
+      'if(!it.Name.StartsWith("data/plugins/") && !it.Name.StartsWith("icons/")');
+    return /StartsWith\("data\/plugins\/"\)/.test(老) && !/StartsWith\("data\/plugins\/"\)/.test(那颗);
+  })());
 
 台.题('四、旧口径那几句话消失');
 for(const f of ['src/pack/publish.mjs', 'src/pack/comp-files.cjs',

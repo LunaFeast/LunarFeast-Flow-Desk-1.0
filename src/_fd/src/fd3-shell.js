@@ -45,7 +45,10 @@ const 外观不接的名单 = ['singbit-input-practice'];
 const PackLooks = {
   get 表(){ return LookStore.data.packs || (LookStore.data.packs = {}); },
   /* 能挑的一家 = 这一轮加载着的、除了那一家不接的 */
-  可挑(){ return Packs.list().filter(m => PackOps.forHost(m) && 外观不接的名单.indexOf(m.id) < 0); },
+  /* 外观这一格列得动哪几家：这一家在首页有卡、且自己接外观。
+     插件清单写了 home:false 的那一家不列（推演定制 2026-10-16 起不在首页摆卡）：
+     独立那一套涂的是"这一家展开以后那一片"，它没有那一片，摆一颗钮就是空头支票。 */
+  可挑(){ return Packs.list().filter(m => PackOps.forHost(m) && m.home !== false && 外观不接的名单.indexOf(m.id) < 0); },
   /* 挑过的那一条（不管此刻跟不跟）：界面上要留着给他看、关掉跟随时要还给他的就是这一条 */
   记的(包){ const 格 = this.表[包]; return (格 && 格.案) || ''; },
   /* 现在真按自己那一套画的是哪一条：跟随中就没有（回空） */
@@ -116,6 +119,7 @@ const VSC_BASE = 58;
    方案的形状（几套、怎么存、怎么切）留到那时候再定。
    从前那七对默认尺寸写在各家自己定义里（便签 5×3、日程 7×8、金句 5×2、为写 7×2、声笔练习 7×2、
    推演定制 7×2、音乐遥控器 16×7），这一批从插件那头撤出来，数只留在这几行说明与施工清单那张两栏表里。
+   这张表今天六行：推演定制那一行跟着「不在首页摆卡」一起撤了（2026-10-16 他那一条，入口挂为写右栏停靠）。
    表里不点名也照旧工作的一家：推演定制现做的组件 —— 那份尺寸是用户自己在配方里写的，仍生效（问摆放第②档）。 */
 const 出厂布局 = new Map([
   ['notes',                 { w:null, h:null, x:null, y:null }],
@@ -123,7 +127,6 @@ const 出厂布局 = new Map([
   ['your-sentences',        { w:null, h:null, x:null, y:null }],
   ['why-not-write',         { w:null, h:null, x:null, y:null }],
   ['singbit-input-practice',{ w:null, h:null, x:null, y:null }],
-  ['wnw-custom',            { w:null, h:null, x:null, y:null }],
   ['music-remote',          { w:null, h:null, x:null, y:null }],
 ]);
 
