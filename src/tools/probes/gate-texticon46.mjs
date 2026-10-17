@@ -1,7 +1,7 @@
 /* ============================================================
-   gate-pushui46.mjs · 外46 七：文字与图标那一屏（src\_build\push-ui.mjs + push-ui.html + src\tools\push-fd.bat）
+   gate-texticon46.mjs · 外46 七：文字与图标那一屏（src\_build\text-icon.mjs + text-icon.html + src\tools\text-icon.bat）
    ------------------------------------------------------------
-     node src/tools/probes/gate-pushui46.mjs
+     node src/tools/probes/gate-texticon46.mjs
    钉的是这一台「只管两样、两件都不越界」：
      一、它不实现任何发布动作 —— 起的子进程只有刷新清单、重新生成产物、重新对齐索引那三颗，git 只读不写，不碰密钥，不起他的程序；
      二、只听 127.0.0.1，写请求不带那一枚随机码就拒；被闸当零件借进去时不许占端口；
@@ -17,14 +17,14 @@ import path from 'node:path';
 import { ROOT, rd, 切, 尺在, rd在, 记账 } from './lib-slice.mjs';
 import { 探针沙盒 } from '../本地路径.mjs';
 
-const 台 = 记账('gate-pushui46');
-const ui = rd('src/_build/push-ui.mjs');
-const pg = rd('src/_build/push-ui.html');
-const bat = rd('src/tools/push-fd.bat');
+const 台 = 记账('gate-texticon46');
+const ui = rd('src/_build/text-icon.mjs');
+const pg = rd('src/_build/text-icon.html');
+const bat = rd('src/tools/text-icon.bat');
 const 起 = 切(ui, '起连');        /* 那一趟真 spawn 的手艺在这一颗里（起() 只是单趟的那层薄壳） */
 
 /* ---------- 先把那一层与那一格指到沙盒，再借这一份进来 ----------
-   图标那一层、插件那一格、界面文字那一棵都是 push-ui.mjs **加载那一刻**按环境变量算好的，晚设一步就没用了：
+   图标那一层、插件那一格、界面文字那一棵都是 text-icon.mjs **加载那一刻**按环境变量算好的，晚设一步就没用了：
    2026-10-17 这一版闸先在第二节 import 了一遍（那时环境变量还没设），后面真跑那颗 图标写 就朝仓根 icons\ 落了一张字。
    顺序记在这儿当教训，下面第七、第八节全用这一颗 那。 */
 const 沙 = path.join(探针沙盒, '图标那一层-闸跑');
@@ -38,7 +38,7 @@ fs.writeFileSync(path.join(沙, '索引.txt'),
   '【图标索引】一张图一行：文件名 = 这是干什么的（引用它的代码）\n\n# —— 通用图标（icons\\ 文件夹）——\ngear = 设置（齿轮）：某处 —— 引用：src/_fd/src/fd3-shell.js×1\ncal = 日历：某处 —— 引用：没有代码直接叫它（可能是备用或已改名）\n');
 process.env.FD_ICONS = 沙;
 process.env.FD_PLUGINS = 沙包;
-const 那 = await import('../../_build/push-ui.mjs');
+const 那 = await import('../../_build/text-icon.mjs');
 
 台.题('一、这一台只管两样，不实现发布动作');
 {
@@ -84,7 +84,7 @@ const 那 = await import('../../_build/push-ui.mjs');
 }
 
 台.题('三、双击那一颗入口');
-台.判('入口在 src\\tools\\push-fd.bat，指的就是这一台', 尺在('src/tools/push-fd.bat') && bat.includes('node push-ui.mjs'));
+台.判('入口在 src\\tools\\text-icon.bat，指的就是这一台', 尺在('src/tools/text-icon.bat') && bat.includes('node text-icon.mjs'));
 台.判('那颗是 CRLF（cmd.exe 读 LF 会吃行首，这一条早钉过）', /\r\n/.test(bat) && !/[^\r]\n/.test(bat));
 台.判('它开的端口和这一台的默认端口是同一串（写死两处，比一次）',
   new RegExp('start http://127\\.0\\.0\\.1:' + /PORT \|\| (\d+)/.exec(ui)[1] + '/').test(bat));

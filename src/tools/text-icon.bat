@@ -20,8 +20,8 @@ if errorlevel 1 (
 where git >nul 2>nul
 if errorlevel 1 (
   echo 提醒：这一台找不到 git。顶上那一行会写「盘上问不出」，不会装成都提交完了；改句子、改图标这两样照旧能使。
-  echo 办法：装一次 Git for Windows，或在本来就用得到 git 的那个终端里跑这一句：node push-ui.mjs
+  echo 办法：装一次 Git for Windows，或在本来就用得到 git 的那个终端里跑这一句：node text-icon.mjs
   echo.
 )
 start "" /b cmd /c "timeout /t 1 /nobreak >nul & start http://127.0.0.1:8792/"
-node push-ui.mjs
+node text-icon.mjs

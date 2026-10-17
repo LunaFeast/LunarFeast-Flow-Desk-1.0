@@ -1,8 +1,8 @@
 /* ============================================================
    改文字与改图标那一屏（2026-10-16 收的口径：这一台只管这两样）
    ------------------------------------------------------------
-     双击 src\tools\push-fd.bat      起这一台，顺手把浏览器开到 http://127.0.0.1:8792/
-     node src/_build/push-ui.mjs     同一件事，从终端起
+     双击 src\tools\text-icon.bat      起这一台，顺手把浏览器开到 http://127.0.0.1:8792/
+     node src/_build/text-icon.mjs     同一件事，从终端起
      环境变量 PORT 换端口（默认 8792；8791 是那台页面服务的，各占一个）
      环境变量 FD_TREE 指到别的一棵（闸在沙盒那一棵里真跑那几颗判断时用）
 
@@ -34,11 +34,11 @@ import { TREE } from './plugin-repos.mjs';
    所以 pr.mjs / push-list.mjs / version.mjs / forward-features.mjs 那四本这一份一概不再 import —— 那些动作还在命令行里。 */
 
 const PORT = +(process.env.PORT || 8792);
-/* 被当命令跑才听端口：闸（src\tools\probes\gate-pushui46.mjs）要把这一份当零件借进去真跑那几颗判断，
+/* 被当命令跑才听端口：闸（src\tools\probes\gate-texticon46.mjs）要把这一份当零件借进去真跑那几颗判断，
    一 import 就占 8792 的话，跑闸会把你正开着的那一屏顶掉。与 plugin-repos.mjs 同一道闸。 */
 const 被当命令跑 = !!(process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url);
 const 码 = crypto.randomBytes(12).toString('hex');
-const 页面路 = path.join(import.meta.dirname, 'push-ui.html');
+const 页面路 = path.join(import.meta.dirname, 'text-icon.html');
 const 发 = (res, 码数, 文, 类) => {
   res.writeHead(码数, { 'content-type': (类 || 'text/plain; charset=utf-8'), 'cache-control': 'no-store' });
   res.end(文);
@@ -83,7 +83,7 @@ function 现场(){
    图标住在仓根 icons\ 那一格（子文件夹只认一层）。**每一张是什么、哪份代码在叫它、叫几次，
    已经有一份对齐好的答案：icons\索引.txt**，由 src\_build\ico-index.mjs（#245）生成 ——
    这一台只读它、并给一颗「重新对齐一遍」去跑那颗脚本，绝不自己再搜第二套（搜出来的口径与那份索引对不上就是两头漂移）。
-   六个后缀与那颗脚本里那一份同字，闸 gate-pushui46 盯着。 */
+   六个后缀与那颗脚本里那一份同字，闸 gate-texticon46 盯着。 */
 const 图标后缀 = ['.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif'];
 /* 那一层住哪：默认仓根 icons\；环境变量 FD_ICONS 指到别处（与页面服务那台同一个名字，见 src\_fd\fd-serve.mjs 顶上）——
    闸要真跑"加一张、换一张、删一张"，拿沙盒当那一层，不往你的 icons\ 里落一个字。 */

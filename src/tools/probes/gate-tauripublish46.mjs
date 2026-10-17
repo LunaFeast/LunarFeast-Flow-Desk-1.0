@@ -132,7 +132,7 @@ const 壳 = rd('src/pack/sfx.cs');
 台.题('七、开发那一层与这台自己的位置，一个字节都不许跟着包出门（2026-10-14 他量出来的那一件）');
 {
   /* 他原话：「为什么用户安装的版本也有GitHub小助手这些东西！这不是该打包给用户的东西！泄露我的GitHub信息怎么办！」
-     量出来是真的：装出去的那一棵里当时有 src\tools\ 整格 110 份（探针、自查、audit、start-fd.bat、那台小助手 push-fd.bat）、
+     量出来是真的：装出去的那一棵里当时有 src\tools\ 整格 110 份（探针、自查、audit、start-fd.bat、那台小助手 text-icon.bat）、
      src\_build\ 里推送发布那一摊 10 份，还有 src\tools\ 底下那颗不进仓的路径表（这台自己的那几格位置全写在里面，
      具体哪几格不抄在这里 —— 抄进这份文本就等于把它送到公开面上，这一节最后那道逐份扫的判据就是防这一手的）。
      根因：src 这一层从前是照着**盘上**走的，而 .gitignore 只挡得住仓，挡不住"盘上有的就被打进包"；
@@ -141,8 +141,8 @@ const 壳 = rd('src/pack/sfx.cs');
   台.判('装出去的那一棵里没有 src\\tools\\ 那一份（探针、自查、audit、两颗 .bat、本地路径 全在这一格）',
     单.length > 100 && 单.filter(k => k.startsWith('src/tools/')).length === 0,
     单.filter(k => k.startsWith('src/tools/')).length + ' 份');
-  台.判('推送与发布那一摊十份不在包里（pr / release / push-ui 两份 / push-list / public-scan / plugin-repos / forward-features / ico-index / packs）',
-    ['pr.mjs', 'release.mjs', 'push-ui.mjs', 'push-ui.html', 'push-list.mjs', 'public-scan.mjs',
+  台.判('推送与发布那一摊十份不在包里（pr / release / text-icon 两份 / push-list / public-scan / plugin-repos / forward-features / ico-index / packs）',
+    ['pr.mjs', 'release.mjs', 'text-icon.mjs', 'text-icon.html', 'push-list.mjs', 'public-scan.mjs',
      'plugin-repos.mjs', 'forward-features.mjs', 'ico-index.mjs', 'packs.mjs']
       .every(名 => !单.some(k => k === 'src/_build/' + 名)));
   台.判('这台自己的位置那份（src\\tools\\本地路径.cjs）与编译中间产物 sfx-stub.exe 都不在包里 —— 它们都进了盘、都没进版本，正是从前那一层照盘上走会带走的两种',

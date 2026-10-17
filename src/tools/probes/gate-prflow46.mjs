@@ -36,8 +36,8 @@ const 台 = 记账('gate-prflow46');
 const pr = rd('src/_build/pr.mjs');
 const rel = rd('src/_build/release.mjs');
 const rep = rd('src/_build/plugin-repos.mjs');
-const ui = rd('src/_build/push-ui.mjs');
-const pg = rd('src/_build/push-ui.html');
+const ui = rd('src/_build/text-icon.mjs');
+const pg = rd('src/_build/text-icon.html');
 const scn = rd('src/_build/public-scan.mjs');
 const lst = rd('src/_build/push-list.mjs');
 const 提PR = pr.slice(pr.indexOf("has('--提交PR')"), pr.indexOf('else 跑(() => 停('));
@@ -73,7 +73,7 @@ const pr码 = 代码(pr), rel码 = 代码(rel);
 台.判('没有任何一条路推 main：push 与 main 这两个参数不同在一句里，也没有 push origin main 那一串',
   !/'push'[^\n]*'main'/.test(pr码) && !/'push', 'origin', 'main'/.test(pr码));
 台.判('第一次那一颗整块拆干净了：这一颗与那一屏里「建远程」这三个字一处都不留（连注释里都不许留成一枚还能按的钮）',
-  !/建远程/.test(pr) && !/建远程/.test(rd('src/_build/push-ui.mjs')) && !/建远程/.test(rd('src/_build/push-ui.html')));
+  !/建远程/.test(pr) && !/建远程/.test(rd('src/_build/text-icon.mjs')) && !/建远程/.test(rd('src/_build/text-icon.html')));
 台.判('远程那一头万一没有 main（那一根被人删了、或这台挂错了远程）：同步那一道照样当场停，报的是人话，而且不替你重建那一根',
   同步.includes('if(!表.main) 停(远程没main话(表))') && 远程话.includes('这一颗什么都不推') && 远程话.includes('这一颗不替你重建 main 那一根'));
 台.判('没有 --force、没有 -f、没有强推那一手', !/--force/.test(pr码) && !/'-f'/.test(pr码));
@@ -266,7 +266,7 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 提交分支:'feature/46-tauri-dat
   !ui.includes("from './push-list.mjs'"));
 台.判('5 那一屏不再有任何一笔的输入框（提交说明、更新描述那些格子跟着那一页一起撤；他写的字还是进那一格明文清单）',
   !pg.includes('data-会动=') && !pg.includes('参照：') && !pg.includes('textarea'));
-台.判('6 往远程送东西那三道连同「敲那一个字才算确认」一起从这一屏撤了：这一台不带 --提交PR、不带 --已确认、没有收字那一颗；本机那三道（只听 127.0.0.1、随机码、坏编码不砸台）由 gate-pushui46 第二与第四节钉',
+台.判('6 往远程送东西那三道连同「敲那一个字才算确认」一起从这一屏撤了：这一台不带 --提交PR、不带 --已确认、没有收字那一颗；本机那三道（只听 127.0.0.1、随机码、坏编码不砸台）由 gate-texticon46 第二与第四节钉',
   !ui.includes('--提交PR') && !ui.includes('--已确认') && !ui.includes('收字') && !pg.includes('确认词') && !ui.includes('确认词'));
 台.判('7 那一份「这一趟要推什么」的单只在 pr.mjs 里摊：写明 main、assemble 那条拼装的分支、tag、集成分支都不推；那一屏不再有摊单那一格，也不自己再算一份',
   pr.includes('main：不推（只能你人工合并）· assemble 那条拼装的分支：不推 · tag：不推') && pr.includes('：不推（永不进远程）') &&

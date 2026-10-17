@@ -15,8 +15,8 @@ import { 八项, 认这项, 中文名, 分支of, 现在带不带, 合那一棵, 
 const 台 = 记账('gate-forward46');
 const 名单文 = rd('src/_build/forward-features.mjs');
 const 发布文 = rd('src/_build/release.mjs');
-const 屏文 = rd('src/_build/push-ui.html');
-const 台文 = rd('src/_build/push-ui.mjs');
+const 屏文 = rd('src/_build/text-icon.html');
+const 台文 = rd('src/_build/text-icon.mjs');
 
 台.题('一 · 名单只有一份，八项一项一格（id · 中文名 · 分支 · 动的地方哪几处）');
 台.判('八项齐（词格模式、音乐遥控器停靠、热力图、推演组件定制、空白网页、双栏停靠、卡片出场权重、推演记录）',

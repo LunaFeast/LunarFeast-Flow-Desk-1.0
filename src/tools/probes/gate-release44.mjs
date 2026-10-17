@@ -122,8 +122,8 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   台.判('7 反向验：档位写错也挡（只认 简装 / 完整 两档，不拿它当简装蒙着跑）· 退出码 ' + 丙.码,
     丙.码 === 1 && /只认两档/.test(丙.文), 丙.文.split(/\r?\n/).find(l => l.includes('停下来')) || '');
   台.判('8 这一道只剩命令（2026-10-16 那一屏整块撤了「版本与推送」，那颗钮与它那一条路由一起没了）：release.mjs 的 --打自测包 照旧在，那一屏不再提自测',
-    rd('src/_build/release.mjs').includes("has('--打自测包')") && !rd('src/_build/push-ui.html').includes('id="自测"') &&
-    !rd('src/_build/push-ui.mjs').includes("'--打自测包'"));
+    rd('src/_build/release.mjs').includes("has('--打自测包')") && !rd('src/_build/text-icon.html').includes('id="自测"') &&
+    !rd('src/_build/text-icon.mjs').includes("'--打自测包'"));
   /* 简装这一枚不带哪几家 —— 名字归他点，家表只当尺（2026-10-13 他那一句「简单版没有任何拆解出去的功能」） */
   const 丁 = 砸(['--打自测包', '--不带=zzz']);
   台.判('9 反向验：--不带 里点了家表没有的名字就当场停，并把七家 id·中文名全报出来 · 退出码 ' + 丁.码,
@@ -140,9 +140,9 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
     自.includes('家表.some(j => j.id === id)') && !自.includes("'--skip=notes'"));
   台.判('13 不带哪几家、带哪几项只剩命令行那两道口（--不带= 与 --带=）：屏上那七格勾和后端接它们那两颗口子一起撤了（2026-10-16 那一页整块没了）',
     rd('src/_build/release.mjs').includes("val('--不带', '')") && rd('src/_build/release.mjs').includes("val('--带', '')") &&
-    !rd('src/_build/push-ui.html').includes('id="插件家"') && !rd('src/_build/push-ui.html').includes('function 不带的家') &&
-    !rd('src/_build/push-ui.html').includes('不带: 不带的.join') && !rd('src/_build/push-ui.html').includes('id="八项"') &&
-    !rd('src/_build/push-ui.mjs').includes('身.不带') && !rd('src/_build/push-ui.mjs').includes('身.带'));
+    !rd('src/_build/text-icon.html').includes('id="插件家"') && !rd('src/_build/text-icon.html').includes('function 不带的家') &&
+    !rd('src/_build/text-icon.html').includes('不带: 不带的.join') && !rd('src/_build/text-icon.html').includes('id="八项"') &&
+    !rd('src/_build/text-icon.mjs').includes('身.不带') && !rd('src/_build/text-icon.mjs').includes('身.带'));
 }
 
 台.题('六、--看 在脏树上照量（2026-10-13 他为「屏上还不统一」问的那两处根因）');
