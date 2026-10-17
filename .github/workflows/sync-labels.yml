@@ -1,0 +1,74 @@
+name: Sync labels to target repositories
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync_labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync labels from source repo to multiple target repos
+        env:
+          GH_TOKEN: ${{ secrets.LABEL_SYNC_TOKEN }}
+          SOURCE_REPO: LunarFeast/LunarFeast-Flow-Desk-1.0
+          TARGETS: |
+            LunarFeast/Music-Remote
+            LunarFeast/Music-Remote-plugins-MusicBe
+            LunarFeast/Singbit-Input-Practice
+            LunarFeast/Your-Sentences
+            LunarFeast/Notes
+            LunarFeast/Schedule
+            LunarFeast/Why-Not-Wirte-plugins-Deduce-Custom
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "Missing secret: LABEL_SYNC_TOKEN"
+            echo "Add it in GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret"
+            exit 1
+          fi
+
+          echo "Fetching labels from $SOURCE_REPO"
+
+          curl -sS \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$SOURCE_REPO/labels?per_page=100" \
+            | jq -c '.[]' \
+            | while IFS= read -r label; do
+                name=$(echo "$label" | jq -r '.name')
+                color=$(echo "$label" | jq -r '.color')
+                description=$(echo "$label" | jq -r '.description // ""')
+
+                echo "Processing label: $name"
+
+                while IFS= read -r repo; do
+                  [ -n "$repo" ] || continue
+
+                  echo "  -> $repo"
+
+                  status=$(curl -sS -o /tmp/create.out -w "%{http_code}" \
+                    -X POST \
+                    -H "Authorization: Bearer $GH_TOKEN" \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "Content-Type: application/json" \
+                    -d "$(jq -nc --arg name "$name" --arg color "$color" --arg description "$description" '{name:$name,color:$color,description:$description}')" \
+                    "https://api.github.com/repos/$repo/labels")
+
+                  if [ "$status" = "201" ]; then
+                    echo "    created"
+                  elif [ "$status" = "422" ]; then
+                    encoded=$(printf '%s' "$name" | jq -sRr @uri)
+                    curl -sS \
+                      -X PATCH \
+                      -H "Authorization: Bearer $GH_TOKEN" \
+                      -H "Accept: application/vnd.github+json" \
+                      -H "Content-Type: application/json" \
+                      -d "$(jq -nc --arg color "$color" --arg description "$description" '{color:$color,description:$description}')" \
+                      "https://api.github.com/repos/$repo/labels/$encoded" >/dev/null
+                    echo "    updated"
+                  else
+                    echo "    failed: HTTP $status"
+                  fi
+                done <<< "$TARGETS"
+              done
