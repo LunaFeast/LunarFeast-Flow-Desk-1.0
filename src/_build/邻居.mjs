@@ -2,8 +2,8 @@
    一家一仓之后「那一份到底在哪儿」只此一处（插件分离第 5 批第四刀）
    ------------------------------------------------------------
    先问本仓，本仓没有就问旁边那一层的各家那一棵；邻居那几棵的名字**不抄第二份名单**，
-   拿搬仓那一颗（src\_build\pack-repo.mjs）的 仓名 那张表现算。那一本问不到时（这一棵本来就是
-   某一家自己那一棵，或者这一棵没带搬仓那颗）邻居是空 —— 问不到就把本仓那一条交回去，
+   拿搬仓那一颗（src\_build\pack-repo.mjs）的 仓名 那张表现算，位置取 布局.mjs 的 插件格（<开发那一摊>\plugins\<仓名>）。
+   那一本问不到时（这一棵本来就是某一家自己那一棵，或者这一棵没带搬仓那颗）邻居是空 —— 问不到就把本仓那一条交回去，
    让调用方拿到它自己的 ENOENT，绝不在这儿编一个"看着像对"的空结果。
 
    这一颗只回答"在哪儿、在不在、读一份、列一格"，不改任何判据：
@@ -11,6 +11,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
+import { 插件格 } from './布局.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const 本仓根 = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -18,7 +19,7 @@ const 切段 = 相 => String(相).split('/').filter(Boolean);
 let 邻 = [];
 try{
   const { 仓名 } = await import(pathToFileURL(path.join(本仓根, 'src', '_build', 'pack-repo.mjs')).href);
-  邻 = Object.values(仓名).map(名 => path.join(path.dirname(本仓根), 名));
+  邻 = Object.values(仓名).map(名 => path.join(插件格, 名));
 }catch(e){ /* 问不到那一本：没有邻居，只认本仓 */ }
 
 export const 邻居数 = () => 邻.length;

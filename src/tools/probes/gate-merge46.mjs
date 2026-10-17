@@ -15,7 +15,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { ROOT, lsd, rd, 尺在, 记账 } from './lib-slice.mjs';
 import { 家, REPOS } from '../../_build/plugin-repos.mjs';
-import { 仓名 } from '../../_build/pack-repo.mjs';   /* 哪一家叫什么仓，只此一张表 */
+import { 仓名 } from '../../_build/pack-repo.mjs';
+import { 插件格 } from '../../_build/布局.mjs';   /* 哪一家叫什么仓，只此一张表 */
 
 const 台 = 记账('gate-merge46');
 const 问 = a => { try{ return execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim(); }catch(e){ return ''; } };
@@ -26,7 +27,7 @@ const rep = rd('src/_build/plugin-repos.mjs');
 const 闸 = rd('src/tools/probes/gate-pack46.mjs');
 const 跟踪 = 问(['ls-files']).split(/\r?\n/).filter(Boolean);
 const 各家 = 家.map(j => j.id);
-const 旁 = ROOT.replace(/[\\/]+$/, '').replace(/[\\/][^\\/]*$/, '');
+const 旁 = 插件格;   /* 位置只写在 布局.mjs 那一处：<开发那一摊>\plugins\<仓名>，这一颗不另算 */
 const 那一仓 = 仓 => { try{ return execFileSync('git', ['-C', 旁 + '/' + 仓, 'ls-files'], { encoding: 'utf8' }).trim().split(/\r?\n/).filter(Boolean); }catch(e){ return []; } };
 
 台.题('一、七家的代码不在主仓的名单里，在各自那一仓的名单里（2026-10-16 第四刀：一家一仓，主程序那一仓改作空壳）');

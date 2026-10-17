@@ -23,11 +23,12 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { 记账, rd, lsd, 有, 出自, 隔壁 } from './lib-slice.mjs';
 import { 仓名, 看一家, 铺, 打包, 分自检, TREE } from '../../_build/pack-repo.mjs';
+import { 插件格, 沙盒格 } from '../../_build/布局.mjs';
 import { 私人串清单, 扫文本 } from '../../_build/public-scan.mjs';
 
 const 台 = 记账('gate-repo5');
 const 沙盒旗 = process.argv.find(a => a.startsWith('--沙盒='));
-const 沙盒 = path.resolve(沙盒旗 ? 沙盒旗.slice('--沙盒='.length) : path.join(path.dirname(TREE), 'FD 搬仓闸沙盒'));
+const 沙盒 = path.resolve(沙盒旗 ? 沙盒旗.slice('--沙盒='.length) : path.join(沙盒格, 'move-repo-gate'));   /* 全英文：路径里不塞中文 */
 const 跑 = (args, 处) => execFileSync(process.execPath, args, { cwd: 处 || TREE, encoding: 'utf8' });
 const 清 = () => { try{ fs.rmSync(沙盒, { recursive: true, force: true }); }catch(e){} };
 
@@ -149,8 +150,8 @@ try{
      所以钉反过来那一面 —— 壳里那一格空着，那三件在 Notes 自己那一仓里逐字还在。 */
   台.判('便签那三件不在主程序仓里、在 Notes 那一棵里逐字还在（删干净了，也搬齐了）',
     !fs.existsSync(path.join(TREE, 'data', 'plugins', 'notes', 'main.js'))
-    && fs.existsSync(path.join(path.dirname(TREE), 'Notes', 'data', 'plugins', 'notes', 'main.js'))
-    && fs.existsSync(path.join(path.dirname(TREE), 'Notes', 'data', 'plugins', 'notes', 'manifest.json')));
+    && fs.existsSync(path.join(插件格, 'Notes', 'data', 'plugins', 'notes', 'main.js'))
+    && fs.existsSync(path.join(插件格, 'Notes', 'data', 'plugins', 'notes', 'manifest.json')));
   台.判('这颗工具列进了"开发那一层"那份名单（装出去的那一棵里搜不到它）',
     fs.readFileSync(path.join(TREE, 'src', 'pack', 'publish.mjs'), 'utf8')
       .includes('pack-repo|packbox') || fs.readFileSync(path.join(TREE, 'src', 'pack', 'publish.mjs'), 'utf8')
@@ -238,12 +239,14 @@ try{
   台.判('反证 · 把"子件不给出包命令"那一句的闸摘掉，它立刻给一棵没有容器可出的仓塞进一份出包命令',
     (() => { const 改 = 工.replace("if(!情.子) fs.writeFileSync(path.join(路, '出包.mjs')", "fs.writeFileSync(path.join(路, '出包.mjs')");
       return 改 !== 工 && !/if\(!情\.子\) fs\.writeFileSync\(path\.join\(路, '出包\.mjs'/.test(改); })());
-  台.判('重铺会摘掉「这一趟不该再有」的那几份：拿那一仓进了版本的名单比，不在名单里的从盘上删掉再落笔',
-    /const 该有 = new Set/.test(工) && /'ls-files', '-z'/.test(工) && /!该有\.has\(p\)/.test(工)
+  台.判('重铺会摘掉「这一趟不该再有」的那几份，但只摘这一家名下的路径：顶上那一份 .gitattributes 与两份声明那一类碰都不许碰（2026-10-16 摘错过声笔那一仓的换行规矩）',
+    /const 该有 = new Set/.test(工) && /'ls-files', '-z'/.test(工) && /const 名下 =/.test(工)
+    && /!该有\.has\(p\) && 名下\.some/.test(工)
     && /fs\.rmSync\(path\.join\(路, \.\.\.p\.split\('\/'\)\)/.test(工));
-  台.判('反证 · 把那道比名单摘掉（谁都不删），挪走的份就永远留在原来那一棵里，两仓同时住一份',
-    (() => { const 改 = 工.replace('.filter(p => !该有.has(p));', ';');
-      return 改 !== 工 && !/该有\.has\(p\)/.test(改); })());
+  台.判('反证 · 把「只摘名下」那一道摘掉（谁不在名单里就删谁），顶上那一份 .gitattributes 立刻一起被扫走',
+    (() => { const 串 = "!该有.has(p) && 名下.some(前 => p === 前 || p.startsWith(前 + '/'))";
+      const 改 = 工.replace(串, '!该有.has(p)');
+      return 工.includes(串) && 改 !== 工 && !改.includes(串); })());
 }
 
 台.题('八、那把尺会问隔壁那一棵：主程序仓里一个插件字节都没有，那一摞检查照样读得到（「到哪儿找那一份」只此一处）');

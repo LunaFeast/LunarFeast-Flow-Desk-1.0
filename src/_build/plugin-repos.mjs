@@ -53,8 +53,8 @@ const val = (f, d) => { const a = argv.find(x => x.startsWith(f + '=')); return 
 const DRY = has('--dry');
 const ONLY = val('--only', '').split(',').map(s => s.trim()).filter(Boolean);
 const MSG = val('--msg', '');
-export const OUT_DEFAULT = path.join(path.dirname(TREE), path.basename(TREE) + '-plugins');
-/* 铺出去那一格默认在仓外那一格（这一棵树的上一层、同名加 -plugins）：串现算，不写死盘符 ——
+export const OUT_DEFAULT = path.join(path.dirname(TREE), 'plugins');   /* 一家一仓之后：八家那一格就在主程序这一棵旁边（位置只写在 布局.mjs） */
+/* 铺出去那一格默认在仓外那一格（这一棵树的上一层里那一格 plugins）：串现算，不写死盘符 ——
    写死了这一份自己就把这台机器的位置公开在公开面上（公开面那道闸 src\_build\public-scan.mjs 认这一条）。
    换机器 / 换盘：给 --out=目录 就行。 */
 export const OUT = path.resolve(val('--out', OUT_DEFAULT));

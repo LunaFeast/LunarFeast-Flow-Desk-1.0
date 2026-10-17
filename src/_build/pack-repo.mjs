@@ -28,7 +28,7 @@
    缺一样就停。
 
    仓名那张对应表只此一份（下面那张 仓名），照着清单第 5 批那张表抄的，别处不许再抄第二份。
-   铺出去那一格是默认位置（主程序那一棵的上一层、按仓名叫），换机器换盘给 --仓根=；
+   铺出去那一格是默认位置（<开发那一摊>\plugins\<仓名>，位置只写在 布局.mjs 那一处），换机器换盘给 --仓根=；
    落点全用现算的串，本文件与生成的那几份里都不写死这台机器的盘符（公开面那道闸认这一条）。
    哪一家有哪几份源码、内核怎么出，只写在 `plugin-repos.mjs` 那张 `家` 表里（from 与 内核 两格），这颗不另记一份。
    挂在某一家底下的**子件**（MusicBee 播放器适配那种：不是插件、没有运行时那一格、不出自己的容器）
@@ -42,6 +42,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { 家, 子件 } from './plugin-repos.mjs';
+import { 插件格, 沙盒格, 主程序仓名 } from './布局.mjs';
 import { 打目录, 扩展名 } from './packbox.mjs';
 import { 私人串清单, 扫文本, 是二进制 } from './public-scan.mjs';
 
@@ -70,7 +71,7 @@ export const 仓名 = {
    壳里留下的那一截不跟着走：4.5 码的「一份明文表 + 一台通用解释器」（players.json 与那颗 dll 的装载）
    是主程序自己的事，什么时候能独立成一仓，等它自己长出形状再说。 */
 const 远程 = 名 => 'git@github.com:LunarFeast/' + 名 + '.git';
-const 仓根默认 = () => path.dirname(TREE);
+const 仓根默认 = () => 插件格;   /* 八家那一格：<开发那一摊>\plugins\（位置只写在 布局.mjs 那一处） */
 const 仓路 = (id, 根) => path.join(根 || 仓根默认(), 仓名[id] || 停('这一家没有仓名对应：' + id));
 
 /* ---------- 进版本的那几份才铺：产物（三颗内核）由那一家的出包命令现出 ----------
@@ -167,7 +168,7 @@ export function 看一家(id){
 /* ---------- 这一家自己那条出包命令（生成的那一份，只有"先出自己那颗内核 + 去叫打包手"，没有"自己压"）---------- */
 const 出包文本 = (id, 内核) => `/* ${id} 这一家自己的出包命令（插件分离第 5 批）
    ------------------------------------------------------------
-     node 出包.mjs                      主程序那一棵就在旁边同一层（..\\\\Flow-Desk-1.0）时
+     node 出包.mjs                      主程序那一棵就在上一格（<开发那一摊>\\flow-desk）时
      node 出包.mjs --主仓=一处目录        主程序那一棵在别处
      node 出包.mjs --出=一处目录          容器要落在别处（默认落本仓 dist\\\\）
 
@@ -204,7 +205,7 @@ if(内){
     console.log('内核出好了（源码那几份现场拼的一段）· ' + 内.装名 + ' ' + Buffer.byteLength(文) + ' 字节');
   } else throw new Error('这一家的内核那一格写得不全：既没有"出"也没有"那颗"');
 }
-const 猜 = [process.env.FD_MAIN, path.join(path.dirname(仓), 'Flow-Desk-1.0')]
+const 猜 = [process.env.FD_MAIN, path.join(path.dirname(path.dirname(仓)), 'flow-desk')]   /* 主程序那一棵在插件格上面那一格，名字只从 布局.mjs 那一处来 */
   .filter(Boolean).map(x => path.resolve(x));
 const 主 = (() => {
   const 项 = process.argv.find(a => a.startsWith('--主仓='));
@@ -403,13 +404,19 @@ export function 铺(id, 根, opt){
   fs.writeFileSync(path.join(路, '.gitignore'), [...new Set(挡)].join('\n') + '\n');
   /* 摘掉「这一趟不该再有」的那几份：表里把某几份挪去别一仓（2026-10-16 MusicBee 那三份从音乐遥控器
      挪去它自己那一仓），只覆盖不删的话那一棵里就同时住着两处，一名一仓这条规矩当场破。
-     只动那一仓**进了版本**的名单 —— 产物（.gitignore 挡着的）与 dist\\ 那一格一概不碰，那是出包命令现出的东西。 */
+     只动那一仓进了版本的名单，而且**只动这一家名下的路径**（运行时那一格 + 表里点名的那几格/那几份）：
+     顶上那一份 .gitattributes、两份声明（LICENSE / THIRD-PARTY）那一类不归这一颗管 ——
+     2026-10-16 就摘错过声笔那一仓的 .gitattributes，那条是给 rp-base.html 保命用的换行规矩。
+     产物（.gitignore 挡着的）与 dist\\ 那一格也一概不碰，那是出包命令现出的东西。 */
   let 摘 = [];
   if(fs.existsSync(path.join(路, '.git'))){
+    const 活2 = 家.find(j => j.id === id) || 子件.find(j => j.id === id) || 停('名单里没有这一家：' + id);
+    const 名下 = [...活2.from.map(p => p.replace(/\/+$/, '')), 'data/plugins/' + id];
     const 该有 = new Set([...情.份.map(x => 'data/plugins/' + id + '/' + x.路), ...情.源码.map(x => x.路),
       '.gitignore', ...(情.子 ? [] : ['出包.mjs'])]);
     摘 = execFileSync('git', ['-C', 路, '-c', 'core.quotepath=false', 'ls-files', '-z'], { encoding: 'utf8' })
-      .split('\0').filter(Boolean).filter(p => !该有.has(p));
+      .split('\0').filter(Boolean)
+      .filter(p => !该有.has(p) && 名下.some(前 => p === 前 || p.startsWith(前 + '/')));
     for(const p of 摘) fs.rmSync(path.join(路, ...p.split('/')), { force: true });
   }
   if(!fs.existsSync(path.join(路, '.git')))
