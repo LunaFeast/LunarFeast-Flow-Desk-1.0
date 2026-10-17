@@ -139,15 +139,15 @@ function addLayer(pre, dir, skip){
 }
 const inNodeModules = rel => rel.split('/').includes('node_modules');
 /* ---------- 开发那一层不带走（2026-10-14 他量出来的）----------
-   装出去的那一棵里当时躺着：src\tools\ 整格 110 份（探针、自查、audit、start-fd.bat、那台小助手 push-fd.bat）
-   与 src\_build\ 里推送发布那一摊（pr.mjs / release.mjs / push-ui.mjs / push-ui.html / push-list.mjs /
+   装出去的那一棵里当时躺着：src\tools\ 整格 110 份（探针、自查、audit、start-fd.bat、那台小助手 text-icon.bat）
+   与 src\_build\ 里推送发布那一摊（pr.mjs / release.mjs / text-icon.mjs / text-icon.html / push-list.mjs /
    public-scan.mjs / plugin-repos.mjs / forward-features.mjs / ico-index.mjs / packs.mjs）。
    这些是"做这个程序"用的，不是程序本身，也不是给用户的东西。名单只写这一处，闸读这一份（gate-tauripublish46 第七节）。
    2026-10-16 第 3 批 3.3 乙往这一摊里加一颗 packbox.mjs —— 自有容器那颗打包手。它进这一层是硬要求，不是顺手：
    打包那颗只在发布环节用，用户侧任何界面、任何工具都不许有"把一个包另存成压好的包 / 加密包"的口（插件分离规划第八节）。 */
 export const 开发层 = [
   /^tools\//,
-  /^_build\/(plugin-repos|pr|release|push-ui|push-list|public-scan|forward-features|ico-index|packs|packbox|pack-repo)\.(mjs|html)$/,
+  /^_build\/(plugin-repos|pr|release|text-icon|push-list|public-scan|forward-features|ico-index|packs|packbox|pack-repo)\.(mjs|html)$/,
 ];
 const 是开发层 = rel => 开发层.some(打 => 打.test(rel));
 /* 没进版本的一律不带走：这台自己的位置记在 src\tools\ 底下那一颗不进仓的路径表里（ Rust 与那几格素材、工区、

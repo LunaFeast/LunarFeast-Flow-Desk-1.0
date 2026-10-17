@@ -79,23 +79,20 @@ const Title = {
     const app = this.inApp();
     const R = [];
     const i = (label, key, fn) => R.push({ label, key, fn });
-    const gap = () => R.push({ sep:true });
+    /* 一份菜单从头到尾一条流水，不分组（他 2026-10-17 issue #55：那三条分隔线删掉） */
     i('重新载入页面', 'Ctrl R', () => this.run('reload', () => location.reload()));
     i('强制重新载入', 'Ctrl Shift R', () => this.run('reloadForce', () => location.reload()));
     i('插件管理', '', () => Shell.packManager());
     i('设置', '', () => openSettings());
-    gap();
     i('放大', 'Ctrl +', () => this.run('zoomIn'));
     i('缩小', 'Ctrl −', () => this.run('zoomOut'));
     i('实际大小', 'Ctrl 0', () => this.run('zoomReset'));
     i('全屏', 'F11', () => this.run('fullscreen'));
-    gap();
     if(app){
       i('最小化', '', () => window.FD_APP.winCtl('min'));
       i(this.st.maximized ? '还原窗口' : '最大化', '', () => window.FD_APP.winCtl('max'));
       i('退出程序', 'Ctrl Q', () => window.FD_APP.winCtl('quit'));
     }
-    gap();
     return R;
   },
   toggle(){
@@ -112,7 +109,6 @@ const Title = {
     }
     m.innerHTML = '';
     for(const r of this.rows()){
-      if(r.sep){ m.appendChild(h('div', { class:'fd-msep' })); continue; }
       m.appendChild(h('button', { class:'fd-mi', onclick:() => { this.close(); r.fn(); } },
         [h('span', {}, r.label), r.key ? h('kbd', {}, r.key) : null]));
     }

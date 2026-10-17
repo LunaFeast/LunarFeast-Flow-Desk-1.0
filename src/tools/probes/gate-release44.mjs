@@ -121,9 +121,8 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   const 丙 = 砸(['--打自测包=瞎写']);
   台.判('7 反向验：档位写错也挡（只认 简装 / 完整 两档，不拿它当简装蒙着跑）· 退出码 ' + 丙.码,
     丙.码 === 1 && /只认两档/.test(丙.文), 丙.文.split(/\r?\n/).find(l => l.includes('停下来')) || '');
-  台.判('8 屏上那颗钮在，且走的是这一道（不是「② 打包发版」那一条合并之后才放行的路）',
-    rd('src/_build/push-ui.html').includes('id="自测"') && rd('src/_build/push-ui.html').includes("跑('自测'") &&
-    rd('src/_build/push-ui.mjs').includes("'--打自测包'"));
+  台.判('8 本地自测包这一道是命令：--打自测包 在那儿，且默认那一档是简装',
+    rd('src/_build/release.mjs').includes("has('--打自测包')") && rd('src/_build/release.mjs').includes("val('--打自测包', '简装')"));
   /* 简装这一枚不带哪几家 —— 名字归他点，家表只当尺（2026-10-13 他那一句「简单版没有任何拆解出去的功能」） */
   const 丁 = 砸(['--打自测包', '--不带=zzz']);
   台.判('9 反向验：--不带 里点了家表没有的名字就当场停，并把七家 id·中文名全报出来 · 退出码 ' + 丁.码,
@@ -138,11 +137,9 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   台.判('12 不带的落到发布那一趟的 --skip=（publish 里那一颗已经把两格与货架一起挑掉，这里不另写一份挑货的）',
     /'--skip=' \+ 不带\.join\(','/.test(自) && 自.includes("'src/pack/publish.mjs'") &&
     自.includes('家表.some(j => j.id === id)') && !自.includes("'--skip=notes'"));
-  台.判('13 屏上那一栏勾完直接递给这一道（插件那几家一家一格，屏上不露内部名字、不要他手打；功能那八项的勾 2026-10-14 随拆分一起从屏上撤了，后端那两头照旧收）',
-    rd('src/_build/push-ui.html').includes('id="插件家"') && rd('src/_build/push-ui.html').includes('function 不带的家') &&
-    rd('src/_build/push-ui.html').includes('不带: 不带的.join') && !rd('src/_build/push-ui.html').includes('简装不带') &&
-    !rd('src/_build/push-ui.html').includes('id="八项"') &&
-    rd('src/_build/push-ui.mjs').includes('身.不带') && rd('src/_build/push-ui.mjs').includes('身.带'));
+  台.判('13 不带哪几家、带哪几项由命令那两道口递（--不带= 与 --带=），发版那一趟带哪几家由清单说了算',
+    rd('src/_build/release.mjs').includes("val('--不带', '')") && rd('src/_build/release.mjs').includes("val('--带', '')") &&
+    rd('src/_build/release.mjs').includes("发版那一趟带哪几家由清单说了算"));
 }
 
 台.题('六、--看 在脏树上照量（2026-10-13 他为「屏上还不统一」问的那两处根因）');

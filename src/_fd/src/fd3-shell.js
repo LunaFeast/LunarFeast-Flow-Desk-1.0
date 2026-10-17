@@ -2153,17 +2153,19 @@ const Shell = {
       const 桌上 = new Set(this.layout.items.map(i => i.widget));
       grid.innerHTML = '';
       const 家 = ((d && d.packs) || [])
-        .filter(p => p.manifest && p.manifest.id && PackOps.forHost(p.manifest))
+        /* 路径里有包就列（他 2026-10-17 issue #56：这一屏要显示 plugins 路径里存在插件包的所有插件）——
+           不归本宿主用的那几家照样露面，加载那一头自己拦（sh-load.js 里 host 不认本宿主就不 import） */
+        .filter(p => p.manifest && p.manifest.id)
         .filter(p => !kw || (String(p.manifest.name || p.id) + ' ' + p.id).toLowerCase().includes(kw))
         .sort((a, b) => (((a.manifest.order || 100) - (b.manifest.order || 100)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)));
       for(const p of 家){
         const m = p.manifest;
         const id = String(p.id);
         const 名 = m.name || id;
-        const 上了 = 加载中.has(id);
+        const 件名 = 'tool-' + id;
+        const 上了 = 桌上.has(id) || 桌上.has(件名);
         /* 这一家摆不摆卡片只看注册表：只垫设置行、只加一个快捷键、只带后台监听的那些没这一号，
            它们在桌上本来就不该有卡 —— 那句说明写在 title 里，不占界面一行字。 */
-        const 件名 = 'tool-' + id;
         const 占卡 = Registry.has(id) || Registry.has(件名);
         const 名号 = 占卡 && !桌上.has(id) && !桌上.has(件名) ? ' · 桌上还没它那张卡' : '';
         /* 开机后台那一趟核过的才在这张表里（没那份容器的一家不在表上，界面上也不提它）：
@@ -2178,9 +2180,10 @@ const Shell = {
             onclick:async () => { await PackOps.load(id); } },
             [h('span', { class:'w-mk', html:icoFor(id, m.icon || 'card') }),
              h('span', {}, 名), h('span', { class:'fd-addtag' }, 上了 ? '已加载' : '没加载'), ...记]),
+          /* 三颗钮每一行都在（他 2026-10-17 issue #56：不要加载/卸载二选一）——
+             哪一颗此刻真能使，按下去由那颗自己说，不靠藏起来当提示 */
           h('div', { class:'fd-addops' }, [
-            上了 ? PackOps.unloadButton(id, draw) : PackOps.loadButton(id),
-            PackOps.removeButton(id, draw)].filter(Boolean))
+            PackOps.loadButton(id, 名), PackOps.unloadButton(id, draw), PackOps.removeButton(id, draw)])
         ]));
       }
       const 一行 = grid.children.length;

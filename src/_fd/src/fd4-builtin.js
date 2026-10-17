@@ -2341,8 +2341,7 @@ function tabData(){
     Backup.账().then(补);                /* 磁盘上那一账是问出来的：先摆着，问到就补那两个字 */
     return blk;
   })()));
-  /* 下面这一包对话框接法（确认框 + 改完问一句重启）现在只有「一键清理」在用 ——
-     界面文字那一行外46 十二撤走了，那份清单改由 GitHub 版本资源助手那一台管（src\_build\push-ui.mjs）。 */
+  /* 下面这一包对话框接法（确认框 + 改完问一句重启）现在只有「一键清理」在用。 */
   const listDlg = {
     base:{ row:'fd-row', btn:'fd-btn', input:'fd-input', hint:'fd-hint' },
     dlg(title, body, okText){

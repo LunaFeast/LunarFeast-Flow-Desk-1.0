@@ -396,31 +396,28 @@ const PackOps = {
   },
   /* ---------- 这一屏上那四颗钮 ----------
      「安装」是屏幕级的一颗（把包放进路径，放进来才有这一行）；
-     「加载 / 卸载 / 删除」每一行一颗，用在谁身上写得明白：
-       加载用在路径里有、这一轮没加载的那一家；卸载用在正在加载的那一家；删除用在任意一家。
+     「加载 / 卸载 / 删除」每一行一颗，用在谁身上写得明白。
+     四颗一律摆出来（他 2026-10-17 issue #56：安装那颗要始终在，每一行那三颗也要始终在）——
+     这一台读不到插件路径、或这一条通道不在，按下去把话说明白，不靠把钮藏起来当提示。
      Flow-Desk 的「插件管理」与为写的「打开内容」都调这几颗，两端的入口一个都不差。 */
+  这一台能使(){ if(this.can()) return true; toast('这台机器读不到插件路径', true); return false; },
   loadButton(id, name){
-    if(!this.can()) return null;
     return h('button', { class:'wnw-btn mini', title:'请进使用页（改名单 + 刷新这一页）' + (name ? ' · ' + name : ''),
-      html:icoMarkup('run') + '加载', onclick:async () => { await this.load(id); } });
+      html:icoMarkup('run') + '加载', onclick:async () => { if(this.这一台能使()) await this.load(id); } });
   },
   unloadButton(id, after){
-    if(!this.can()) return null;
-    return h('button', { class:'wnw-btn mini ico', title:'从使用页撤下来 · 包留在插件路径里',
-      'aria-label':'卸载', html:icoMarkup('eject'),
-      onclick:() => this.unloadAsk(id, after) });
+    return h('button', { class:'wnw-btn mini', title:'从使用页撤下来 · 包留在插件路径里',
+      html:icoMarkup('eject') + '卸载', onclick:() => { if(this.这一台能使()) this.unloadAsk(id, after); } });
   },
   removeButton(id, after){
-    if(!this.can()) return null;
-    return h('button', { class:'wnw-btn mini ico', title:'把这一格连文件一起从插件路径里清掉（删之前问一句）',
-      'aria-label':'删除', html:icoMarkup('trash'),
-      onclick:() => this.removeAsk(id, after) });
+    return h('button', { class:'wnw-btn mini', title:'把这一格连文件一起从插件路径里清掉（删之前问一句）',
+      html:icoMarkup('trash') + '删除', onclick:() => { if(this.这一台能使()) this.removeAsk(id, after); } });
   },
   /* 屏幕上那颗「安装」：挑一个包放进来（压好的 zip 或解开的文件夹都认） */
   installButton(){
-    if(!this.can() || !this.canImport()) return null;
     return h('button', { class:'wnw-btn mini', title:'挑一个包放进插件路径（装完先不加载，要用了再按「加载」）',
-      html:icoMarkup('install') + '安装', onclick:() => this.installAsk() });
+      html:icoMarkup('install') + '安装',
+      onclick:() => { if(!this.canImport()){ toast('导入插件只在 Flow-Desk 程序里有', true); return; } this.installAsk(); } });
   },
   /* 卸载前那一句：说清楚这是停止加载、数据默认留着，勾上那一句才一起清 */
   unloadAsk(id, after){
