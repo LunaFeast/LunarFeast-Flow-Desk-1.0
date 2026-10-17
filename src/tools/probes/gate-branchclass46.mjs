@@ -42,7 +42,7 @@ const 台 = 记账('gate-branchclass46');
     r.行 === false && /四类/.test(r.话) && /milestone-heatmap/.test(r.话), r.话);
 }
 台.题('三、判据没有第二份');
-const 名单 = ['src/_build/push-list.mjs', 'src/_build/pr.mjs', 'src/_build/text-icon.mjs', 'src/_build/release.mjs',
+const 名单 = ['src/_build/push-list.mjs', 'src/_build/pr.mjs', 'src/_build/release.mjs',
   'src/_build/plugin-repos.mjs', 'src/tools/probes/gate-push46.mjs', 'src/tools/probes/gate-prflow46.mjs',
   'src/tools/probes/gate-texticon46.mjs', 'src/tools/probes/gate-branchclass46.mjs'];
 {
@@ -122,7 +122,7 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 分支类型:'重构', 提交分�
 }
 台.数('默认支名这一串', 支名默认('外46 搬 tauri 数据通道 mjs', '20261012'));
 
-台.题('六、"这个名字这一轮能不能用"只有一颗：支名可用（pr.mjs 两处、text-icon 那一屏都叫它）');
+台.题('六、"这个名字这一轮能不能用"只有一颗：支名可用（叫它的只有 pr.mjs 那两处）');
 {
   台.判('23 旧那三种头一段照收（--看 从前生成的名字、已经开出去的支都算），认不出类的也不硬给它安一类',
     支名可用('feature/46-tauri-data').行 === true && 支名可用('hotfix/9-fu').行 === true && 支名可用('release/1.2.3-do').行 === true &&
@@ -133,7 +133,7 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 分支类型:'重构', 提交分�
   台.判('25 认不出类的拒，报的话把那四条形状列出来；空名字也拒且说清是那一格空的',
     支名可用('feature/外46').行 === false && /四类/.test(支名可用('feature/外46').话) &&
     支名可用('').行 === false && /那一行是空的/.test(支名可用('').话) && 支名可用(null).行 === false);
-  const 抄 = ['src/_build/pr.mjs', 'src/_build/text-icon.mjs', 'src/_build/release.mjs']
+  const 抄 = ['src/_build/pr.mjs', 'src/_build/release.mjs']
     .filter(p => { const 正 = rd(p).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
       return /支名形状\.test\(/.test(正) || /可推远程\([^)]*\)\.行/.test(正); });
   台.判('26 收与不收不再各处判第二遍：那三颗文件里不许再出现 支名形状.test( 或 可推远程(...).行（都改叫 支名可用）',

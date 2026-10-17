@@ -71,7 +71,7 @@ export const 拼装支 = 'assemble';
 
 /* 打包那三样的落点，和那一本「这一枚是什么形状」的账（2026-10-14 加）：
    release.mjs 每打成一枚就往这一本里记一笔（哪一枚 exe、简装还是完整、带了哪几家插件与哪几项功能），
-   text-icon.mjs 读它，屏上才分得出「全功能那一枚是哪一份文件」—— 五枚 exe 的名字只差那一段短哈希，
+   谁要分「全功能那一枚是哪一份文件」就读这一本 —— 五枚 exe 的名字只差那一段短哈希，
    他 2026-10-14 那句「找不到全功能的完整的安装包」就是被这个卡的。
    这一格整个被 .gitignore 第一节（根上默认全拒）挡着，不进仓、不上公开面；名字只在这两份里写这一处。 */
 export const 产物格 = path.join(TREE, 'dist', 'tauri');
@@ -524,7 +524,7 @@ function 落到位(笔){
   }
   /* 补一次索引里的"这份文件现在什么样"（大小、时间）。少了这一手，凡是有换行换算的份（*.bat 是 eol=crlf：
      仓里存 LF、盘上出 CRLF，两个字节数天生不一样）都会被下一趟 status 当成改了 ——
-     量出来的：--收改动 拼完一棵之后 status 报「M src/tools/text-icon.bat」，可 git diff 说没差，
+     量出来的：--收改动 拼完一棵之后 status 报「M src/tools/start-fd.bat」，可 git diff 说没差，
      而发布那道闸吃的正是 status --porcelain，会当着他停在一处根本不存在的改动上。 */
   git(TREE, ['update-index', '--really-refresh']);
 }

@@ -36,8 +36,6 @@ const 台 = 记账('gate-prflow46');
 const pr = rd('src/_build/pr.mjs');
 const rel = rd('src/_build/release.mjs');
 const rep = rd('src/_build/plugin-repos.mjs');
-const ui = rd('src/_build/text-icon.mjs');
-const pg = rd('src/_build/text-icon.html');
 const scn = rd('src/_build/public-scan.mjs');
 const lst = rd('src/_build/push-list.mjs');
 const 提PR = pr.slice(pr.indexOf("has('--提交PR')"), pr.indexOf('else 跑(() => 停('));
@@ -72,8 +70,8 @@ const pr码 = 代码(pr), rel码 = 代码(rel);
   (pr码.match(/'push'/g) || []).length);
 台.判('没有任何一条路推 main：push 与 main 这两个参数不同在一句里，也没有 push origin main 那一串',
   !/'push'[^\n]*'main'/.test(pr码) && !/'push', 'origin', 'main'/.test(pr码));
-台.判('第一次那一颗整块拆干净了：这一颗与那一屏里「建远程」这三个字一处都不留（连注释里都不许留成一枚还能按的钮）',
-  !/建远程/.test(pr) && !/建远程/.test(rd('src/_build/text-icon.mjs')) && !/建远程/.test(rd('src/_build/text-icon.html')));
+台.判('第一次那一颗整块拆干净了：pr.mjs 里「建远程」这三个字一处都不留（连注释里都不许留成一枚还能按的钮）',
+  !/建远程/.test(pr) && !/'push', 'origin', 'main'/.test(pr));
 台.判('远程那一头万一没有 main（那一根被人删了、或这台挂错了远程）：同步那一道照样当场停，报的是人话，而且不替你重建那一根',
   同步.includes('if(!表.main) 停(远程没main话(表))') && 远程话.includes('这一颗什么都不推') && 远程话.includes('这一颗不替你重建 main 那一根'));
 台.判('没有 --force、没有 -f、没有强推那一手', !/--force/.test(pr码) && !/'-f'/.test(pr码));
@@ -250,27 +248,12 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 提交分支:'feature/46-tauri-dat
   确认词 === '推' && 样.includes('亲手敲一个「推」字') && 样.includes('回车、空、别的字都不算'));
 
 /* ---------- 八 ---------- */
-台.题('八、那一屏 2026-10-16 整块撤了「版本与推送」：那一摊只剩 pr.mjs 与 release.mjs 两颗命令');
-台.判('1 提交 PR 与打包发版那一整手只剩命令：pr.mjs 的 --提交PR、release.mjs 的 --照清单发 还在原处，那一屏既不 spawn 它们，也没有那两颗钮',
-  pr.includes("has('--提交PR')") && rel.includes("has('--照清单发')") &&
-  !ui.includes("'src/_build/pr.mjs'") && !ui.includes("'src/_build/release.mjs'") &&
-  !pg.includes('id="pr"') && !pg.includes('id="发"'));
-台.判('2 没合并就打包那一道还在：release.mjs 当场停，报的是那句「先合并 PR，再打包」与 merge-base --is-ancestor 那一眼；那一屏连这句回绝话都没有',
-  rel.includes('先合并 PR，再打包 —— 号要钉在 main 上真实存在的那一笔上') && rel.includes('merge-base') &&
-  !ui.includes('先合并 PR'));
-台.判('3 顶上那三格（提交分支 / 本轮说明 / 分支类型）不进任何屏：那一屏不认支名也不认类型，那两把尺只住在 push-list 与 pr.mjs 里',
-  !pg.includes('id="支"') && !pg.includes("取('型')") && !ui.includes('支名可用') && !ui.includes('支类合规') &&
-  pr.includes('支名可用(串).行') && pr.includes("from './push-list.mjs'"));
-台.判('4 「这几格还空着」那道闸从前是那一屏与后端各拿一份：屏撤了之后这一台一个字都不读那一格清单（清单读写归 pr.mjs 与 release.mjs 那两头）',
-  !ui.includes('等字的格') && !pg.includes('等字的格') && !ui.includes('读清单显示') && !ui.includes('改清单') &&
-  !ui.includes("from './push-list.mjs'"));
-台.判('5 那一屏不再有任何一笔的输入框（提交说明、更新描述那些格子跟着那一页一起撤；他写的字还是进那一格明文清单）',
-  !pg.includes('data-会动=') && !pg.includes('参照：') && !pg.includes('textarea'));
-台.判('6 往远程送东西那三道连同「敲那一个字才算确认」一起从这一屏撤了：这一台不带 --提交PR、不带 --已确认、没有收字那一颗；本机那三道（只听 127.0.0.1、随机码、坏编码不砸台）由 gate-texticon46 第二与第四节钉',
-  !ui.includes('--提交PR') && !ui.includes('--已确认') && !ui.includes('收字') && !pg.includes('确认词') && !ui.includes('确认词'));
-台.判('7 那一份「这一趟要推什么」的单只在 pr.mjs 里摊：写明 main、assemble 那条拼装的分支、tag、集成分支都不推；那一屏不再有摊单那一格，也不自己再算一份',
+台.题('八、打包与摊单这两道自己的闸（这一台开发期小工具长成什么样不在这里钉 —— 它归 gate-texticon46）');
+台.判('1 没合并就打包：release.mjs 当场停，报的是那句「先合并 PR，再打包」与 merge-base --is-ancestor 那一眼',
+  rel.includes('先合并 PR，再打包 —— 号要钉在 main 上真实存在的那一笔上') && rel.includes('merge-base'));
+台.判('2 那一份「这一趟要推什么」的单只在 pr.mjs 里摊：写明 main、assemble 那条拼装的分支、tag、集成分支都不推，别处不另算第二份',
   pr.includes('main：不推（只能你人工合并）· assemble 那条拼装的分支：不推 · tag：不推') && pr.includes('：不推（永不进远程）') &&
-  !pg.includes('这一趟还没跑，一个字节都没送') && !ui.includes("'/api/摊单'") && !ui.includes('前瞻单') && !ui.includes('提交单'));
+  !rel.includes('main：不推（只能你人工合并）') && !lst.includes('main：不推（只能你人工合并）'));
 
 /* ---------- 九 ---------- */
 台.题('九、公开面那道闸（推之前必须过）');
@@ -336,11 +319,11 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
 台.判('确认不过就回 false，--提交PR 那一串里推支与建 PR 都排在它后面（不确认就走不到 push）',
   pr.indexOf('要他确认(') < pr.indexOf('推支(支.名') && pr.indexOf('要他确认(') < pr.indexOf('开PR(支.名') &&
   /if\(!要他确认\(/.test(pr) && 要确认.includes('return false'));
-台.判('那一个「推」字只由终端亲口给：pr.mjs 的 要他确认 认的还是 push-list 那一颗 确认词；那一屏既不问也不代填（连 确认词 这三个字都不该出现）',
+台.判('那一个「推」字只由终端亲口给：要他确认 认的还是 push-list 那一颗 确认词，比法只这一处',
   要确认.includes("'  确认词：' + 确认词 + ' > '") && 要确认.includes('if(答 !== 确认词)') &&
-  !ui.includes('确认词') && !pg.includes('确认词') && !ui.includes('当值.收'));
-台.判('那一颗字只有一个出处：push-list 导出的 确认词，pr/release/ui 都没再写死一遍',
-  !/=== '推'/.test(pr + rel + ui) && 确认词 === '推' && pr.includes("from './push-list.mjs'") && pr.includes('确认词'));
+  要确认.includes('读不到终端输入') && !/=== '推'/.test(要确认));
+台.判('那一颗字只有一个出处：push-list 导出的 确认词，pr 与 release 都没再写死一遍',
+  !/=== '推'/.test(pr + rel) && 确认词 === '推' && pr.includes("from './push-list.mjs'") && pr.includes('确认词'));
 
 台.题('十二、号那套一个都没改');
 台.判('主程序还是取 main 上那笔空的「发布」记号，号 = 底号+build.<那一笔>',
@@ -448,16 +431,10 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
     !/['"]fetch['"]|['"]push['"]|update-ref/.test(代码(切出(rep, '本地前瞻支'))) &&
     代码(切出(rep, '本地前瞻支')).includes('catch(e){ continue; }'),
     (代码(切出(rep, '本地前瞻支')).match(/['"]fetch['"]|['"]push['"]|update-ref/g) || []).join('、'));
-  台.判('4 屏上不再摆那一栏（2026-10-14 他把拆分撤了：八项都在 main 里；2026-10-16 那一页整块没了）：那一格、那颗钮、那种勾都不在屏上',
-    !pg.includes('function 画前瞻') && !pg.includes('id="只在"') && !pg.includes('id="八项"') &&
-    !pg.includes('id="推项格"') && !pg.includes('id="集成"') && !pg.includes('id="完整"'),
-    ['画前瞻', 'id="只在"', 'id="八项"', 'id="推项格"', 'id="集成"', 'id="完整"'].filter(s => pg.includes(s)).join('、') || '屏上六样都没有');
-  台.判('5 重建集成分支那一道只剩命令：pr.mjs 的 --重建集成分支 还在（不点 --支= 就取量出来的那些），这一屏那两条路由（/api/集成 与 /api/完整）跟着那一页一起撤了',
-    pr.includes("has('--重建集成分支')") && pr.includes('一条都没有 ——') &&
-    !ui.includes("'/api/集成'") && !ui.includes("'/api/完整'") && !ui.includes('--重建集成分支') &&
-    !pg.includes('id="集成"') && !pg.includes('id="完整"'));
-  台.判('6 那几条一条都没量到，由命令自己说那一行「一条都没有」，不拿空列表去挪那一根；屏上那道 400 跟着那一页一起撤了',
-    !ui.includes('一条支都没勾') && pr.includes('一条都没有 ——'));
+  台.判('4 这一颗只回话不写字：量出来的每一条都是 本地前瞻支 现算的，全程不 fetch / 不 push / 不挪指针（上面第 3 条钉的就是这个）',
+    列.every(x => typeof x.名 === 'string' && typeof x.类 === 'string' && x.笔数 >= 0), 列.length + ' 条');
+  台.判('5 重建集成分支那一道只剩命令：不点 --支= 就取量出来的那些，一条都没量到当场说「一条都没有」，不拿空列表去挪那一根',
+    pr.includes("has('--重建集成分支')") && pr.includes('一条都没有 ——'));
 }
 
 台.收尾();
