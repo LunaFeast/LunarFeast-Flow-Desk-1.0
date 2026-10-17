@@ -319,6 +319,12 @@ const 那 = await import('../../_build/text-icon.mjs');
   台.判('7 换这张不再走系统那个选文件框（每张卡上那枚隐藏 file input 撤了），改成挂成待挑、到柜里点中一张',
     !/data-档="/.test(pg) && pg.includes("挑 = { 类:'换', 名: 换.dataset['换'] }") &&
     pg.includes("挑 = { 类:'换包'") && pg.includes('async function 送那张(') && pg.includes('柜开口()'));
+  台.判('8 图标柜与那一片卡是左右并列（他 2026-10-17 那句「滚动下去了就看不到图标库怎么挑！！换成左右并列」）：两栏网格、柜栏排在卡栏前面、两栏各自定高各自滚、柜栏顶上填路径那一行钉住不动',
+    /\.两栏\{ display:grid; grid-template-columns:minmax\(340px,32%\) 1fr/.test(pg) &&
+    /\.柜栏\{[^}]*height:calc\(100vh - 150px\)/.test(pg) && /\.卡栏\{ height:calc\(100vh - 150px\); overflow:auto/.test(pg) &&
+    /\.柜栏 > \.行\{ position:sticky/.test(pg) &&
+    pg.indexOf('class="两栏"') < pg.indexOf('class="柜栏"') && pg.indexOf('class="柜栏"') < pg.indexOf('class="卡栏"') &&
+    pg.indexOf('id="柜格"') < pg.indexOf('id="图格"'));
 }
 
 台.题('十、界面文字那一栏收紧（他 2026-10-17 第 1 条）：三格不再拉满整行，勾的是哪一句要看得出来');

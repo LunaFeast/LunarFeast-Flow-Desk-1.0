@@ -54,9 +54,15 @@
   .字行 label{ flex:0 0 auto; white-space:nowrap; }
   .字行.删{ background:#fbeeea; border-left-color:var(--急); }
   .字行.删 .句{ text-decoration:line-through; color:var(--急); }
-  /* 图标柜（他 2026-10-17 第 2、3 条）：指定一格，把里面能预览的图全画出来，点中一张去换 / 去加 */
-  .柜{ display:grid; grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); gap:8px; margin-top:8px;
-        border:1px solid var(--线); background:var(--块); padding:10px; max-height:340px; overflow:auto; }
+  /* 图标柜：指定一格，把里面能预览的图全画出来，点中一张去换 / 去加。
+     左右并列（他 2026-10-17 那句「滚动下去了就看不到图标库怎么挑！！换成左右并列」）：
+     左栏自己滚、顶上填路径那一行钉住不动，右栏那一片卡自己滚 —— 两栏同时在屏幕上。 */
+  .两栏{ display:grid; grid-template-columns:minmax(340px,32%) 1fr; gap:14px; align-items:start; }
+  .柜栏{ display:flex; flex-direction:column; height:calc(100vh - 150px); min-width:0; }
+  .柜栏 > .行{ position:sticky; top:0; z-index:1; background:var(--底); }
+  .卡栏{ height:calc(100vh - 150px); overflow:auto; min-width:0; }
+  .柜{ flex:1 1 auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px; margin-top:8px;
+        border:1px solid var(--线); background:var(--块); padding:10px; overflow:auto; align-content:start; }
   .柜格{ display:flex; flex-direction:column; align-items:center; gap:4px; font:inherit; font-size:12px;
          padding:6px 4px; border:1px solid transparent; border-radius:3px; background:none; cursor:pointer; color:var(--字); }
   .柜格:hover{ border-color:#b9b1a8; background:#f7f3ee; }
@@ -65,6 +71,7 @@
   .柜格 span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .挑{ font-size:13px; color:var(--急); }
   .挑:empty{ display:none; }
+  @media (max-width:1100px){ .两栏{ grid-template-columns:1fr; } .柜栏,.卡栏{ height:auto; } .柜{ max-height:340px; } }
 </style>
 </head>
 <body>
@@ -80,32 +87,39 @@
   <div class="提示" id="git警"></div>
 
 <div id="p图" hidden>
-  <div class="行">
-    <span class="状态" id="图情">正在数 icons 这个文件夹……</span>
-    <span style="flex:1"></span>
-    <button id="图重">重新数一遍</button>
-    <button id="图对">重新对齐一遍</button>
+ <div class="两栏">
+  <div class="柜栏">
+    <div class="行">
+      <label for="柜路">图标柜</label>
+      <input type="text" id="柜路" placeholder="这台电脑上放图的一格" autocomplete="off" spellcheck="false" style="flex:1 1 160px;min-width:150px">
+      <button id="柜列">列这一格</button>
+    </div>
+    <div class="行">
+      <label for="柜搜">找</label>
+      <input type="text" id="柜搜" placeholder="名字里有这几个字" autocomplete="off" style="flex:1 1 140px;min-width:120px">
+      <input type="file" id="柜档" accept=".svg,.png,.jpg,.jpeg,.webp,.gif">
+    </div>
+    <div class="挑" id="挑话"></div>
+    <div class="柜" id="柜格" hidden></div>
   </div>
-  <div class="行">
-    <label for="加名">加一张图</label>
-    <input type="text" id="加名" placeholder="名字空着就照挑中的文件名改（如 gear2.svg；子文件夹写成 tools/gear2.svg）" autocomplete="off" spellcheck="false" style="min-width:300px">
-    <input type="file" id="加档" accept=".svg,.png,.jpg,.jpeg,.webp,.gif">
-    <button id="加送">添进去</button>
-    <button id="加柜">从图标柜挑一张添进去</button>
-    <span class="状态">挑完文件名字自己填上，添完点「重新对齐一遍」把它记进图标索引</span>
+  <div class="卡栏">
+    <div class="行">
+      <span class="状态" id="图情">正在数 icons 这个文件夹……</span>
+      <span style="flex:1"></span>
+      <button id="图重">重新数一遍</button>
+      <button id="图对">重新对齐一遍</button>
+    </div>
+    <div class="行">
+      <label for="加名">加一张图</label>
+      <input type="text" id="加名" placeholder="名字空着就照挑中的文件名改（如 gear2.svg；子文件夹写成 tools/gear2.svg）" autocomplete="off" spellcheck="false" style="min-width:220px">
+      <input type="file" id="加档" accept=".svg,.png,.jpg,.jpeg,.webp,.gif">
+      <button id="加送">添进去</button>
+      <button id="加柜">从图标柜挑一张添进去</button>
+    </div>
+    <div class="提示" id="图果"></div>
+    <div class="格" id="图格"></div>
   </div>
-  <div class="行">
-    <label for="柜路">图标柜</label>
-    <input type="text" id="柜路" placeholder="这台电脑上放图的一格（自己扫自己画，不用系统那个选文件框）" autocomplete="off" spellcheck="false" style="flex:1 1 260px;min-width:240px">
-    <button id="柜列">列这一格</button>
-    <label for="柜搜">找</label>
-    <input type="text" id="柜搜" placeholder="名字里有这几个字" autocomplete="off" style="min-width:150px">
-    <input type="file" id="柜档" accept=".svg,.png,.jpg,.jpeg,.webp,.gif">
-  </div>
-  <div class="挑" id="挑话"></div>
-  <div class="柜" id="柜格" hidden></div>
-  <div class="提示" id="图果"></div>
-  <div class="格" id="图格"></div>
+ </div>
 </div>
 
 <div id="p字" hidden>
