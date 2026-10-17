@@ -1,1 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2v8.6"/><path d="M6.4 8.6 10 12.2l3.6-3.6"/><path d="M3.4 13.4v3.2h13.2v-3.2"/></svg>
+<!-- @license lucide-static v1.59.0 - ISC -->
+<svg
+  class="lucide lucide-hard-drive-download"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M12 2v8" />
+  <path d="m16 6-4 4-4-4" />
+  <rect width="20" height="8" x="2" y="14" rx="2" />
+  <path d="M6 18h.01" />
+  <path d="M10 18h.01" />
+</svg>

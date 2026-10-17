@@ -10,8 +10,11 @@
      · 界面文字 —— 读 data\ui-text.yaml，改哪一句先写回那一份，再「预览改动」→「写进源码」→
        「重新生成产物」；这四步全叫 src\pack\uitext.cjs 那一份（2026-10-13 定的方案甲：句子落进源码那一份）。
      · 图标素材 —— 读 icons\索引.txt 与那张索引的生成器 src\_build\ico-index.mjs：数图、
-       看哪份代码叫它几次、换一张 / 添一张 / 删一张（删之前先看有没有代码在叫它），
-       插件包那一格的封面同名盖进它自己那一格。
+       看哪份代码叫它几次、换一张 / 添一张 / 删一张（删之前先看有没有代码在叫它）。
+       换与加都落两处：树根 icons\（程序此刻读的那一层）+ 出厂 src\pack\icons\（装到机器上带的那一份）——
+       只写前者的话他换的图活在本地，下一趟生成与打包带的还是线稿画出来的那一张（2026-10-17 他点的那条「保存呢」）。
+       插件包那一格的封面住在它自己那一家的 data\plugins\<包>\images\ 里（一家一仓之后在隔壁那棵），
+       位置问 src\_build\邻居.mjs 那把尺；索引登记了、那一格里还没有的那一张给一枚占位符，点下去当场放进去。
 
    往远程送东西、起分支与提交、打安装包、记版本号那些，2026-10-16 从这一屏整块撤了 ——
    那些动作还在命令行里（src\_build\pr.mjs 与 src\_build\release.mjs 那两颗），要跑由他在终端里跑。
@@ -30,6 +33,8 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
 import { TREE } from './plugin-repos.mjs';
+/* 一家一仓之后，插件那一张封面住在隔壁那一棵里；"到底在哪一格"只问这一把尺，别处不许再算第二套。 */
+import { 找 as 邻找, 出自 as 邻出自 } from './邻居.mjs';
 /* 往远程送东西、记版本号、打安装包那些都不在这一屏上了（2026-10-16 他点的：这一台只留改文字与改图标），
    所以 pr.mjs / push-list.mjs / version.mjs / forward-features.mjs 那四本这一份一概不再 import —— 那些动作还在命令行里。 */
 
@@ -88,12 +93,28 @@ const 图标后缀 = ['.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif'];
 /* 那一层住哪：默认仓根 icons\；环境变量 FD_ICONS 指到别处（与页面服务那台同一个名字，见 src\_fd\fd-serve.mjs 顶上）——
    闸要真跑"加一张、换一张、删一张"，拿沙盒当那一层，不往你的 icons\ 里落一个字。 */
 const 图标层 = process.env.FD_ICONS ? path.resolve(process.env.FD_ICONS) : path.join(TREE, 'icons');
+/* 出厂那一格 src\pack\icons\：装到机器上带的就是这一格（见 src\_build\ico-dump.mjs 顶上那段），
+   所以屏上换一张图必须同时落进这里，只写树根 icons\ 的话他换的图活在本地、打包带的还是线稿。
+   跟着 图标层 的那一棵走：闸把图标那一层指到沙盒，出厂这一格就在沙盒里，不往他仓落一个字。 */
+const 厂层 = path.join(path.dirname(图标层), 'src', 'pack', 'icons');
 /* 插件包那一格同一个口子（FD_PLUGINS）：闸要真跑「往包里盖一张封面」，得能指到沙盒那一棵，
-   不往你的 data\plugins\ 里落一个字。默认还是仓里那一格（屏上取图、列清单都从那儿读）。 */
+   不往你的 data\plugins\ 里落一个字。没指的时候不问这一格 —— 见下面 插件找()。 */
 const 插件层 = process.env.FD_PLUGINS ? path.resolve(process.env.FD_PLUGINS) : path.join(TREE, 'data', 'plugins');
 const 索引路 = path.join(图标层, '索引.txt');
 /* 索引一行一条：`名字 = 这是干什么的 —— 引用：某文件×3、某文件×1`；段首那几行以 # 起头。
    认不动的行整行留着当"说不清的"，不猜。 */
+/* 插件那一张封面到底在哪一格（2026-10-16 一家一仓之后）：主程序仓 data\plugins\ 那一格搬空了，
+   封面住在 <开发那一摊>\plugins\<仓名>\data\plugins\<包>\images\ 里。从前这一台只认仓里那一格，
+   于是七张封面全报「取不到这个文件」。现在问 邻居.mjs 那把尺：本仓先问、再按 仓名 那张表问那七棵，
+   谁那儿有就是谁的；哪一棵都没有就回本仓那一条（占位符点下去就新建在那儿）。
+   FD_PLUGINS 指到别处时一律不问邻居 —— 闸在沙盒里真跑，不许往他家插件仓落一个字。 */
+const 插件相 = (包, 档) => 'data/plugins/' + 包 + '/images/' + 档;
+function 插件找(包, 档){
+  return process.env.FD_PLUGINS ? path.resolve(插件层, 包, 'images', 档) : 邻找(插件相(包, 档));
+}
+function 插件出自(包, 档){
+  return process.env.FD_PLUGINS ? '沙盒那一格' : 邻出自(插件相(包, 档));
+}
 function 读索引(){
   let 文 = '';
   try{ 文 = fs.readFileSync(索引路, 'utf8'); }catch(e){ return { 错: '读不到 icons\\索引.txt：' + ((e && e.code) || (e && e.message) || e), 条: [], 段: [] }; }
@@ -124,8 +145,10 @@ function 图标单(){
     if(!图标后缀.includes(后)) return;
     const 键 = 层 === '' ? 名.replace(/\.[a-z0-9]+$/i, '') : 层 + '-' + 名.replace(/\.[a-z0-9]+$/i, '');
     const 条 = 按名.get(键);
-    单.push({ 名: 层 ? 层 + '/' + 名 : 名, 键, 层: 层 === '' ? '（icons 根下）' : 层,
-      大: fs.statSync(全).size, 说: 条 ? 条.说 : '', 引用: 条 ? 条.引用 : '', 段: 条 ? 条.段 : '', 登记: !!条 });
+    const 相 = 层 ? 层 + '/' + 名 : 名;
+    单.push({ 名: 相, 键, 层: 层 === '' ? '（icons 根下）' : 层,
+      大: fs.statSync(全).size, 说: 条 ? 条.说 : '', 引用: 条 ? 条.引用 : '', 段: 条 ? 条.段 : '', 登记: !!条,
+      出厂: 出厂看(相) });
   };
   for(const it of 项){
     if(it.isFile()) 收(it.name, '', path.join(图标层, it.name));
@@ -142,15 +165,28 @@ function 图标单(){
     const 尾 = /·\s*([A-Za-z0-9._-]+)\s*$/.exec(x.说);
     const 档 = 尾 ? 尾[1] : 'icon.svg';
     const 包 = x.名.slice(5);
-    const 全 = path.join(插件层, 包, 'images', 档);
+    const 全 = 插件找(包, 档);
     let 大 = -1;
     try{ 大 = fs.statSync(全).size; }catch(e){}
-    return { 名: 'data/plugins/' + 包 + '/images/' + 档, 键: x.名, 包, 档, 层: '插件包 ' + 包, 大, 说: x.说.replace(/\s*·\s*[a-z0-9.]+$/i, '').trim(),
+    return { 名: 'data/plugins/' + 包 + '/images/' + 档, 键: x.名, 包, 档, 全, 出自: 插件出自(包, 档),
+      层: '插件包 ' + 包, 大, 说: x.说.replace(/\s*·\s*[a-z0-9.]+$/i, '').trim(),
       引用: x.引用, 段: x.段, 登记: true, 在不在: 大 >= 0 };
   }).sort((a, b) => a.键 < b.键 ? -1 : 1);
-  const 通用没图 = 索.条.filter(x => !/^pack-/.test(x.名) && !单.some(y => y.键 === x.名)).map(x => x.名);
+  /* 索引登记了、icons 里却没那张图：给一张占位卡，让他当场放一张进去。
+     该放在哪儿照 收() 那个键的写法算回来（键里带 "-" 且那一段确实是个子文件夹，就是 <子文件夹>\<名>.svg），
+     后缀一律 .svg —— 出厂那一格就是按名字画线稿的，装到机器上带的也是这个名字。 */
+  const 通用没图 = 索.条.filter(x => !/^pack-/.test(x.名) && !单.some(y => y.键 === x.名)).map(x => {
+    const 刀 = x.名.indexOf('-');
+    let 补 = x.名 + '.svg';
+    if(刀 > 0){
+      try{ if(fs.statSync(path.join(图标层, x.名.slice(0, 刀))).isDirectory()) 补 = x.名.slice(0, 刀) + '/' + x.名.slice(刀 + 1) + '.svg'; }catch(e){}
+    }
+    return { 名: x.名, 键: x.名, 段: x.段, 说: x.说, 引用: x.引用, 补 };
+  });
   return { 错: 索.错, 单, 插件, 张: 单.length, 插件张: 插件.length,
-    没登记: 单.filter(x => !x.登记).map(x => x.键), 没图: 通用没图, 插件丢图: 插件.filter(x => !x.在不在).map(x => x.键) };
+    没登记: 单.filter(x => !x.登记).map(x => x.键), 没图: 通用没图.map(x => x.名), 没图条目: 通用没图,
+    插件丢图: 插件.filter(x => !x.在不在).map(x => x.键),
+    没进厂: 单.filter(x => x.出厂 !== '同').map(x => x.名) };
 }
 
 /* ---------- 界面文字那一摊（他 2026-10-12 点的另一半天）----------
@@ -214,6 +250,7 @@ function 文字写(文, 改){
    他写一次路径，这里出一窗真预览，点中哪张就拿哪张去换 / 去加。上一次那一格由页面存在浏览器自己的
    本地存储里（这一台不落任何文件）。 */
 const 柜MIME = { '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.gif':'image/gif' };
+const 柜上限 = 30000;
 function 柜那格(路){
   const 串 = String(路 == null ? '' : 路).trim();
   if(!串) return { 错:'先写一个文件夹（这台电脑上的任意一格，如 ' + path.join(TREE, 'icons') + '）' };
@@ -222,7 +259,9 @@ function 柜那格(路){
   if(!统.isDirectory()) return { 错:'这一格不是文件夹：' + 串 };
   return { 根: path.resolve(串) };
 }
-/* 只往下走一层（icons 那一格就是 根 + 子文件夹 两层，跟取图那两道路径闸一个口径）；一张最多读 4000 张就停 */
+/* 只往下走一层（icons 那一格就是 根 + 子文件夹 两层，跟取图那两道路径闸一个口径）。
+   上限给到 3 万张：他那一整柜（src\icons by lucide 那种 2169 张）要一次全摆出来 —— 从前卡在一处就画不全，
+   「不知道这张叫什么」正是要看图的时候，截断等于把这一格的功能砍掉。页面上的图是懒取的，滚到哪儿读到哪儿。 */
 function 柜列(路){
   const 判 = 柜那格(路); if(判.错) return 判;
   const 单 = [];
@@ -230,7 +269,7 @@ function 柜列(路){
     let 项 = [];
     try{ 项 = fs.readdirSync(格, { withFileTypes: true }); }catch(e){ return; }
     for(const it of 项){
-      if(单.length >= 4000) return;
+      if(单.length >= 柜上限) return;
       const 全 = path.join(格, it.name);
       if(it.isDirectory()){ if(层 < 1) 走(全, 层 + 1); continue; }
       const 后 = path.extname(it.name).toLowerCase();
@@ -241,7 +280,7 @@ function 柜列(路){
   };
   走(判.根, 0);
   单.sort((a, b) => a.相 < b.相 ? -1 : 1);
-  return { 错:'', 根: 判.根, 张: 单.length, 单 };
+  return { 错:'', 根: 判.根, 张: 单.length, 全: 单.length < 柜上限, 单 };
 }
 function 柜一张(路, 相){
   const 判 = 柜那格(路); if(判.错) return 判;
@@ -261,19 +300,42 @@ function 柜一张(路, 相){
    单张上限 512 KB（图标本来就该是几 KB 的线稿，超了多半是传错文件）。
    删之前先看索引说没说"有代码在叫它"：说了就拒删，把是哪几处报出来 —— 换图可以，删掉正在用的图不行。 */
 const 图标上限 = 512 * 1024;
-function 图标落点(名){
+function 图标落点(名, 根){
   const 串 = String(名 == null ? '' : 名).trim();
   if(!串 || 串.length > 80 || /[\\:*?"<>|\u0000-\u001f]/.test(串)) return { 错:'这个名字不成样子（不许带反斜杠、冒号、星号、问号、尖括号）' };
   if(/^索引\.txt$/i.test(串.replace(/^.*[\\/]/, ''))) return { 错:'icons\\索引.txt 是那份说明书，不是图标，不许动它' };
-  const 根 = path.resolve(图标层);
-  const 全 = path.resolve(根, 串);
-  if(!(全 === 根 || 全.startsWith(根 + path.sep))) return { 错:'只许在 icons 这个文件夹里改（不许往外钻）' };
+  const 根全 = path.resolve(根 || 图标层);
+  const 全 = path.resolve(根全, 串);
+  if(!(全 === 根全 || 全.startsWith(根全 + path.sep))) return { 错:'只许在 icons 这个文件夹里改（不许往外钻）' };
   const 父 = path.resolve(path.dirname(全));
-  if(父 !== 根 && path.resolve(path.dirname(父)) !== 根) return { 错:'子文件夹只认一层（icons\\<那一层>\\<图>），再往里钻不算图标' };
+  if(父 !== 根全 && path.resolve(path.dirname(父)) !== 根全) return { 错:'子文件夹只认一层（icons\\<那一层>\\<图>），再往里钻不算图标' };
   if(!图标后缀.includes(path.extname(全).toLowerCase())) return { 错:'只收这六种后缀：' + 图标后缀.join(' ') };
   const 基 = path.basename(全);
   if(基.length > 60 || !/^[\w.\-]+$/.test(基)) return { 错:'文件名只许字母数字点横杠，60 字以内' };
-  return { 全, 根, 父 };
+  return { 全, 根: 根全, 父 };
+}
+/* 这一张在出厂那一格里同不同：一样 / 不一样 / 没有。
+   「不一样」与「没有」都是同一件事 —— 装到机器上带的还不是屏上这一张（出厂那一格才是随包件）。 */
+function 出厂看(相){
+  try{
+    const 从 = fs.statSync(path.join(图标层, 相));
+    const 到 = fs.statSync(path.join(厂层, 相));
+    if(!到.isFile()) return '没有';
+    if(从.size !== 到.size) return '不一样';
+    return fs.readFileSync(path.join(图标层, 相)).equals(fs.readFileSync(path.join(厂层, 相))) ? '同' : '不一样';
+  }catch(e){ return '没有'; }
+}
+/* 把树根这一张原样复制进出厂那一格（同名同后缀同子文件夹）。换 / 加 写完紧跟着叫它，
+   所以屏上点「换这张」之后落的是两处：icons\（程序此刻读的）与 src\pack\icons\（打安装包带的）。 */
+function 进出厂(相){
+  const 从 = 图标落点(相), 到 = 图标落点(相, 厂层);
+  if(从.错) return { 错:从.错 };
+  if(到.错) return { 错:到.错 };
+  if(!fs.existsSync(从.全)) return { 错:'icons\\' + 相 + ' 这一张盘上没有，没什么可复制进出厂' };
+  const 字 = fs.readFileSync(从.全);
+  fs.mkdirSync(到.父, { recursive: true });
+  fs.writeFileSync(到.全, 字);
+  return { 好:true, 相, 大:字.length, 路径:'src/pack/icons/' + 相 };
 }
 function 图标写(名, 基64, 模式){
   const 落 = 图标落点(名);
@@ -287,28 +349,32 @@ function 图标写(名, 基64, 模式){
   if(字.length > 图标上限) return { 错:'这一张 ' + 字.length.toLocaleString() + ' 字节，超过 ' + 图标上限.toLocaleString() + ' 字节上限（图标该是几 KB 的线稿，多半是传错文件了）' };
   fs.mkdirSync(落.父, { recursive: true });
   fs.writeFileSync(落.全, 字);
-  return { 好:true, 新建:!在, 名, 大:字.length };
+  /* 同一份字节跟着复制进出厂那一格 —— 不复制的话他换的图只活在本地这一层，下一趟生成与打包带的还是线稿 */
+  const 厂 = 进出厂(path.relative(落.根, 落.全).split(path.sep).join('/'));
+  return { 好:true, 新建:!在, 名, 大:字.length, 出厂:厂 };
 }
-/* 插件包那一张封面：不住 icons\，住在 data\plugins\<包>\images\ 里，那一个文件名写在它的插件清单与那份索引上。
-   所以这里只许「同名盖一张」：换了文件名等于壳里叫不到那张图，要换格式得他自己在清单与索引里改。 */
+/* 插件包那一张封面：不住 icons\，住在它自己那一家的 data\plugins\<包>\images\ 里
+   （一家一仓之后那一格在隔壁那棵，位置问 插件找()），那一个文件名写在它的插件清单与那份索引上。
+   所以这里只许「同名盖一张」：换了文件名等于壳里叫不到那张图，要换格式得他自己在清单与索引里改。
+   索引登记了、那一格里确实还没有那一张的（占位符那一手）：就在同一格新建出来，落在哪一棵原样报回屏上。 */
 function 插件封面(包, 档){
   if(!/^[a-z0-9][a-z0-9-]*$/.test(String(包 || ''))) return { 错:'包名只许小写字母、数字、连字符：「' + 包 + '」' };
   if(!/^icon\.(svg|png|jpe?g|webp|gif)$/i.test(String(档 || ''))) return { 错:'插件封面只认 icon.<六种后缀>：「' + 档 + '」' };
-  const 格 = path.resolve(插件层, 包, 'images');
-  const 全 = path.resolve(格, String(档));
-  if(path.dirname(全) !== 格) return { 错:'只许写在 data\\plugins\\<包>\\images\\ 那一格里' };
-  return { 全, 格 };
+  const 全 = 插件找(包, 档);
+  const 格 = path.dirname(全);
+  if(path.basename(格) !== 'images' || path.basename(path.dirname(格)) !== String(包)) return { 错:'只许写在 data\\plugins\\<包>\\images\\ 那一格里' };
+  return { 全, 格, 出自: 插件出自(包, 档), 新建: !fs.existsSync(全) };
 }
 function 图标写插件(包, 档, 基64){
   const 落 = 插件封面(包, 档);
   if(落.错) return 落;
-  if(!fs.existsSync(落.全)) return { 错:'这一包里本来没有那张封面：' + 落.全 + '\n  要添一张新的得连它的插件清单与那份索引一起改，小助手不替你改那两处' };
   let 字;
   try{ 字 = Buffer.from(String(基64 || ''), 'base64'); }catch(e){ return { 错:'传上来的图读不懂（不是 base64）' }; }
   if(!字.length) return { 错:'传上来的图是空的' };
   if(字.length > 图标上限) return { 错:'这一张 ' + 字.length.toLocaleString() + ' 字节，超过 ' + 图标上限.toLocaleString() + ' 字节上限（图标该是几 KB 的线稿，多半是传错文件了）' };
+  fs.mkdirSync(落.格, { recursive: true });
   fs.writeFileSync(落.全, 字);
-  return { 好:true, 名:'pack-' + 包, 大:字.length, 路径:'data/plugins/' + 包 + '/images/' + 档 };
+  return { 好:true, 名:'pack-' + 包, 大:字.length, 路径:'data/plugins/' + 包 + '/images/' + 档, 新建:落.新建, 出自:落.出自 };
 }
 function 图标删(名){
   const 落 = 图标落点(名);
@@ -437,7 +503,7 @@ const 服务器 = http.createServer(async (req, res) => {
       const 包 = String(参.get('包') || ''), 档 = String(参.get('档') || 'icon.svg');
       const 判 = /^[a-z0-9][a-z0-9-]*$/.test(包) && /^icon\.(svg|png|jpe?g|webp|gif)$/i.test(档);
       后 = path.extname(档).toLowerCase();
-      全 = path.resolve(插件层, 包, 'images', 档);
+      全 = 判 ? 插件找(包, 档) : '';
       if(!判){ 发(res, 400, '插件包那张图标只认 data\\plugins\\<包>\\images\\icon.<六种后缀>'); return; }
     }else{
       const 名 = String(参.get('名') || '');
@@ -464,12 +530,24 @@ const 服务器 = http.createServer(async (req, res) => {
       if(路 === '/api/图标/加'){ 发(res, 400, '插件包的封面不给往里面添新的 —— 那一个文件名写在它的插件清单与那份索引上，要添新的那两处得一起改'); return; }
       const r = 图标写插件(String(身.包), String(身.档 || ''), 身 && 身.图);
       if(r.错){ 发(res, 400, r.错); return; }
-      JSON发(res, { 好:true, 名:r.名, 大:r.大, 路径:r.路径 });
+      JSON发(res, { 好:true, 名:r.名, 大:r.大, 路径:r.路径, 新建:r.新建, 出自:r.出自 });
       return;
     }
     const r = 图标写(String(身 && 身.名 || ''), 身 && 身.图, 路 === '/api/图标/换' ? '换' : '加');
     if(r.错){ 发(res, 400, r.错); return; }
-    JSON发(res, { 好:true, 名:r.名, 大:r.大, 新建:r.新建 });
+    JSON发(res, { 好:true, 名:r.名, 大:r.大, 新建:r.新建, 出厂:r.出厂 });
+    return;
+  }
+  /* 把树根 icons\ 里那几张复制进出厂 src\pack\icons\（装到机器上带的就是那一格）。
+     换 / 加 那两道自己已经带着复制了，这一颗管的是他在资源管理器里直接换掉的那几张。 */
+  if(路 === '/api/图标/进厂'){
+    const 身 = await 读体(req);
+    const 单 = 身 && Array.isArray(身.单) ? 身.单.map(String)
+      : (身 && 身.名 ? [String(身.名)] : []);
+    if(!单.length){ 发(res, 400, '没说要复制哪几张进出厂'); return; }
+    const 成 = [], 坏 = [];
+    for(const 名 of 单){ const r = 进出厂(名); if(r.好) 成.push(r); else 坏.push(名 + '：' + r.错); }
+    JSON发(res, { 好:!坏.length, 成, 坏 });
     return;
   }
   if(路 === '/api/图标/删'){
@@ -510,4 +588,5 @@ if(被当命令跑) 服务器.on('error', e => {
 /* 闸要从这一份里真跑那几颗判断（存句子、图标读索引、git 叫不动那两道），所以对外交出来；
    借的人不会听到端口 —— 上面那道 被当命令跑 挡着。 */
 export { 被当命令跑, 文字读, 文字写, 清单文件, 字树, 图标单, 读索引, 叫得动git, 界面文字那颗, 现场,
-  图标落点, 图标写, 图标删, 图标上限, 插件封面, 图标写插件, 插件层, 柜列, 柜一张, 图标后缀 };
+  图标落点, 图标写, 图标删, 图标上限, 插件封面, 图标写插件, 插件层, 柜列, 柜一张, 图标后缀,
+  厂层, 进出厂, 出厂看, 插件找, 柜上限 };

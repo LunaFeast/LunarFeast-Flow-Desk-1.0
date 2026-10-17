@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ROOT, rd, 尺在, 记账 } from './lib-slice.mjs';
-import { 八项, 认这项, 中文名, 分支of, 现在带不带, 合那一棵, 摊打包那一棵, 硬链接一份 } from '../../_build/forward-features.mjs';
+import { 八项, 认这项, 中文名, 分支of, 现在带不带, 合那一棵, 摊打包那一棵, 硬链接一份, 盖上没提交 } from '../../_build/forward-features.mjs';
 
 const 台 = 记账('gate-forward46');
 const 名单文 = rd('src/_build/forward-features.mjs');
@@ -189,6 +189,59 @@ const 手文 = rd('src/_build/pr.mjs');
   const 全八 = 八项.map(x => 现在带不带(根, x).带);
   台.判('今天这一棵八项都在（八条逐条问代码，不照屏上勾、也不照支名）', 全八.every(b => b === true),
     八项.filter((x, i) => 全八[i] !== true).map(x => x.中文).join('、') || '八项都在');
+}
+
+台.题('七 · 自测包要把盘上没提交的盖进那一棵（2026-10-17 那 98 张图标就是被静默丢掉的）');
+{
+  const 沙 = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-forward46-overlay-'));
+  const 仓 = path.join(沙, 'repo');
+  const g = (... a) => execFileSync('git', a, { cwd: 仓, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  fs.mkdirSync(仓, { recursive: true });
+  g('init', '-q', '-b', 'main');
+  g('config', 'user.name', 't'); g('config', 'user.email', 't@invalid');
+  fs.mkdirSync(path.join(仓, 'src'), { recursive: true });
+  /* a.txt 排在最前：git status 那一条是「 M a.txt」，开头那一格是空格 —— 从前这里被 git() 那颗的 trim() 削掉一位，
+     第一条记录整条走样、那份文件静默不盖（量过：104 条只盖 103 份）。拿它当反证钉住。 */
+  fs.writeFileSync(path.join(仓, '.gitignore'), '不回仓那一格/\n');
+  for(const 名 of ['a.txt', 'src/keep.svg']) fs.writeFileSync(path.join(仓, 名), '提交里那一份\n');
+  g('add', '-A'); g('-c', 'user.name=t', '-c', 'user.email=t@invalid', 'commit', '-qm', '基础那一笔');
+  fs.mkdirSync(path.join(仓, '不回仓那一格'), { recursive: true });
+  fs.writeFileSync(path.join(仓, '不回仓那一格/私密.txt'), '这玩意儿不许进包\n');
+  /* 盘上三种状态各来一份：改过没提交两份（头一份就是那个开头空格的）+ 新加没提交一份 */
+  fs.writeFileSync(path.join(仓, 'a.txt'), '盘上改过的那一份\n');
+  fs.writeFileSync(path.join(仓, 'src/keep.svg'), '<svg>盘上换过的图标</svg>');
+  fs.writeFileSync(path.join(仓, 'src/new.svg'), '<svg>新换的一张</svg>');
+  const 读2 = (棵, 相) => { try { return fs.readFileSync(path.join(棵.目录, 相), 'utf8'); } catch (e) { return ''; } };
+  {
+    const 摊 = 摊打包那一棵(仓, 'main', [], path.join(沙, '摊开'), [], undefined, true);
+    const 读 = 相 => { try { return fs.readFileSync(path.join(摊.目录, 相), 'utf8'); } catch (e) { return ''; } };
+    台.判('1 盖了盘上那几份：改过的与新加的逐字节一样（第一条那个开头是空格的也盖到了），那一棵里读得到的就是盘上那一份',
+      摊.盖了.盖 === 3 && 摊.盖了.没提交 === 3 && 读('a.txt') === '盘上改过的那一份\n' &&
+      读('src/keep.svg') === '<svg>盘上换过的图标</svg>' && 读('src/new.svg') === '<svg>新换的一张</svg>',
+      JSON.stringify(摊.盖了));
+    台.判('2 没进仓、又被 .gitignore 挡住的那一格不搬（自测包也不许把私密东西带进树里），跳过的也是零',
+      !fs.existsSync(path.join(摊.目录, '不回仓那一格')) && 摊.盖了.跳.length === 0, JSON.stringify(摊.盖了.跳));
+    台.判('3 工作树站的那一棵一个字没动（那一棵才是他改东西的地方，这一趟只往仓外那一格里写）',
+      fs.readFileSync(path.join(仓, 'a.txt'), 'utf8') === '盘上改过的那一份\n' && fs.existsSync(path.join(仓, 'src/new.svg')));
+    const 裸 = 摊打包那一棵(仓, 'main', [], path.join(沙, '裸'), []);
+    台.判('4 不点那一道开关时一棵不多一份：那一棵就是那一笔提交的内容（发版那一趟走的还是这一条；换行符按签出那一头算，比的是内容不是行尾）',
+      裸.盖了.盖 === 0 && 读2(裸, 'a.txt').replace(/\r\n/g, '\n') === '提交里那一份\n' &&
+      !fs.existsSync(path.join(裸.目录, 'src/new.svg')), JSON.stringify(裸.盖了) + ' · 读到 ' + JSON.stringify(读2(裸, 'a.txt')));
+    摊.撤(); 裸.撤();
+  }
+  /* 那颗单跑一遍：自己数得出"账上几条、盖了几份"，从前那条就是少一份还报成照打 */
+  const 直 = 盖上没提交(仓, path.join(沙, '直盖'));
+  台.判('5 那颗单跑也对得上数：git 账上 3 条、三份都落地、一份不吞',
+    直.没提交 === 3 && 直.盖 === 3 && 直.跳.length === 0 &&
+    fs.readFileSync(path.join(沙, '直盖/a.txt'), 'utf8') === '盘上改过的那一份\n', JSON.stringify(直));
+  台.判('6 那条状态位的形状闸在：不是「两个状态位 + 空格 + 路径」的整条报出来，不许当没看见；问那一本账也不走带 trim 的那颗 git()',
+    名单文.includes('const 拆 = /^(..) (.+)$/.exec(条);') && 名单文.includes('读不懂的那一条') &&
+    名单文.includes("execFileSync('git', ['-C', 根, 'status', '--porcelain', '-z']") &&
+    !/单 = git\(根, \['status', '--porcelain', '-z'\]\)/.test(名单文));
+  台.判('7 打包那一趟把这一处报在终端上（盖了几份、跟着删了几份、跳过几处），不许静默',
+    发布文.includes('那棵.盖了.盖') && 发布文.includes('那棵.盖了.删') && 发布文.includes('那棵.盖了.跳.length') &&
+    发布文.includes('合的家, true)'));
+  fs.rmSync(沙, { recursive: true, force: true });
 }
 
 台.收尾();

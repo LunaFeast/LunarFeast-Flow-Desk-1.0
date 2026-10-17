@@ -2,9 +2,11 @@
    图标这一格由线稿现画，一个名字一个文件：
      1) src\pack\icons\     出厂默认（跟着代码走，改代码就重画，装到机器上带的就是这一格那一份）
      2) 树根 icons\         给他换图的那一层：只补没有的，他自己改过的那张绝不动
+   两层都认同一件事：盘上那一份与线稿画出来的字节不一样 = 被人换过 → 不重画（--force 才按代码重画）。
+   他从小工具（src\_build\text-icon.mjs）里换一张图，同时落这两格，所以界面上看见的那一张就是打包带出去的那一张。
    素材那一格不画，照同名搬：src\pack\material\ → 树根 material\（页面写的是相对地址，本地协议按树根去找）。
-   node src/_build/ico-dump.mjs              出厂全按代码重画，树根那两格只补缺
-   node src/_build/ico-dump.mjs --force      两处都重画（树根那层他改过的会被覆盖）
+   node src/_build/ico-dump.mjs              两处都只重画"没被人换过"的，树根那两格只补缺
+   node src/_build/ico-dump.mjs --force      两处都按代码重画（他改过的会被覆盖）
    代码里那份 ICO_D 只是浏览器直接打开单文件时的兜底，真正改图改的是 icons\ 里的文件。
    ----------
    树根那一格为什么要有：程序（壳与开发服务器那台）扫的是 <树根>\icons 与 <树根>\material ——
@@ -40,17 +42,23 @@ export function 铺图标一层(在){
   const LIVE = path.join(根, 'icons');
   fs.mkdirSync(FACTORY, { recursive:true });
   fs.mkdirSync(LIVE, { recursive:true });
-  let fac = 0, live = 0, kept = 0;
+  let fac = 0, live = 0, kept = 0, 保出厂 = 0;
   for(const name of Object.keys(ICO_D)){
     /* 独立成图时 currentColor 就是黑：写死 #000，遮罩只看 alpha，别留悬案 */
     const body = ICO_D[name].replace(/stroke="currentColor"/g, 'stroke="#000"');
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="#000" ' +
       'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>\n';
     const fp = path.join(FACTORY, name + '.svg');
-    fs.writeFileSync(fp, svg); fac++;
+    /* 出厂那一张被人换过（字节与线稿画出来的不一样）就不重画。这一格是装到机器上带的那一份，
+       小工具里换图正是复制到这里来的 —— 无条件按线稿重画会把他换的图一口吞掉，界面上换个文件名都还看得见，
+       打包出来却是原来的线稿。要看代码里的线稿重画一遍：--force。 */
+    if(!force && fs.existsSync(fp) && !fs.readFileSync(fp).equals(Buffer.from(svg, 'utf8'))){ 保出厂++; }
+    else { fs.writeFileSync(fp, svg); fac++; }
     const lp = path.join(LIVE, name + '.svg');
     if(fs.existsSync(lp) && !force){ kept++; continue; }
-    fs.writeFileSync(lp, svg); live++;
+    /* 往树根那一层补的那一份，拿出厂那一张：出厂那张可能是被人换过、这一趟保住没重画的 ——
+       拿现画的线稿塞进树根，同一棵里两层就各说一套（界面上读的是树根那一层，打包带的是出厂那一层）。 */
+    fs.writeFileSync(lp, fs.existsSync(fp) ? fs.readFileSync(fp) : svg); live++;
   }
   /* 出厂那一格里不是线稿画出来的那几份（png 那三张、索引.txt）：照同名补进树根，已有的不动 */
   for(const 件 of fs.readdirSync(FACTORY)){
@@ -59,7 +67,7 @@ export function 铺图标一层(在){
     if(fs.existsSync(lp) && !force){ kept++; continue; }
     fs.copyFileSync(path.join(FACTORY, 件), lp); live++;
   }
-  return { 树: 根, 出厂: fac, 补上: live, 保住: kept, 名字: Object.keys(ICO_D).length };
+  return { 树: 根, 出厂: fac, 补上: live, 保住: kept, 保住出厂: 保出厂, 名字: Object.keys(ICO_D).length };
 }
 
 /* 素材那一格（随包纹理那几张）：照同名从 src\pack\material 搬到树根 material\，已有的不动 ——
@@ -85,7 +93,7 @@ export function 铺素材一层(在){
 if(process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])){
   const r = 铺图标一层();
   const 素 = 铺素材一层(r.树);
-  console.log('出厂 src\\pack\\icons\\ 重画 ' + r.出厂 + ' 张 · 树根 icons\\ 补了 ' + r.补上 +
+  console.log('出厂 src\\pack\\icons\\ 重画 ' + r.出厂 + ' 张，保住人换过的 ' + r.保住出厂 + ' 张 · 树根 icons\\ 补了 ' + r.补上 +
     ' 张，保住他改过的 ' + r.保住 + ' 张 · 线稿 ' + r.名字 + ' 个名字 · 那一棵：' + r.树);
   console.log('随包素材：树根 material\\ 补了 ' + 素.补上 + ' 张，保住他换过的 ' + 素.保住 + ' 张');
 }

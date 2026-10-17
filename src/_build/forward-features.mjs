@@ -178,9 +178,14 @@ export function 硬链接一份(源, 到) {
      · src/pack/node_modules —— 从前 electron 那一颗的运行时，发布那一步要读它（这一棵上没有就自动跳过）；
      · src/tools/本地路径.cjs —— 这台机器的登记（Rust 那三颗位置、编译缓存那一格、工区、存档落点）。
        临时那一棵里跑的编壳与发布两趟都要读它；少带这一份，报的是「本地那份登记里没写 Rust 那三颗位置」。 */
-export function 摊打包那一棵(在, 基点, 项列表, 那一格, 要链, 额外支) {
+export function 摊打包那一棵(在, 基点, 项列表, 那一格, 要链, 额外支, 带上没提交) {
   const 根 = path.resolve(在 || TREE);
   const 果 = 合那一棵(根, 基点, 项列表, 那一格, 额外支);
+  /* 自测包那一档要的是"把盘上这些没提交的东西装到一起看跑不跑得起"（release.mjs 顶上那句原话），
+     可从那一笔提交摊出来的那一棵只有一笔提交里的内容 —— 没提交的改动会被静默丢掉，终端上却照旧报
+     「盘上 N 处没提交，自测包照打」。2026-10-17 真撞上这一条：他把 98 张图标换进 src\pack\icons\ 还没提交，
+     打出来那一枚带的还是代码里的线稿。所以这一档摊完就把盘上那一份盖上去。 */
+  果.盖了 = 带上没提交 ? 盖上没提交(根, 果.目录) : { 盖: 0, 删: 0, 跳: [], 没提交: 0 };
   const 链 = (要链 || ['src/pack/node_modules', 'src/tools/本地路径.cjs']).filter(相 => fs.existsSync(path.join(根, 相)));
   const 链了 = [];
   for(const 相 of 链){
@@ -189,6 +194,50 @@ export function 摊打包那一棵(在, 基点, 项列表, 那一格, 要链, �
   }
   果.链了 = 链了;
   return 果;
+}
+
+/* 把盘上没提交的改动逐份盖进那一棵临时树：改过的与新增的按字节复制过去，盘上删掉的那一棵里跟着删。
+   名单只认 git 自己那一本账（status --porcelain -z）：没进仓的那些（.gitignore 挡住的）本来就不该进包，
+   所以这里不搬；工作树站的那一棵一个字不动，写的全在仓外那一格里。
+   撞车状态（未合并的那几条）与看着不像仓内相对路径的那几条一律跳过并报名字 —— 宁可缺一处并在屏上说清，
+   也不拿一棵自己算出来的名单冒充 git 那一本账。 */
+export function 盖上没提交(在, 目录){
+  const 根 = path.resolve(在 || TREE);
+  const 到 = path.resolve(目录);
+  let 单 = [];
+  try{
+    /* 这一句不叫上面那颗 git()：那颗带 trim()，会把第一条记录开头那两个状态位前的空格一起削掉
+       （' M src/…' 变成 'M src/…'），于是头一份被当成看不懂的路径静默丢掉 —— 量过：104 条只盖了 103 份。 */
+    单 = execFileSync('git', ['-C', 根, 'status', '--porcelain', '-z'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).split('\0').filter(x => x !== '');
+  }
+  catch(e){ throw new Error('问不动 git 那一本账，没提交的改动盖不进这一枚：' + String((e && e.message) || e).split(/\r?\n/)[0]); }
+  let 盖 = 0, 删 = 0; const 跳 = [];
+  for(let i = 0; i < 单.length; i++){
+    const 条 = 单[i];
+    /* 每一条必须是「两个状态位 + 一个空格 + 路径」（那两位可以是空格：索引里没动、只在工作树改过就是 ' M'）；
+       不是这个样子的整条报出来，不许当没看见 */
+    const 拆 = /^(..) (.+)$/.exec(条);
+    if(!拆){ 跳.push('读不懂的那一条：' + JSON.stringify(条)); continue; }
+    const 态 = 拆[1], 相 = 拆[2];
+    const 是改名 = /^[RC]/.test(态.trim());
+    const 旧 = 是改名 ? String(单[++i] == null ? '' : 单[i]) : '';
+    const 处理 = (路, 删不删) => {
+      if(!路 || path.isAbsolute(路) || 路.split(/[\\/]/).includes('..')){ if(路) 跳.push(路); return; }
+      if(/[UDX]/.test(态)){ 跳.push(路 + '（未合并：' + 态 + '）'); return; }
+      const 落 = path.join(到, 路);
+      if(删不删 || !fs.existsSync(path.join(根, 路))){
+        if(fs.existsSync(落)){ fs.rmSync(落, { force: true }); 删++; }
+        return;
+      }
+      fs.mkdirSync(path.dirname(落), { recursive: true });
+      fs.copyFileSync(path.join(根, 路), 落);
+      盖++;
+    };
+    处理(相, /D/.test(态));
+    if(是改名 && 旧) 处理(旧, true);          /* 改名后面那一份旧路径：新位置已经复制过去了，旧位置得跟着撤 */
+  }
+  return { 盖, 删, 跳, 没提交: 单.length };
 }
 
 /* 把勾中的那几项合到「打包用的那一棵」上：全程只挪仓外那一格里的一棵临时树 ——
