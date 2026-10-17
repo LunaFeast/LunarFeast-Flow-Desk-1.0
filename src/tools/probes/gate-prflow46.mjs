@@ -10,7 +10,8 @@
      五、各家快进 只挪指针、已有的一笔都不改写，真分叉或撞车就报是哪一家然后停；
      六、--照清单发 在那条支还没合进 main 时拒绝打包，并报 merge-base --is-ancestor 那一眼；
      七、清单多认「提交分支 =」与「本轮说明 =」两样，写出去读回来对得上，--看 重跑保住他写的值；
-     八、那一屏两颗按钮的先后：提交 PR 在前、打包发版他合并之后才亮；顶上多了「提交分支」那一格；
+     八、那一摊只剩命令：提交 PR 与打包发版各自一道（pr.mjs --提交PR / release.mjs --照清单发），没合并就打包当场停；
+        顶上那三格与那份摊单从前在屏上，2026-10-16 那一页整块撤了，屏上一根线都不许留；
      九、公开面那道闸：串全部现场算（这台的位置、帐户名、私人目录名一串都不缺）、扫的是
         origin/main 到这条支之间新增和修改的每一本文本、二进制跳过、本地那一颗不算进扫描面，
         而且 pr.mjs 推之前真调用它；
@@ -249,37 +250,27 @@ const 样 = 拼清单({ 基线:'1.0.0-alpha', 提交分支:'feature/46-tauri-dat
   确认词 === '推' && 样.includes('亲手敲一个「推」字') && 样.includes('回车、空、别的字都不算'));
 
 /* ---------- 八 ---------- */
-台.题('八、那一屏：两颗按钮的先后与顶上那一格');
-台.判('「提交 PR」起的是 pr.mjs --提交PR 那一整手，日志流回同一屏（屏上已经敲过那个字，所以带 --已确认）',
-  ui.includes("['src/_build/pr.mjs', '--提交PR', '--已确认']") && ui.includes('建 PR，建完就停'));
-台.判('「打包发版」起的是 release.mjs --照清单发，标题里不再写「等你确认」',
-  ui.includes("['src/_build/release.mjs', '--照清单发']") && !ui.includes('最后等你确认'));
-台.判('没合并就点打包：后端当场回绝那句「先合并 PR，再打包」，界面上那颗也先不亮',
-  ui.includes('先合并 PR，再打包 —— 号要钉在 main 上真实存在的那一笔上') && pg.includes("!(合 && 合.本地)"));
-台.判('顶上多了「提交分支」那一格：能改、能粘贴，读回来也写回去',
-  pg.includes('id="支"') && pg.includes("取('支').value") && pg.includes('提交分支: 取') && pg.includes('本轮说明: 取'));
-台.判('支名那一格后端也过同一把尺（这一屏不再自己判：收与不收只问 支名可用）',
-  ui.includes('if(!支名收(名)){ 发(res, 400, 支名拒话(名)); return; }') &&
-  ui.includes('const 支名收 = 名 => 支名可用(名).行;') && ui.includes('支名可用(串).话') && !/支名形状/.test(ui));
-台.判('「分支类型」那一格：下拉里那四个名字从服务端那张表来（页面不自己抄一份），后端只收那四个或空着',
-  ui.includes('支类: 支类表.map(c => ({ 类: c.类, 话: c.话 }))') && ui.includes('!支类表.some(c => c.类 === 型)') &&
-  pg.includes('(对.支类 || []).map(c =>') && pg.includes('<option value="">（照支名认）</option>') &&
-  pg.includes("分支类型: 取('型').value"));
-台.判('类型与支名不是同一类：后端 400 拒收，屏幕上那一行也当场报出来（不等走到落笔那一步才发现）',
-  ui.includes('const 判 = 支类合规(型, 名); if(!判.行)') && pg.includes('对.类判 && 对.类判.行 === false'));
-台.判('「不点就不落笔」两颗都在：屏幕那颗钮按 等字的格 的同一把尺不亮，后端 /api/pr 也拿它挡在起子进程之前',
-  pg.includes('function 等字()') && pg.includes('textarea[data-会动="1"]') && pg.includes('取(\'pr\').disabled = 底 || !!缺.length || 没说明') &&
-  ui.includes('const 缺 = 等字的格(读清单显示(文));') && ui.includes("if(缺.length){ 发(res, 409, '这几格还空着"));
-台.判('界面上每一笔的输入框拿参照文字当 placeholder（我交的那句只在提示里，不进数据那一格）',
-  pg.includes("'参照：' + b.参照") && pg.includes('这一笔的提交说明，你自己写') && pg.includes('data-会动='));
-台.判('端口、只听 127.0.0.1、随机码、坏编码不砸台、往远程送东西那三道起子进程前先核他敲的那个字 —— 一条都没退化',
-  ui.includes("服务器.listen(PORT, '127.0.0.1'") && /PORT \|\| 8792/.test(ui) && /const 码 = crypto\.randomBytes/.test(ui) &&
-  /req\.headers\['x-push-code'\] !== 码/.test(ui) && ui.includes('try{ return decodeURIComponent(u); }catch(e){ return u; }') &&
-  (ui.match(/if\(!收字\(res, 身\)\) return;/g) || []).length === 2 && ui.includes('子.stdin.end();') &&
-  (ui.match(/stdin\.write\(/g) || []).length === 0);
-台.判('那一屏不再写「几根指针都推上去」：那份单由 pr.mjs 摊（那一颗里写明 main、assemble 那条拼装的分支、tag、集成分支都不推），屏上只说"这一趟还没跑，一个字节都没送"',
-  !pg.includes('那几根指针') && pg.includes('这一趟还没跑，一个字节都没送') &&
-  pr.includes('main：不推（只能你人工合并）· assemble 那条拼装的分支：不推 · tag：不推') && pr.includes('：不推（永不进远程）'));
+台.题('八、那一屏 2026-10-16 整块撤了「版本与推送」：那一摊只剩 pr.mjs 与 release.mjs 两颗命令');
+台.判('1 提交 PR 与打包发版那一整手只剩命令：pr.mjs 的 --提交PR、release.mjs 的 --照清单发 还在原处，那一屏既不 spawn 它们，也没有那两颗钮',
+  pr.includes("has('--提交PR')") && rel.includes("has('--照清单发')") &&
+  !ui.includes("'src/_build/pr.mjs'") && !ui.includes("'src/_build/release.mjs'") &&
+  !pg.includes('id="pr"') && !pg.includes('id="发"'));
+台.判('2 没合并就打包那一道还在：release.mjs 当场停，报的是那句「先合并 PR，再打包」与 merge-base --is-ancestor 那一眼；那一屏连这句回绝话都没有',
+  rel.includes('先合并 PR，再打包 —— 号要钉在 main 上真实存在的那一笔上') && rel.includes('merge-base') &&
+  !ui.includes('先合并 PR'));
+台.判('3 顶上那三格（提交分支 / 本轮说明 / 分支类型）不进任何屏：那一屏不认支名也不认类型，那两把尺只住在 push-list 与 pr.mjs 里',
+  !pg.includes('id="支"') && !pg.includes("取('型')") && !ui.includes('支名可用') && !ui.includes('支类合规') &&
+  pr.includes('支名可用(串).行') && pr.includes("from './push-list.mjs'"));
+台.判('4 「这几格还空着」那道闸从前是那一屏与后端各拿一份：屏撤了之后这一台一个字都不读那一格清单（清单读写归 pr.mjs 与 release.mjs 那两头）',
+  !ui.includes('等字的格') && !pg.includes('等字的格') && !ui.includes('读清单显示') && !ui.includes('改清单') &&
+  !ui.includes("from './push-list.mjs'"));
+台.判('5 那一屏不再有任何一笔的输入框（提交说明、更新描述那些格子跟着那一页一起撤；他写的字还是进那一格明文清单）',
+  !pg.includes('data-会动=') && !pg.includes('参照：') && !pg.includes('textarea'));
+台.判('6 往远程送东西那三道连同「敲那一个字才算确认」一起从这一屏撤了：这一台不带 --提交PR、不带 --已确认、没有收字那一颗；本机那三道（只听 127.0.0.1、随机码、坏编码不砸台）由 gate-pushui46 第二与第四节钉',
+  !ui.includes('--提交PR') && !ui.includes('--已确认') && !ui.includes('收字') && !pg.includes('确认词') && !ui.includes('确认词'));
+台.判('7 那一份「这一趟要推什么」的单只在 pr.mjs 里摊：写明 main、assemble 那条拼装的分支、tag、集成分支都不推；那一屏不再有摊单那一格，也不自己再算一份',
+  pr.includes('main：不推（只能你人工合并）· assemble 那条拼装的分支：不推 · tag：不推') && pr.includes('：不推（永不进远程）') &&
+  !pg.includes('这一趟还没跑，一个字节都没送') && !ui.includes("'/api/摊单'") && !ui.includes('前瞻单') && !ui.includes('提交单'));
 
 /* ---------- 九 ---------- */
 台.题('九、公开面那道闸（推之前必须过）');
@@ -345,9 +336,9 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
 台.判('确认不过就回 false，--提交PR 那一串里推支与建 PR 都排在它后面（不确认就走不到 push）',
   pr.indexOf('要他确认(') < pr.indexOf('推支(支.名') && pr.indexOf('要他确认(') < pr.indexOf('开PR(支.名') &&
   /if\(!要他确认\(/.test(pr) && 要确认.includes('return false'));
-台.判('界面与终端比的是同一颗字：那一颗只从 push-list 取，pr.mjs 的 要他确认 与那一屏的 收字 用的是同一句比法（界面不再从日志里等那一句）',
+台.判('那一个「推」字只由终端亲口给：pr.mjs 的 要他确认 认的还是 push-list 那一颗 确认词；那一屏既不问也不代填（连 确认词 这三个字都不该出现）',
   要确认.includes("'  确认词：' + 确认词 + ' > '") && 要确认.includes('if(答 !== 确认词)') &&
-  ui.includes('if(答 !== 确认词)') && !ui.includes('当值.收'));
+  !ui.includes('确认词') && !pg.includes('确认词') && !ui.includes('当值.收'));
 台.判('那一颗字只有一个出处：push-list 导出的 确认词，pr/release/ui 都没再写死一遍',
   !/=== '推'/.test(pr + rel + ui) && 确认词 === '推' && pr.includes("from './push-list.mjs'") && pr.includes('确认词'));
 
@@ -444,7 +435,7 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
 }
 
 /* ---------- 十四、只在本地那一条清单（他 2026-10-12 第 5 件）---------- */
-台.题('十四、没推的前瞻支在屏上标「只在本地」，并列出它相对基础版多了哪几处');
+台.题('十四、没推的前瞻支：量出来的那几条带齐名字、哪一类、几笔、几份（屏上那一栏 2026-10-16 跟着那一页一起撤了，只剩这一颗判断与命令行）');
 {
   const 列 = 本地前瞻支();
   台.判('1 真跑：量出来的每一条都是那两类前瞻支之一，且相对主干确实有笔（不列空壳）',
@@ -457,15 +448,16 @@ for(const p of [素材目录, 工区, 存档落点, 探针沙盒, Rust工具链,
     !/['"]fetch['"]|['"]push['"]|update-ref/.test(代码(切出(rep, '本地前瞻支'))) &&
     代码(切出(rep, '本地前瞻支')).includes('catch(e){ continue; }'),
     (代码(切出(rep, '本地前瞻支')).match(/['"]fetch['"]|['"]push['"]|update-ref/g) || []).join('、'));
-  台.判('4 屏上不再摆那一栏（2026-10-14 他把拆分撤了：八项都在 main 里，没有"只在本地的那几条"可挑）：那一格、那颗钮、那种勾都不在屏上',
+  台.判('4 屏上不再摆那一栏（2026-10-14 他把拆分撤了：八项都在 main 里；2026-10-16 那一页整块没了）：那一格、那颗钮、那种勾都不在屏上',
     !pg.includes('function 画前瞻') && !pg.includes('id="只在"') && !pg.includes('id="八项"') &&
     !pg.includes('id="推项格"') && !pg.includes('id="集成"') && !pg.includes('id="完整"'),
     ['画前瞻', 'id="只在"', 'id="八项"', 'id="推项格"', 'id="集成"', 'id="完整"'].filter(s => pg.includes(s)).join('、') || '屏上六样都没有');
-  台.判('5 命令与后端那两道还在（--重建集成分支 与 /api/集成 照旧能跑），只是不再占屏上一块',
-    ui.includes("路 === '/api/集成'") && ui.includes("'--重建集成分支', '--支=' + 列.join(',')") &&
-    ui.includes("路 === '/api/完整'") && pr.includes("'--重建集成分支'"));
-  台.判('6 一条都没勾时后端 400（不拿空列表去挪那一根）',
-    ui.includes("if(!列.length){ 发(res, 400, '一条支都没勾"));
+  台.判('5 重建集成分支那一道只剩命令：pr.mjs 的 --重建集成分支 还在（不点 --支= 就取量出来的那些），这一屏那两条路由（/api/集成 与 /api/完整）跟着那一页一起撤了',
+    pr.includes("has('--重建集成分支')") && pr.includes('一条都没有 ——') &&
+    !ui.includes("'/api/集成'") && !ui.includes("'/api/完整'") && !ui.includes('--重建集成分支') &&
+    !pg.includes('id="集成"') && !pg.includes('id="完整"'));
+  台.判('6 那几条一条都没量到，由命令自己说那一行「一条都没有」，不拿空列表去挪那一根；屏上那道 400 跟着那一页一起撤了',
+    !ui.includes('一条支都没勾') && pr.includes('一条都没有 ——'));
 }
 
 台.收尾();
