@@ -153,6 +153,26 @@ const 动作 = [...new Set([...顶栏.matchAll(/winCtl\('([A-Za-z]+)'\)/g)].map(
 台.判('这一组的两颗都上了注册单（win:ctl 与 win:closeAnswer）',
   壳.includes('win_cmds::win_ctl') && 壳.includes('win_cmds::win_close_answer'));
 
+/* ---- 他 2026-10-17 issue #54「双层窗口嵌套问题」：外层那一圈系统标题栏与页面自己那一行叠成两层。
+   无边框那一句是 2026-10-16 f6ed1ba 才补上的，而这一条从前**没有任何台子校验** —— 哪天被谁撤掉不会有人报。 ---- */
+{
+  const 建窗 = 壳里('src/tauri_bind/page_cmds.rs');
+  const 配置 = JSON.parse(壳里('tauri.conf.json'));
+  const 每一份 = fs.readdirSync(path.join(壳根, 'src'), { recursive: true })
+    .filter(f => String(f).endsWith('.rs'))
+    .map(f => ({ p: 'src/_tauri/src/' + String(f).split(path.sep).join('/'),
+                 文: fs.readFileSync(path.join(壳根, 'src', String(f)), 'utf8') }));
+  const 再开 = 每一份.filter(x => /\.decorations\(true\)|set_decorations\(\s*true/.test(x.文));
+  const 建窗数 = 每一份.reduce((n, x) => n + (x.文.match(/WebviewWindowBuilder::new/g) || []).length, 0);
+  台.判('建窗那一句带 .decorations(false)（系统那一圈撤掉，页面上那一行才是唯一那一行）',
+    建窗.includes('.decorations(false)'));
+  台.判('全仓没有任何一处再把那一圈打开（.decorations(true) 与 set_decorations(true) 一处都不许有）',
+    再开.length === 0, 再开.map(x => x.p).join('、'));
+  台.判('建窗只有一颗（label "main"）、配置那一头 app.windows 是空的 —— 第二颗带边框的窗口生不出来',
+    建窗数 === 1 && /WebviewWindowBuilder::new\([^,]+,\s*"main"/.test(建窗) &&
+    Array.isArray(配置.app.windows) && 配置.app.windows.length === 0, '建窗 ' + 建窗数 + ' 颗 · 配置 ' + JSON.stringify(配置.app.windows));
+}
+
 台.题('九、回报给页面的形状与两枚事件名照旧');
 台.判('回报的还是那两格 { maximized, fullscreen }', /maximized/.test(窗) && /fullscreen/.test(窗));
 for(const 件 of ['win:state', 'fd:close-ask'])
