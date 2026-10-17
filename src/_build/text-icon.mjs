@@ -208,6 +208,54 @@ function 文字写(文, 改){
   return { 文: 出.join('\n'), 动 };
 }
 
+/* ---------- 图标柜（他 2026-10-17 提的第 2、3 条）----------
+   系统那个选文件框记不住上一次那格；更麻烦的是 .svg 在他机器上关联到浏览器，一整柜两千多张
+   在资源管理器里全是同一个浏览器图标，根本看不出哪张是哪张。所以这一格由这一台自己扫、自己画：
+   他写一次路径，这里出一窗真预览，点中哪张就拿哪张去换 / 去加。上一次那一格由页面存在浏览器自己的
+   本地存储里（这一台不落任何文件）。 */
+const 柜MIME = { '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.gif':'image/gif' };
+function 柜那格(路){
+  const 串 = String(路 == null ? '' : 路).trim();
+  if(!串) return { 错:'先写一个文件夹（这台电脑上的任意一格，如 ' + path.join(TREE, 'icons') + '）' };
+  let 统 = null;
+  try{ 统 = fs.statSync(串); }catch(e){ return { 错:'读不到这一格：' + ((e && e.code) || (e && e.message) || e) }; }
+  if(!统.isDirectory()) return { 错:'这一格不是文件夹：' + 串 };
+  return { 根: path.resolve(串) };
+}
+/* 只往下走一层（icons 那一格就是 根 + 子文件夹 两层，跟取图那两道路径闸一个口径）；一张最多读 4000 张就停 */
+function 柜列(路){
+  const 判 = 柜那格(路); if(判.错) return 判;
+  const 单 = [];
+  const 走 = (格, 层) => {
+    let 项 = [];
+    try{ 项 = fs.readdirSync(格, { withFileTypes: true }); }catch(e){ return; }
+    for(const it of 项){
+      if(单.length >= 4000) return;
+      const 全 = path.join(格, it.name);
+      if(it.isDirectory()){ if(层 < 1) 走(全, 层 + 1); continue; }
+      const 后 = path.extname(it.name).toLowerCase();
+      if(!图标后缀.includes(后)) continue;
+      let 大 = -1; try{ 大 = fs.statSync(全).size; }catch(e){}
+      单.push({ 相: path.relative(判.根, 全).split(path.sep).join('/'), 大, 后 });
+    }
+  };
+  走(判.根, 0);
+  单.sort((a, b) => a.相 < b.相 ? -1 : 1);
+  return { 错:'', 根: 判.根, 张: 单.length, 单 };
+}
+function 柜一张(路, 相){
+  const 判 = 柜那格(路); if(判.错) return 判;
+  const 全 = path.resolve(判.根, String(相 == null ? '' : 相));
+  if(!全.startsWith(判.根 + path.sep)) return { 错:'只许看这一格里面的图（不许往外钻）' };
+  const 后 = path.extname(全).toLowerCase();
+  if(!图标后缀.includes(后)) return { 错:'只列这六种后缀：' + 图标后缀.join(' ') };
+  let 字 = null;
+  try{ 字 = fs.readFileSync(全); }catch(e){ return { 错:'读不到这一张：' + ((e && e.code) || (e && e.message) || e) }; }
+  if(!字.length) return { 错:'这一张是空的' };
+  if(字.length > 图标上限) return { 错:'这一张 ' + 字.length.toLocaleString() + ' 字节，超过 ' + 图标上限.toLocaleString() + ' 字节上限' };
+  return { 字, 后, 名: path.basename(全) };
+}
+
 /* 图标那一格的增删改（他 2026-10-12 点的）：只动 icons\ 那一格里的一层文件，
    名字与后缀先过一遍（六后缀之外不收、带路径分隔符与怪字符的不收、索引.txt 那一本说明书不许当图标删），
    单张上限 512 KB（图标本来就该是几 KB 的线稿，超了多半是传错文件）。
@@ -433,6 +481,20 @@ const 服务器 = http.createServer(async (req, res) => {
     return;
   }
 
+  /* ---------- 图标柜：列一格 + 出预览（读的那两道路径闸与「换 / 加」那五把守门同一口径）---------- */
+  if(路 === '/api/图柜'){
+    const 参 = new URLSearchParams(String((req.url || '').split('?')[1] || ''));
+    JSON发(res, 柜列(参.get('路'))); return;
+  }
+  if(路 === '/api/图柜/一张'){
+    const 参 = new URLSearchParams(String((req.url || '').split('?')[1] || ''));
+    const r = 柜一张(参.get('路'), 参.get('相'));
+    if(r.错){ 发(res, 400, r.错); return; }
+    /* 带 码=1 的那一发是给「挑中这张」用的：回 base64，页面拿它去叫 /api/图标/换 或 /加 */
+    if(参.get('码')){ JSON发(res, { 好:true, 名:r.名, 大:r.字.length, 图: r.字.toString('base64') }); return; }
+    发(res, 200, r.字, 柜MIME[r.后] || 'application/octet-stream'); return;
+  }
+
   发(res, 404, '没这一格');
 });
 if(被当命令跑) 服务器.listen(PORT, '127.0.0.1', () => {
@@ -448,4 +510,4 @@ if(被当命令跑) 服务器.on('error', e => {
 /* 闸要从这一份里真跑那几颗判断（存句子、图标读索引、git 叫不动那两道），所以对外交出来；
    借的人不会听到端口 —— 上面那道 被当命令跑 挡着。 */
 export { 被当命令跑, 文字读, 文字写, 清单文件, 字树, 图标单, 读索引, 叫得动git, 界面文字那颗, 现场,
-  图标落点, 图标写, 图标删, 图标上限, 插件封面, 图标写插件, 插件层 };
+  图标落点, 图标写, 图标删, 图标上限, 插件封面, 图标写插件, 插件层, 柜列, 柜一张, 图标后缀 };

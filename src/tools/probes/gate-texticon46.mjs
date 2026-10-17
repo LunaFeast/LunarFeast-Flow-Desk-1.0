@@ -44,7 +44,7 @@ const 那 = await import('../../_build/text-icon.mjs');
 {
   const 叫 = [...ui.matchAll(/跑git\(\['([^']+)'/g)].map(m => m[1]);
   const 路由 = [...new Set([...ui.matchAll(/路 === '(\/api\/[^']+)'/g)].map(m => m[1]))].sort();
-  const 该有 = ['/api/图标', '/api/图标/一张', '/api/图标/加', '/api/图标/删', '/api/图标/对齐', '/api/图标/换',
+  const 该有 = ['/api/图柜', '/api/图柜/一张', '/api/图标', '/api/图标/一张', '/api/图标/加', '/api/图标/删', '/api/图标/对齐', '/api/图标/换',
     '/api/现场', '/api/文字', '/api/文字/存', '/api/文字/扫', '/api/文字/落', '/api/文字/预览', '/api/文字/重生成'].sort();
   台.判('这一台只开该开的那几格，推送那一摊的路由一格不剩（量 / 摊单 / 推项 / 快进 / 删支 / 自测 / 完整 / 集成 / pr / 发 / 开产物 都不在）',
     JSON.stringify(路由) === JSON.stringify(该有) && !/摊单|推项|快进|删支|自测|集成|开产物/.test(ui), 路由.join('、'));
@@ -146,8 +146,10 @@ const 那 = await import('../../_build/text-icon.mjs');
     pg.includes('data-换=') && pg.includes('data-删=') && pg.includes('id="加名"') && pg.includes('id="加档"') &&
     pg.includes('取(\'加送\').onclick'));
   台.判('9 插件包那七张也给「换这张」（同名盖进它自己那一格），但不给「删这张」也不给往包里添新的 —— 那一个文件名写在它的插件清单与那份索引上',
-    pg.includes('data-换包=') && pg.includes('发插件封面') && /accept="\.'/.test(pg) &&
+    pg.includes('data-换包=') && pg.includes('发插件封面') &&
     pg.includes('不给改名也不给删') && !/data-删包=/.test(pg));
+  台.判('9b 屏上只剩两处选文件的地方（图标柜那一行与「加一张图」那一行），六后缀写死在 accept 里；每张卡上那枚隐藏 file input 撤了',
+    (pg.match(/accept="\.svg,\.png,\.jpg,\.jpeg,\.webp,\.gif"/g) || []).length === 2 && !/hidden data-档=/.test(pg));
   台.判('10 「加一张图」挑完文件名字自己填上（照那个文件名改，空格与不许的字符换成横杠），不必自己起英文名',
     pg.includes('const 图名 =') && pg.includes("取('加档').onchange") && pg.includes('名字按挑中的文件填好了')
     && /取\('加送'\)\.onclick[\s\S]{0,300}图名\(档\.name\)/.test(pg));
@@ -200,7 +202,7 @@ const 那 = await import('../../_build/text-icon.mjs');
     ui.includes("起(['src/pack/uitext.cjs']") && rd('src/pack/uitext.cjs').includes('if(require.main === module)'));
   台.判('10 屏上那一栏一屏一条不换行：那一格一段（不再切成四列小卡），行里三格排成一排',
     pg.includes('#字格{ grid-template-columns:1fr; }') && pg.includes('.字行{ display:flex')
-    && pg.includes("class=\"项 字行\"") && pg.includes('text-overflow:ellipsis'));
+    && pg.includes("'<div class=\"项 字行'") && pg.includes('text-overflow:ellipsis'));
   台.判('11 屏上那五颗手（刷新清单 / 保存句子 / 预览改动 / 写进源码 / 重新生成产物）都在，且不让人挑「写进哪一张页面」（落点是源码）',
     pg.includes('id="字段"') && pg.includes('id="字搜"') &&
     pg.includes('字扫') && pg.includes('字存') && pg.includes('字预') && pg.includes('字落') && pg.includes('字重')
@@ -273,5 +275,62 @@ const 那 = await import('../../_build/text-icon.mjs');
   fs.rmSync(沙, { recursive: true, force: true });
   fs.rmSync(path.join(探针沙盒, '插件封面-闸跑'), { recursive: true, force: true });
 }
+
+台.题('九、图标柜（他 2026-10-17 第 2、3 条）：指定一格、真预览、点中一张去换 —— 全在沙盒那一格里真跑');
+{
+  const 那0 = await import('../../_build/text-icon.mjs');
+  const 柜根 = path.join(ROOT, 'icons');                       /* 只读它，一个字都不写 */
+  const 柜沙 = 那0.图标落点('gear.svg').根;      /* 这一份认的那一格，不是我自己另起的一格 */
+  fs.mkdirSync(柜沙, { recursive: true });
+  fs.writeFileSync(path.join(柜沙, '索引.txt'),
+    '【图标索引】一张图一行：文件名 = 这是干什么的（引用它的代码）\n\n# —— 通用图标（icons\\ 文件夹）——\ngear = 设置（齿轮）：某处 —— 引用：没有代码直接叫它\n');
+  fs.writeFileSync(path.join(柜沙, 'gear.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>', 'utf8');
+  const 列 = 那0.柜列(柜根);
+  台.判('1 列一格真跑：读的是盘上那一份（icons 那一格 ' + 列.张 + ' 张），每张带回 相对名 / 字节 / 后缀，后缀只在这六种里',
+    !列.错 && 列.张 > 20 && 列.单.length === 列.张 &&
+    列.单.every(x => x.相 && typeof x.大 === 'number' && 那0.图标后缀.includes(x.后)) &&
+    列.单.every(x => !/^[A-Za-z]:/.test(x.相) && !x.相.startsWith('..')), 列.根 + ' · ' + 列.张 + ' 张');
+  台.判('2 三种"量不到"分得开：不存在的一格报读不到、空着报先写一格、是文件不是文件夹也报明白 —— 不拿空名单冒充"这一格没有图"',
+    /读不到这一格/.test(那.柜列(path.join(ROOT, '没有这么一格')).错 || '') && /先写一个文件夹/.test(那.柜列('').错 || '') &&
+    /不是文件夹/.test(那.柜列(path.join(ROOT, 'src/_build/text-icon.mjs')).错 || ''));
+  台.判('3 取预览那一路三道拦：往外钻的相对名、六种后缀之外、超大那一张 —— 一律拒，不把别处的文件递出去',
+    /往外钻/.test(那.柜一张(柜根, '../../../package.json').错 || '') &&
+    /六种后缀/.test(那.柜一张(柜根, '索引.txt').错 || '') &&
+    /往外钻/.test(那.柜一张(柜根, '../src/_build/text-icon.mjs').错 || '') &&
+    !那0.柜一张(柜根, 列.单[0].相).错, 那0.柜一张(柜根, 列.单[0].相).错 || '第一张取到 ' + 那0.柜一张(柜根, 列.单[0].相).字.length + ' 字节');
+  {
+    /* 真跑一遍他要点的那一手：从柜里挑一张 → 换进 icons 那一格（这一格现在是沙盒）→ 逐字节比 */
+    const 挑 = 列.单.find(x => /\.svg$/.test(x.相)) || 列.单[0];
+    const 源 = 那0.柜一张(柜根, 挑.相);
+    const 落 = 那0.图标写('gear.svg', 源.字.toString('base64'), '换');
+    const 盘 = fs.readFileSync(path.join(柜沙, 'gear.svg'));
+    台.判('4 端到端真跑：柜里挑中「' + 挑.相 + '」→ 换这张落进 icons 那一格 → 盘上那一份与柜里那一份逐字节一样',
+      !源.错 && 落.好 === true && 落.新建 === false && 盘.equals(源.字), '柜里 ' + 源.字.length + ' 字节 → 盘上 ' + 盘.length + ' 字节');
+  }
+  fs.rmSync(柜沙, { recursive: true, force: true });
+  台.判('5 两道路由在（/api/图柜 与 /api/图柜/一张），带 码=1 那一发回 base64 给「点中这张」用；两格都从这一份导出来给闸真跑',
+    ui.includes("路 === '/api/图柜'") && ui.includes("路 === '/api/图柜/一张'") && ui.includes("参.get('码')") &&
+    /柜列, 柜一张/.test(ui.slice(ui.indexOf('export {'))) && ui.includes('柜MIME'));
+  台.判('6 屏上那一窗齐：路径格 / 列这一格 / 找 / 预览格 / 待挑那一句 / 后备那颗选文件，开屏把上一次那一格填回来（存在浏览器本地，这一台不落文件）',
+    pg.includes('id="柜路"') && pg.includes('id="柜列"') && pg.includes('id="柜搜"') && pg.includes('id="柜格"') &&
+    pg.includes('id="挑话"') && pg.includes('id="柜档"') && pg.includes('id="加柜"') &&
+    pg.includes("localStorage.getItem('fd图标柜那一格')") && pg.includes('localStorage.setItem(柜存') &&
+    !/图柜/.test(rd('src/pack/publish.mjs')) /* 这一格是开发期的东西，绝不进装出去的那一枚包 */);
+  台.判('7 换这张不再走系统那个选文件框（每张卡上那枚隐藏 file input 撤了），改成挂成待挑、到柜里点中一张',
+    !/data-档="/.test(pg) && pg.includes("挑 = { 类:'换', 名: 换.dataset['换'] }") &&
+    pg.includes("挑 = { 类:'换包'") && pg.includes('async function 送那张(') && pg.includes('柜开口()'));
+}
+
+台.题('十、界面文字那一栏收紧（他 2026-10-17 第 1 条）：三格不再拉满整行，勾的是哪一句要看得出来');
+台.判('1 原句与输入框各给一个定宽（从前输入框 flex:1 拉满，勾那颗被顶到最右边，中间一大片空白）',
+  /\.字行 \.句\{ flex:0 0 24em/.test(pg) && /\.字行 input\[type=text\]\{ flex:0 0 24em/.test(pg) &&
+  !/\.字行 input\[type=text\]\{ flex:1 1 auto/.test(pg));
+台.判('2 那一行的样式在：整行底色 + 左边一道红 + 原句划掉 + 鼠标走过看得见',
+  /\.字行\.删\{ background:#fbeeea/.test(pg) && /\.字行\.删 \.句\{ text-decoration:line-through/.test(pg) &&
+  /\.字行:hover\{ background:/.test(pg));
+台.判('2b 勾一下当场翻那一行的状态（不用等「保存这些句子」）',
+  /classList\.toggle\(['"]删['"]/.test(pg));
+台.判('2c 画出来时就带上已勾的那几条（重看一遍之后，勾着的还是勾着的）',
+  /项 字行' \+ \(r\.del/.test(pg) && /r\.del \? ' 删' : ''/.test(pg));
 
 台.收尾();
