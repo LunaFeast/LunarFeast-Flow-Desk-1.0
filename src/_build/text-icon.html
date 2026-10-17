@@ -25,6 +25,12 @@
   .格{ display:grid; grid-template-columns:repeat(auto-fill,minmax(400px,1fr)); gap:12px; margin-top:14px; }
   .笔{ background:var(--块); border:1px solid var(--线); border-top:3px solid #b9b1a8; padding:11px 13px 13px; }
   .笔.停{ border-top-color:#cfc7bd; color:var(--淡); }
+  .笔.动{ border-top-color:var(--好); box-shadow:inset 0 0 0 1px var(--好); }
+  .笔.动 .名::after{ content:' · 刚动过'; color:var(--好); font-weight:600; }
+  .好{ color:var(--好); }
+  .字行.改{ background:#f1f7f2; border-left-color:var(--好); }
+  .字行.改 .句{ color:var(--好); }
+  .筛{ font-size:13px; color:var(--淡); white-space:nowrap; }
   .名{ font-weight:600; }
   .副{ color:var(--淡); font-size:12.5px; margin-top:1px; }
   .项{ font-size:13px; margin-top:8px; }
@@ -69,8 +75,15 @@
   .柜格.中{ border-color:var(--好); background:#eef6f0; }
   .柜格 img{ width:40px; height:40px; object-fit:contain; background:#fff; border:1px solid var(--线); }
   .柜格 span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .柜脚{ grid-column:1 / -1; }
   .挑{ font-size:13px; color:var(--急); }
   .挑:empty{ display:none; }
+  /* 占位符（他 2026-10-17 那句「缺失图标的给一个占位符，让我在这里可以替换！」）：
+     索引登记了、盘上还没有的那一张也占一格，空位看得见边界，点「放一张进去」到柜里挑一张就落下去 */
+  .占位{ width:56px; height:56px; border:2px dashed #b9b1a8; display:flex; align-items:center; justify-content:center;
+        font-size:12px; color:var(--淡); }
+  .厂{ font-size:13px; }
+  .厂 .坏{ color:var(--急); }
   @media (max-width:1100px){ .两栏{ grid-template-columns:1fr; } .柜栏,.卡栏{ height:auto; } .柜{ max-height:340px; } }
 </style>
 </head>
@@ -108,6 +121,8 @@
       <span style="flex:1"></span>
       <button id="图重">重新数一遍</button>
       <button id="图对">重新对齐一遍</button>
+      <button id="厂全">把和出厂不一样的都复制进出厂</button>
+      <label class="筛"><input type="checkbox" id="图筛"><span id="图筛标">只看我动过的</span></label>
     </div>
     <div class="行">
       <label for="加名">加一张图</label>
@@ -117,6 +132,7 @@
       <button id="加柜">从图标柜挑一张添进去</button>
     </div>
     <div class="提示" id="图果"></div>
+    <div class="提示" id="图动"></div>
     <div class="格" id="图格"></div>
   </div>
  </div>
@@ -137,7 +153,9 @@
     <button id="字预">预览改动</button>
     <button id="字落" class="主">写进源码</button>
     <button id="字重">重新生成产物</button>
+    <label class="筛"><input type="checkbox" id="字筛"><span id="字筛标">只看改过的</span></label>
   </div>
+  <div class="提示" id="字数"></div>
   <div class="提示" id="字果"></div>
   <div class="格" id="字格"></div>
 </div>
@@ -164,7 +182,7 @@ async function 问(){
 }
 /* 一次只跑一趟：跑着的时候那几颗会动手的钮全按住（2026-10-14 他那条「点了没反应」） */
 function 跑态(){
-  for(const id of ['图重', '图对', '加送', '柜列', '字扫', '字存', '字预', '字落', '字重']){
+  for(const id of ['图重', '图对', '厂全', '加送', '柜列', '字扫', '字存', '字预', '字落', '字重']){
     const 钮 = 取(id); if(钮) 钮.disabled = 跑着;
   }
 }
@@ -195,6 +213,23 @@ async function 跑(路, 标题, 身){
 
 /* ---------- 两页签：图标素材 / 界面文字（「版本与推送」那一页 2026-10-16 整块撤了） ---------- */
 let 图单 = [];
+/* 这一屏动过哪几张：名 → { 做, 时 }，只活在页面这一趟里（删掉的那张卡不在了，另记在 __删过__ 那一格，只报数）*/
+const 动过 = new Map();
+let 只看动过 = false;
+const 动清单 = () => [...动过.entries()].filter(([名]) => 名 !== '__删过__').map(([名, v]) => Object.assign({ 名 }, v));
+const 动数 = () => { const 计 = { 换:0, 加:0, 删:0 }; for(const v of 动清单()) 计[v.做] = (计[v.做] || 0) + 1; return 计; };
+function 图上数(){
+  const 计 = 动数(), 动 = 动清单(), 删的 = 动过.get('__删过__');
+  取('图动').innerHTML = 动.length
+    ? '<b class="好">这一屏你动过 ' + 动.length + ' 张</b>（换 ' + (计.换 || 0) + ' · 加 ' + (计.加 || 0) + ' · 删 ' + (计.删 || 0) + '）'
+      + (删的 && 删的.单 && 删的.单.length ? ' · 删掉的是：' + 文(删的.单.join('、')) : '')
+      + '<span class="淡"> · 这一份只在这一屏里记着，重开就清</span>' : '';
+  const 标 = 取('图筛标'); if(标) 标.textContent = '只看我动过的' + (动.length ? '（' + 动.length + '）' : '');
+}
+function 记一笔(名, 做){
+  if(做 === '删'){ const 旧 = 动过.get('__删过__') || { 做:'删', 时:Date.now(), 单:[] }; 旧.单.push(String(名).replace(/^.*[\/]/, '')); 旧.时 = Date.now(); 动过.set('__删过__', 旧); }
+  动过.set(String(名), { 做, 时: Date.now() });
+}
 function 切页(谁){
   for(const k of ['图','字']){ 取('p' + k).hidden = k !== 谁; 取('t' + k).className = '页' + (k === 谁 ? ' 主' : ''); }
   if(谁 === '图' && !图单.length) 数图();
@@ -208,73 +243,145 @@ async function 数图(){
   const 对 = await (await fetch('/api/图标')).json();
   图单 = 对.单 || [];
   const 插件 = 对.插件 || [];
+  const 没图 = 对.没图条目 || [];
+  const 没进厂 = 对.没进厂 || [];
   取('图情').innerHTML = 对.错 ? '读不到：' + 文(对.错)
     : 'icons 这个文件夹 ' + 对.张 + ' 张 + 插件包自己那一份 ' + 对.插件张 + ' 张 · 每一张干什么、哪份代码叫它几次，读的是 icons\\索引.txt（那份索引文件里登记的，这一台不另搜一套）'
       + (对.没登记 && 对.没登记.length ? '<br><b class="坏">索引里没登记这 ' + 对.没登记.length + ' 张：' + 文(对.没登记.join('、')) + '</b> —— 跑一遍「重新对齐一遍」' : '')
-      + (对.没图 && 对.没图.length ? '<br><b class="坏">索引登记了、icons 里却没这张图：' + 文(对.没图.join('、')) + '</b>' : '')
-      + (对.插件丢图 && 对.插件丢图.length ? '<br><b class="坏">索引登记了、包里却没那张 icon：' + 文(对.插件丢图.join('、')) + '</b>' : '');
+      + (没图.length ? '<br><b class="坏">索引登记了、icons 里却没这张图：' + 没图.length + ' 张</b> —— 下面那几格空位点「放一张进去」就能补上，两处（icons\\ 与出厂）一起落' : '')
+      + (对.插件丢图 && 对.插件丢图.length ? '<br><b class="坏">索引登记了、那一格里还没那张封面：' + 文(对.插件丢图.join('、')) + '</b> —— 卡片上的空位点「放一张封面进去」' : '')
+      + (没图.length || (对.插件丢图 && 对.插件丢图.length) ? '<br><span class="淡">插件包那一张封面住在它自己那一家的 data\\plugins\\&lt;包&gt;\\images\\ 里（一家一仓），主程序仓没有就问隔壁那七家</span>' : '')
+      + (没进厂.length ? '<br><b class="坏">' + 没进厂.length + ' 张和出厂那一格不一样</b>（装到机器上带的是 src\\pack\\icons\\ 那一份）：' +
+          文(没进厂.slice(0, 10).join('、')) + (没进厂.length > 10 ? ' …' : '') : '');
+  const 厂钮 = 取('厂全');
+  厂钮.hidden = !没进厂.length;
+  厂钮.textContent = '把和出厂不一样的 ' + 没进厂.length + ' 张复制进出厂';
+  图上数();
   const 格 = 取('图格'); 格.innerHTML = '';
+  const 厂行 = x => x.出厂 === '同'
+    ? '<span class="淡"> 出厂 src\\pack\\icons\\ 已经是这一张（打包带出去的就是它）</span>'
+    : '<button data-厂="' + 编(x.名) + '">复制进出厂</button><span class="淡"> 出厂那一格' +
+      (x.出厂 === '没有' ? '还没有这一张' : '还是老图') + ' —— 装到机器上带的是那一格，不是这里</span>';
   const 张 = (x, 图路, 通用) => {
+    const 动 = 动过.get(x.名);
+    if(只看动过 && !动) return;
     const 盒 = document.createElement('div');
-    盒.className = '笔' + (x.在不在 === false ? ' 停' : '');
+    盒.className = '笔' + (动 ? ' 动' : '') + (x.在不在 === false ? ' 停' : '');
     盒.innerHTML = '<div class="名">' + 文(x.键) + '</div>' +
-      '<div class="副">' + 文(x.名) + ' · ' + 文(x.层) + (x.大 >= 0 ? ' · ' + x.大.toLocaleString() + ' 字节' : ' · 取不到这个文件') + (x.段 ? ' · ' + 文(x.段) : '') + '</div>' +
-      (x.大 >= 0 ? '<div class="图预览"><img src="' + 图路 + '" alt="' + 编(x.键) + ' 读不出图"></div>' : '') +
+      '<div class="副">' + 文(x.名) + ' · ' + 文(x.层) + (x.大 >= 0 ? ' · ' + x.大.toLocaleString() + ' 字节' : ' · 那一格里还没有这一张') +
+      (x.出自 ? ' · 在 ' + 文(x.出自) + ' 那一棵' : '') + (x.段 ? ' · ' + 文(x.段) : '') + '</div>' +
+      /* 动过的带一个时间戳：地址不换的话浏览器那一层照旧给你旧图（路由回的是 no-store，img 那层缓存照吃）*/
+      (x.大 >= 0 ? '<div class="图预览"><img src="' + 图路 + (动 ? '&t=' + 动.时 : '') + '" alt="' + 编(x.键) + ' 读不出图"></div>'
+        : '<div class="图预览"><div class="占位">还没有图</div></div>') +
+      (动 ? '<div class="项"><b class="好">这一张你刚' + 动.做 + '过</b><span class="淡"> · ' + new Date(动.时).toLocaleTimeString('zh-CN', { hour12:false }) + ' · 要记进图标索引点「重新对齐一遍」</span></div>' : '') +
       (x.说 ? '<div class="项">' + 文(x.说) + '</div>'
         : x.登记 === false ? '<div class="项"><b class="坏">图标索引里还没有这一张</b>：点上面「重新对齐一遍」把它记上</div>'
         : '<div class="项"><b class="坏">图标索引里这一张没写它是干什么的</b>：那句说明住在 src\\_build\\ico-index.mjs 那张表里，要补得改那一处（小助手不替你编）</div>') +
       (x.引用 ? '<div class="项"><span>引用 </span>' + 文(x.引用) + '</div>' : '') +
-      (通用 ? '<div class="项"><button data-换="' + 编(x.名) + '">换这张</button> <button data-删="' + 编(x.名) + '">删这张</button></div>'
-            : x.在不在 === false ? '<div class="项"><b class="坏">换这张 </b>这一张取不到文件（' + 文(x.名) + '），先对一遍索引再看</div>'
+      (通用 ? '<div class="项"><button data-换="' + 编(x.名) + '">换这张</button> <button data-删="' + 编(x.名) + '">删这张</button>' + 厂行(x) + '</div>'
+            : x.在不在 === false ? '<div class="项"><button data-补包="' + 编(x.包) + '" data-补档="' + 编(x.档) + '">放一张封面进去</button>' +
+              '<span class="淡"> 新建在 ' + 文(x.全) + '（索引登记了这一张，那一格里还没有；同名不给改）</span></div>'
             : '<div class="项"><button data-换包="' + 编(x.包) + '" data-换档="' + 编(x.档) + '">换这张</button>' +
-              '<span class="淡"> 同名盖进 ' + 文(x.名) + '（只认 .' + 编((String(x.档).split('.').pop() || 'svg').toLowerCase()) + '，这一张的文件名写在它的插件清单与那份索引上，不给改名也不给删）</span></div>');
+              '<span class="淡"> 同名盖进 ' + 文(x.全) + '（只认 .' + 编((String(x.档).split('.').pop() || 'svg').toLowerCase()) + '，这一张的文件名写在它的插件清单与那份索引上，不给改名也不给删）</span></div>');
     格.appendChild(盒);
   };
+  /* 索引登记了、icons 里没有的那一张：占位卡 + 能使的「放一张进去」（落点照索引那个名字算，两处一起写） */
+  for(const x of 没图){
+    const 动 = 动过.get(x.补);
+    if(只看动过 && !动) continue;
+    const 盒 = document.createElement('div');
+    盒.className = '笔 停' + (动 ? ' 动' : '');
+    盒.innerHTML = '<div class="名">' + 文(x.键) + '</div>' +
+      '<div class="副">icons\\' + 文(x.补) + ' · 还没有这一张' + (x.段 ? ' · ' + 文(x.段) : '') + '</div>' +
+      '<div class="图预览"><div class="占位">还没有图</div></div>' +
+      (动 ? '<div class="项"><b class="好">这一张你刚' + 动.做 + '过</b></div>' : '') +
+      '<div class="项"><button data-补="' + 编(x.补) + '">放一张进去</button>' +
+      '<span class="淡"> 同名写进 icons\\ 与出厂 src\\pack\\icons\\ 两处</span></div>' +
+      (x.说 ? '<div class="项">' + 文(x.说) + '</div>' : '') +
+      (x.引用 ? '<div class="项"><span>引用 </span>' + 文(x.引用) + '</div>' : '');
+    格.appendChild(盒);
+  }
   for(const x of 图单) 张(x, '/api/图标/一张?名=' + encodeURIComponent(x.名), true);
   for(const x of 插件) 张(x, '/api/图标/一张?包=' + encodeURIComponent(x.包) + '&档=' + encodeURIComponent(x.档), false);
 }
 function 读成64(档){ return new Promise(成 => { const r = new FileReader(); r.onload = () => 成(String(r.result).split(',')[1] || ''); r.readAsDataURL(档); }); }
-async function 发图(哪道, 名, 字64){
-  const 回 = await fetch('/api/图标/' + 哪道, { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 },
-    body: JSON.stringify(字64 === undefined ? { 名 } : { 名, 图: 字64 }) });
-  const 文2 = await 回.text();
-  取('图果').innerHTML = 回.ok ? '<b>' + 哪道 + '完了：</b>' + 文(名) + ' · 这个文件夹重新数了一遍；要把这一张记进图标索引，再点「重新对齐一遍」'
-    : '<b class="坏">' + 文2 + '</b>';
-  if(回.ok){ 图单 = []; 数图(); }
-}
 /* 换这张 / 加一张：不再走系统那个选文件框（它记不住上一次那一格，而 .svg 在这台机器上关联到浏览器，
    一整柜缩略图全是同一个图标，看不出哪张是哪张）。点一下把这一张挂成「待挑」，到下面图标柜里点中一张就落下去。 */
 let 挑 = null;
 function 挑说(){
-  取('挑话').innerHTML = 挑 ? '正在挑图 · 下面图标柜里点一张' + (挑.类 === '加' ? '添进 icons 这一格' : '换掉 <b>' + 编(挑.名 || (挑.包 + '\\' + 挑.档)) + '</b>')
-    + '　<button id="挑放">不挑了</button>' : '';
+  const 去 = !挑 ? '' : 挑.类 === '换包' ? (挑.补 ? '给 <b>' + 编(挑.包) + '</b> 那一包放一张封面'
+              : '换掉 <b>' + 编(挑.包 + '\\' + 挑.档) + '</b>')
+      : 挑.类 === '加' ? (挑.补 ? '放进 <b>' + 编(挑.名) + '</b> 那一格（icons\\ 与出厂两处）' : '添进 icons 这一格')
+      : '换掉 <b>' + 编(挑.名) + '</b>（icons\\ 与出厂两处一起换）';
+  取('挑话').innerHTML = 挑 ? '正在挑图 · 到左边图标柜里点一张' + 去 + '　<button id="挑放">不挑了</button>' : '';
   const 放 = 取('挑放'); if(放) 放.onclick = () => { 挑 = null; 挑说(); };
 }
 取('图格').addEventListener('click', e => {
-  const 换 = e.target && e.target.closest && e.target.closest('button[data-换]');
-  const 换包 = e.target && e.target.closest && e.target.closest('button[data-换包]');
-  const 删 = e.target && e.target.closest && e.target.closest('button[data-删]');
-  if(换){ 挑 = { 类:'换', 名: 换.dataset['换'] }; 挑说(); 柜开口(); return; }
-  if(换包){ 挑 = { 类:'换包', 包: 换包.dataset['换包'], 档: 换包.dataset['换档'] }; 挑说(); 柜开口(); return; }
-  if(删){ if(confirm('删掉 icons\\' + 删.dataset['删'] + ' 这一张？索引上说没有代码在叫它才让删（有叫它的话会拒）。')) 发图('删', 删.dataset['删']); }
+  const 钮 = e.target && e.target.closest && e.target.closest('button');
+  if(!钮) return;
+  const d = 钮.dataset;
+  if(d['换']){ 挑 = { 类:'换', 名: d['换'] }; 挑说(); 柜开口(); return; }
+  if(d['换包']){ 挑 = { 类:'换包', 包: d['换包'], 档: d['换档'] }; 挑说(); 柜开口(); return; }
+  if(d['补包']){ 挑 = { 类:'换包', 补:true, 包: d['补包'], 档: d['补档'] }; 挑说(); 柜开口(); return; }
+  if(d['补']){ 挑 = { 类:'加', 补:true, 名: d['补'] }; 挑说(); 柜开口(); return; }
+  if(d['厂']){ 进厂([d['厂']], '把 ' + d['厂'] + ' 复制进出厂'); return; }
+  if(d['删']){ if(confirm('删掉 icons\\' + d['删'] + ' 这一张？索引上说没有代码在叫它才让删（有叫它的话会拒）。\n\n注意：只删 icons\\ 那一层，出厂 src\\pack\\icons\\ 那一份不动。')) 发图('删', d['删']); }
 });
-/* 挑中一张之后落下去：换 / 换包 / 加 三种去向，走的还是那两条老通道（后端那五把守门一道不少） */
+/* 挑中一张之后落下去：换 / 换包 / 加 三种去向，走的还是那两条老通道（后端那五把守门一道不少）。
+   待挑那一手带了固定名字的（占位符那两张卡）以它为准，不让「加一张图」那一栏里剩着的名字把落点换了。 */
 async function 送那张(字64, 名){
   const 待 = 挑; 挑 = null; 挑说();
   if(!待) return;
   if(待.类 === '换包') await 发插件封面(待.包, 待.档, 字64);
-  else if(待.类 === '加'){ const 要 = 取('加名').value.trim() || 图名(名 || ''); 取('加名').value = 要; await 发图('加', 要, 字64); }
+  else if(待.类 === '加'){ const 要 = 待.名 || 取('加名').value.trim() || 图名(名 || ''); 取('加名').value = 要; await 发图('加', 要, 字64); }
   else await 发图('换', 待.名, 字64);
 }
-/* 插件包那一格的封面：挑一张同名盖进它自己那一格（后缀由那颗按钮上的 accept 限死，后端再拦一道） */
+/* 换这张 / 加一张：落两处 —— 树根 icons\（程序此刻读的）与出厂 src\pack\icons\（装到机器上带的），
+   后端那一发把两处都写完了才回好；出厂那一步要是砸了，屏上就红着报出来，不许闷着说"换好了"。 */
+async function 发图(哪道, 名, 字64){
+  const 回 = await fetch('/api/图标/' + 哪道, { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 },
+    body: JSON.stringify(字64 === undefined ? { 名 } : { 名, 图: 字64 }) });
+  const 文2 = await 回.text();
+  if(回.ok){
+    const 对 = JSON.parse(文2);
+    if(哪道 === '删'){
+      取('图果').innerHTML = '<b>删掉了：</b>' + 文(名) + ' · 只删 icons\\ 那一层，出厂 src\\pack\\icons\\ 那一份不动';
+      记一笔(名, 哪道); 图单 = []; 数图(); return;
+    }
+    const 厂 = 对.出厂 || {};
+    取('图果').innerHTML = '<b>' + 哪道 + '完了：</b>' + 文(名) + ' · ' + 文(厂.好 ? 'icons\\ 与出厂 src\\pack\\icons\\ 两处都换了这一张（打包带的就是它）' : 'icons\\ 换了')
+      + (厂.好 ? '' : '<b class="坏"> —— 但出厂那一格没写进去：' + 文(厂.错 || '不知道哪一步砸的') + '</b>')
+      + ' · 要记进图标索引，再点「重新对齐一遍」';
+    记一笔(名, 哪道); 图单 = []; 数图();
+    return;
+  }
+  取('图果').innerHTML = '<b class="坏">' + 文(文2) + '</b>';
+}
+/* 复制进出厂（他 2026-10-17 那句「保存呢？改的图标要复制替换程序内原版图标的保存呢」）：
+   换 / 加 那两道自己已经带着复制了，这一颗管的是他在资源管理器里直接换掉的那几张。 */
+async function 进厂(单, 话){
+  取('图果').textContent = 话 + '……';
+  const 回 = await fetch('/api/图标/进厂', { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 },
+    body: JSON.stringify({ 单 }) });
+  const 信 = await 回.text();
+  if(!回.ok){ 取('图果').innerHTML = '<b class="坏">' + 文(信) + '</b>'; return; }
+  const 对 = JSON.parse(信);
+  取('图果').innerHTML = '<b>出厂那一格已经和 icons\\ 一样了 ' + 对.成.length + ' 张</b>（src\\pack\\icons\\ 那一份就是装到机器上带的）'
+    + (对.坏.length ? ' · <b class="坏">没写进去 ' + 对.坏.length + ' 张：' + 文(对.坏.join('；')) + '</b>' : '');
+  图单 = []; 数图();
+}
+/* 插件包那一格的封面：挑一张同名盖进它自己那一格（后缀由那颗按钮上的 accept 限死，后端再拦一道）。
+   一家一仓之后那一张住在它自己那一家的仓里，落点与仓名由后端报回来 —— 那一格就是这一家的原版。 */
 async function 发插件封面(包, 档, 字64){
   取('图果').textContent = '正在把这一张盖进 ' + 包 + ' 那一包…';
   const 回 = await fetch('/api/图标/换', { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 },
     body: JSON.stringify({ 包, 档, 图:字64 }) });
   const 信 = await 回.text();
-  取('图果').innerHTML = 回.ok ? '<b>换好了：</b>' + 文(JSON.parse(信).路径) + ' · 主进程盯着这些图，换完推一份新清单给各窗口，程序不用重启'
-    : '<b class="坏">' + 文(信) + '</b>';
-  if(回.ok){ 图单 = []; 数图(); }
+  if(!回.ok){ 取('图果').innerHTML = '<b class="坏">' + 文(信) + '</b>'; return; }
+  const 对 = JSON.parse(信);
+  取('图果').innerHTML = '<b>' + (对.新建 ? '放进去' : '换好了') + '</b>：' + 文(对.出自) + ' · ' + 文(对.路径) +
+    ' · 这一家仓里那一张就是程序读的原版，主进程盯着这些图，换完推一份新清单给各窗口，程序不用重启';
+  记一笔('data/plugins/' + 包 + '/images/' + 档, 对.新建 ? '加' : '换'); 图单 = []; 数图();
 }
 /* ---------- 图标柜（他 2026-10-17 第 2、3 条）：指定一格 → 一窗真预览 → 点中一张去换 / 去加 ----------
    上一次那一格存在浏览器自己的本地存储里（这一台不落任何文件），开屏就填回来。 */
@@ -293,19 +400,22 @@ async function 柜列(){
   if(对.错){ 柜单 = []; 柜画(); 取('图果').innerHTML = '<b class="坏">' + 文(对.错) + '</b>'; return; }
   柜单 = 对.单 || []; 柜根 = 对.根;
   try{ localStorage.setItem(柜存, 路); }catch(e){}
-  取('图果').innerHTML = '<b>' + 文(对.根) + '</b> · 这一格 ' + 对.张 + ' 张图，点一张就用'
-    + (对.张 >= 4000 ? '（这一格太大，只数了前 4000 张 · 用「找」那一格缩小范围）' : '');
+  取('图果').innerHTML = '<b>' + 文(对.根) + '</b> · 这一格 ' + 对.张 + ' 张图，全摆出来了，点一张就用'
+    + (对.全 === false ? '（这一格实在太大，只数到 ' + 对.张 + ' 张 · 用「找」那一格缩小范围）' : '');
   柜画();
 }
 function 柜画(){
   const 词 = 取('柜搜').value.trim().toLowerCase();
   const 格 = 取('柜格');
   const 单 = 柜单.filter(x => !词 || x.相.toLowerCase().includes(词));
-  格.innerHTML = 单.slice(0, 600).map(x => '<button class="柜格" data-相="' + 编(x.相) + '" title="' + 编(x.相) + ' · ' + x.大.toLocaleString() + ' 字节">'
-      + '<img src="/api/图柜/一张?路=' + encodeURIComponent(柜根) + '&相=' + encodeURIComponent(x.相) + '" alt="">'
+  /* 全画出来（他 2026-10-17 那句「给我展示全部！！有时候我不知道名字需要看图啊」）：
+     从前只画前 600 张，剩下的看不见 = 那一格白摆；整柜两千多张一次摆全，图交给浏览器懒取（滚到哪儿读到哪儿），
+     所以一次画完也不必先点一下才看见。筛完空了才说空。 */
+  格.innerHTML = 单.map(x => '<button class="柜格" data-相="' + 编(x.相) + '" title="' + 编(x.相) + ' · ' + x.大.toLocaleString() + ' 字节">'
+      + '<img loading="lazy" decoding="async" src="/api/图柜/一张?路=' + encodeURIComponent(柜根) + '&相=' + encodeURIComponent(x.相) + '" alt="">'
       + '<span>' + 文(x.相) + '</span></button>').join('')
-    + (单.length > 600 ? '<div class="提示">这一筛 ' + 单.length + ' 张，先画前 600 张 · 再打几个字缩小范围</div>'
-      : (柜单.length && !单.length ? '<div class="提示">这一格里没有名字含这几个字的图</div>' : ''));
+    + (单.length ? '<div class="提示 柜脚">这一筛 ' + 单.length + ' 张，全摆出来了（图滚到哪儿读到哪儿）</div>'
+      : (柜单.length ? '<div class="提示">这一格里没有名字含这几个字的图</div>' : ''));
   格.hidden = !单.length && !柜单.length;
 }
 取('柜列').onclick = 柜列;
@@ -346,22 +456,41 @@ const 图名 = n => String(n || '').replace(/^.*[\\/]/, '').replace(/\s+/g, '-')
 取('加柜').onclick = () => { 挑 = { 类:'加' }; 挑说(); 柜开口(); };
 取('图重').onclick = () => { 图单 = []; 数图(); };
 取('图对').onclick = () => 跑('图标/对齐', '重新对齐图标索引');
+/* 一次把不一致的那几张全复制进出厂（换 / 加 那两道自己已经带着复制，这里管的是他在别处直接动过的那几张） */
+取('厂全').onclick = () => {
+  const 单 = 图单.filter(x => x.出厂 !== '同').map(x => x.名);
+  if(!单.length){ 取('图果').textContent = 'icons\\ 里每一张都和出厂那一格一样，没什么要复制的。'; return; }
+  if(confirm('把 ' + 单.length + ' 张从 icons\\ 原样复制进出厂 src\\pack\\icons\\？\n\n出厂那一格是装到机器上带的那一份：同名盖掉它，icons\\ 这一层一个字不动。'))
+    进厂(单, '把 ' + 单.length + ' 张复制进出厂');
+};
+取('图筛').onchange = e => { 只看动过 = !!e.target.checked; 图单 = []; 数图(); };
 
 /* ---------- 界面文字那一栏：一屏只画挑中的那一页，改完先存文件，再预览，再写进源码，最后重跑产物 ---------- */
 let 字条 = [], 当前 = [];
+let 只看改过 = false;
+/* 这一条改没改只看清单里那一格：填了句子 = 改了，勾了划掉 = 划掉，空着 = 没动 */
+const 改没 = r => r.del ? '删' : (String(r.to || '').trim() ? '改' : '');
+function 字数(){
+  const 本 = { 改:0, 删:0 }; 字条.filter(r => r.段 === 取('字段').value).forEach(r => { const 态 = 改没(r); if(态) 本[态]++; });
+  const 全 = { 改:0, 删:0 }; 字条.forEach(r => { const 态 = 改没(r); if(态) 全[态]++; });
+  取('字数').innerHTML = ((本.改 || 本.删) ? '<b class="好">这一页改了 ' + 本.改 + ' 条 · 划掉 ' + 本.删 + ' 条</b>' : '这一页还没改')
+    + ' · 整份清单改了 <b>' + 全.改 + '</b> 条 · 划掉 <b>' + 全.删 + '</b> 条（换页也看得见）';
+  const 标 = 取('字筛标'); if(标) 标.textContent = '只看改过的' + ((全.改 + 全.删) ? '（' + (全.改 + 全.删) + '）' : '');
+}
 function 字画(){
   const 选 = 取('字段').value, 词 = 取('字搜').value.trim();
   const 全 = 字条.filter(r => r.段 === 选);
-  当前 = 全.filter(r => !词 || r.from.includes(词) || String(r.to || '').includes(词));
+  当前 = 全.filter(r => (!词 || r.from.includes(词) || String(r.to || '').includes(词)) && (!只看改过 || 改没(r)));
   const 格 = 取('字格');
   格.innerHTML = '<div class="笔"><div class="名">' + 文(选) + '</div>' +
     '<div class="副">这一页 ' + 全.length + ' 条' + (词 ? ' · 含「' + 文(词) + '」的 ' + 当前.length + ' 条' : '') +
     ' · 格子里空着就是不改；勾「这句不要了」是划掉这一句</div>' +
-    当前.map((r, i) => '<div class="项 字行' + (r.del ? ' 删' : '') + '">' +
+    当前.map((r, i) => '<div class="项 字行' + (改没(r) === '删' ? ' 删' : (改没(r) === '改' ? ' 改' : '')) + '">' +
       '<span class="句" title="' + 编(r.from) + '">' + 文(r.from) + '</span>' +
       '<input type="text" data-i="' + i + '" value="' + 编(r.to || '') + '" placeholder="不改就空着">' +
       '<label><input type="checkbox" data-d="' + i + '"' + (r.del ? ' checked' : '') + '>这句不要了</label>' +
-      (r.del ? ' <b class="坏">（已划掉）</b>' : '') + '</div>').join('') + '</div>';
+      (r.del ? ' <b class="坏">（已划掉）</b>' : (String(r.to || '').trim() ? ' <b class="好">（填了改动）</b>' : '')) + '</div>').join('') + '</div>';
+  字数();
 }
 async function 字读(){
   取('字情').textContent = '正在读 data\\ui-text.yaml……';
@@ -370,6 +499,7 @@ async function 字读(){
   字条 = 对.条;
   取('字段').innerHTML = 对.段.map(s => '<option' + (s === 取('字段').value ? ' selected' : '') + '>' + 编(s) + '</option>').join('');
   取('字情').textContent = '清单 ' + 对.段.length + ' 页 / ' + 对.字条 + ' 条 · 填了先点「保存这些句子」写进 data\\ui-text.yaml，预览与写进源码都以这个文件为准';
+  字数();
   字画();
 }
 function 字集(){
@@ -390,8 +520,19 @@ function 字集(){
   const 行 = 勾 && 勾.closest && 勾.closest('.字行');
   if(行) 行.classList.toggle('删', !!勾.checked);
 });
+/* 打字与勾选当场翻那一行的样子（不等「保存这些句子」）：行标色 + 计数跟着动 */
+取('字格').addEventListener('input', e => {
+  const 框 = e.target && e.target.closest && e.target.closest('input[data-i]');
+  if(!框) return;
+  const r = 当前[+框.dataset['i']]; if(!r) return;
+  r.to = 框.value;
+  const 行 = 框.closest('.字行');
+  if(行){ 行.classList.toggle('改', !r.del && !!String(框.value).trim()); 行.classList.toggle('删', !!r.del); }
+  字数();
+});
 取('字段').onchange = 字画;
 取('字搜').oninput = 字画;
+取('字筛').onchange = e => { 只看改过 = !!e.target.checked; 字画(); };
 取('字扫').onclick = () => 跑('文字/扫', '刷新界面文字清单');
 取('字存').onclick = async () => {
   const 改 = 字集();

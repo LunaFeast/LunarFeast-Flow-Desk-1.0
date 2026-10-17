@@ -37,7 +37,7 @@ import zlib from 'node:zlib';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { scan as packScan, writeZip } from '../_build/packs.mjs';
-import { 打包 as 打容器, 扩展名 as 容器后缀 } from '../_build/packbox.mjs';
+import { 打包 as 打容器, 扩展名 as 容器后缀, 读容器 } from '../_build/packbox.mjs';
 import { assertClean } from '../_build/scan-packs.mjs';
 import { 号, 页名 } from '../_build/version.mjs';
 

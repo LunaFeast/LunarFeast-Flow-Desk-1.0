@@ -14,6 +14,7 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { ROOT, rd, 切, 尺在, rd在, 记账 } from './lib-slice.mjs';
 import { 探针沙盒 } from '../本地路径.mjs';
 
@@ -44,7 +45,7 @@ const 那 = await import('../../_build/text-icon.mjs');
 {
   const 叫 = [...ui.matchAll(/跑git\(\['([^']+)'/g)].map(m => m[1]);
   const 路由 = [...new Set([...ui.matchAll(/路 === '(\/api\/[^']+)'/g)].map(m => m[1]))].sort();
-  const 该有 = ['/api/图柜', '/api/图柜/一张', '/api/图标', '/api/图标/一张', '/api/图标/加', '/api/图标/删', '/api/图标/对齐', '/api/图标/换',
+  const 该有 = ['/api/图柜', '/api/图柜/一张', '/api/图标', '/api/图标/一张', '/api/图标/加', '/api/图标/删', '/api/图标/对齐', '/api/图标/换', '/api/图标/进厂',
     '/api/现场', '/api/文字', '/api/文字/存', '/api/文字/扫', '/api/文字/落', '/api/文字/预览', '/api/文字/重生成'].sort();
   台.判('这一台只开该开的那几格，推送那一摊的路由一格不剩（量 / 摊单 / 推项 / 快进 / 删支 / 自测 / 完整 / 集成 / pr / 发 / 开产物 都不在）',
     JSON.stringify(路由) === JSON.stringify(该有) && !/摊单|推项|快进|删支|自测|集成|开产物/.test(ui), 路由.join('、'));
@@ -129,19 +130,36 @@ const 那 = await import('../../_build/text-icon.mjs');
     !/git grep/.test(ui) && !/'grep'/.test(ui));
   台.判('3 索引文件自己的标题行（中间也带 " = "）不许变成一条图标：段首之前的一律不算数据',
     ui.includes('if(!当段){ continue; }') && ui.includes('段首之前的一律不算数据'));
-  台.判('4 插件包那七张按索引说的真位置取（data\\plugins\\<包>\\images\\icon.<后缀>），不混进 icons 那一格里比"丢图"',
-    ui.includes("path.join(插件层, 包, 'images', 档)") && ui.includes("const 插件层 = process.env.FD_PLUGINS") &&
-    ui.includes('const 通用没图 =') && ui.includes('插件丢图: 插件.filter(x => !x.在不在)'));
+  台.判('4 插件包那七张的位置问邻居那把尺（本仓 data\\plugins 先问、再问 plugins\\<仓名>\\ 那七棵），不混进 icons 那一格里比"丢图"，也不在这台里抄第二份仓名表',
+    ui.includes("import { 找 as 邻找, 出自 as 邻出自 } from './邻居.mjs'") &&
+    ui.includes('function 插件找(包, 档)') && ui.includes('邻找(插件相(包, 档))') &&
+    !/from '\.\/(pack-repo|布局)\.mjs'/.test(ui) && ui.includes('const 通用没图 =') && ui.includes('插件丢图: 插件.filter(x => !x.在不在)'));
+  台.判('4b 真读一眼他这一棵（另起一个不带 FD_ 环境变量的进程，只读不写）：那七张封面张张取得到、报的是它自己那一家的仓名 —— 从前只认主程序仓那一格，七张全报「取不到」',
+    (() => {
+      const 探 = path.join(探针沙盒, 'tmp-real-read.mjs');
+      fs.writeFileSync(探, 'const m = await import(process.argv[2]);\nconst 单 = m.图标单();\n' +
+        "console.log(JSON.stringify({ 出自: 单.插件.map(x => x.出自), 丢: 单.插件丢图, 在: 单.插件.filter(x => x.在不在).length, 全: 单.插件.every(x => x.全 && x.全.includes('plugins')), 柜: m.柜上限, 厂: m.厂层 }));\n", 'utf8');
+      let 果 = null;
+      try{
+        果 = JSON.parse(execFileSync(process.execPath, [探, new URL('../../_build/text-icon.mjs', import.meta.url).href],
+          { encoding: 'utf8', env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, TEMP: process.env.TEMP } }));
+      }catch(e){ 果 = { 错: String((e && e.message) || e).split(/\r?\n/)[0] }; }
+      fs.rmSync(探, { force: true });
+      台.判('4c 同一眼里：出厂那一格认的是他这一棵的 src\\pack\\icons\\（不是沙盒），图标柜那一格的上限是整柜摆得下的 3 万张',
+        !!果 && !果.错 && /src.pack.icons$/.test(果.厂 || '') && 果.柜 === 30000, JSON.stringify(果).slice(0, 120));
+      return !!果 && !果.错 && 果.在 === 7 && 果.丢.length === 0 && 果.全 &&
+        果.出自.join() === ['Music-Remote', 'Notes', 'Schedule', 'Singbit-Input-Practice', 'Why-Not-Write', 'Why-Not-Write-plugins-Deduce-Custom', 'Your-Sentences'].join();
+    })(), '七家仓名逐一对上');
   台.判('5 取图那两道路径闸：icons 那一格以外不认、子目录不许往外钻；插件那张只认合式的包名与 icon.<六种后缀>',
     ui.includes('只认 icons 这个文件夹里的图') && ui.includes('全.startsWith(根 + path.sep)') &&
     ui.includes("^[a-z0-9][a-z0-9-]*$") && ui.includes('jpe?g') &&
     ui.includes('插件包那张图标只认'));
   台.判('6 「重新对齐一遍」那颗跑的就是那颗现成的索引脚本，这一台自己从不写那份索引',
     ui.includes("起(['src/_build/ico-index.mjs']") && !/writeFileSync\([^)]*索引/.test(ui));
-  台.判('7 屏上两栏在（图标素材 / 界面文字），「版本与推送」那一栏与那一枚对话框都不许留壳；图标那一栏列出干什么、引用、大小、预览，索引没登记、没这张图、取不到文件分开报',
+  台.判('7 屏上两栏在（图标素材 / 界面文字），「版本与推送」那一栏与那一枚对话框都不许留壳；图标那一栏列出干什么、引用、大小、预览，索引没登记、那一格里还没有这一张分开报',
     pg.includes('id="t图"') && pg.includes('id="t字"') && !pg.includes('id="t版"') && !pg.includes('id="p版"') &&
     !pg.includes('class="挡') && !pg.includes('摊着来(') &&
-    pg.includes('图标索引里还没有这一张') && pg.includes("' · 取不到这个文件'") && pg.includes('没登记') && pg.includes('alt="'));
+    pg.includes('图标索引里还没有这一张') && pg.includes("' · 那一格里还没有这一张'") && pg.includes('没登记') && pg.includes('alt="'));
   台.判('8 加、换、删三颗手都在屏上（icons 那一格一张两颗 + 顶上"加一张图"）',
     pg.includes('data-换=') && pg.includes('data-删=') && pg.includes('id="加名"') && pg.includes('id="加档"') &&
     pg.includes('取(\'加送\').onclick'));
@@ -212,6 +230,8 @@ const 那 = await import('../../_build/text-icon.mjs');
 台.题('八、图标那一格的加、换、删：真跑在沙盒那一格里，删之前先看有没有代码在叫它');
 {
   const 仓里 = fs.readdirSync(path.join(ROOT, 'icons')).length;
+  const 仓厂 = fs.readdirSync(path.join(ROOT, 'src', 'pack', 'icons')).length;
+  const 仓厂样 = fs.readFileSync(path.join(ROOT, 'src', 'pack', 'icons', 'gear.svg'));
   const 甲 = s => Buffer.from(s).toString('base64');
   const 小 = 甲('<svg xmlns="http://www.w3.org/2000/svg"/>');
   const 名 = 'gate-round-trip.svg', 路 = p => path.join(沙, p);
@@ -224,6 +244,13 @@ const 那 = await import('../../_build/text-icon.mjs');
   台.判('1 加一张：真落进那一层、字节与送来的一致；同名再加被拒（要盖就点「换这张」）',
     加.好 === true && 加.新建 === true && 加完的字节.equals(Buffer.from(小, 'base64')) &&
     加二.好 === undefined && /已经有这一张/.test(String(加二.错)), JSON.stringify(加二).slice(0, 60));
+  台.判('1b 加与换都同时落进出厂那一格（他 2026-10-17 那句「改的图标要复制替换程序内原版图标的保存呢」）：出厂那一份与 icons 那一份逐字节一样，报回的路径是 src\\pack\\icons\\',
+    加.出厂.好 === true && 换.出厂.好 === true && 换.出厂.路径 === 'src/pack/icons/' + 名 &&
+    fs.readFileSync(path.join(那.厂层, 名)).equals(换完的字节), 那.厂层);
+  台.判('1c 出厂那一格跟着 FD_ICONS 指的那一棵走（沙盒），不指着他真仓里的 src\\pack\\icons\\ 写',
+    path.resolve(那.厂层) === path.resolve(探针沙盒, 'src', 'pack', 'icons') && !那.厂层.startsWith(path.join(ROOT, 'src')), 那.厂层);
+  台.判('1d 进出厂 那颗单跑也算得清：不一致的那一张写完就成了「同」，盘上没有的那一张它不编（报"没什么可复制"）',
+    那.出厂看(名) === '同' && /没什么可复制/.test(String(那.进出厂('gate-none.svg').错)), 那.出厂看(名));
   台.判('2 换这张：同名盖上去、字节变了、不新增文件；换一张本来没有的被拒',
     换.好 === true && 换.新建 === false && !换完的字节.equals(加完的字节) && 换完的字节.toString('utf8').includes('viewBox') &&
     /本来没有这一张/.test(String(那.图标写('gate-none.svg', 小, '换').错)), 换.大 + ' 字节');
@@ -242,9 +269,11 @@ const 那 = await import('../../_build/text-icon.mjs');
     /六种后缀/.test(那.图标落点('a.txt').错) && /只许字母数字/.test(那.图标落点('图 标.svg').错) &&
     /超过/.test((那.图标写('gate-big.svg', 甲('x'.repeat(600 * 1024)), '加').错) || '') &&
     !fs.existsSync(path.join(沙, 'gate-big.svg')) && !fs.existsSync(path.join(ROOT, 'data', 'x.svg')));
-  台.判('7 跑完这一节，你仓根 icons\\ 一个字节没动（文件数与跑前一样，那份说明书也没被改）',
-    fs.readdirSync(path.join(ROOT, 'icons')).length === 仓里 && fs.existsSync(path.join(ROOT, 'icons', '索引.txt')),
-    仓里 + ' → ' + fs.readdirSync(path.join(ROOT, 'icons')).length);
+  台.判('7 跑完这一节，你仓根 icons\\ 与出厂 src\\pack\\icons\\ 都一个字节没动（文件数与跑前一样，那份说明书也没被改，出厂那张 gear 逐字节一样）',
+    fs.readdirSync(path.join(ROOT, 'icons')).length === 仓里 && fs.existsSync(path.join(ROOT, 'icons', '索引.txt')) &&
+    fs.readdirSync(path.join(ROOT, 'src', 'pack', 'icons')).length === 仓厂 &&
+    fs.readFileSync(path.join(ROOT, 'src', 'pack', 'icons', 'gear.svg')).equals(仓厂样),
+    仓里 + ' → ' + fs.readdirSync(path.join(ROOT, 'icons')).length + ' · 出厂 ' + 仓厂 + ' → ' + fs.readdirSync(path.join(ROOT, 'src', 'pack', 'icons')).length);
   /* ---- 插件包那一张封面：同名盖进它自己那一格（沙盒那一棵，不碰他仓里的包） ---- */
   {
     const 包路 = p => path.join(探针沙盒, '插件封面-闸跑', p);
@@ -259,10 +288,17 @@ const 那 = await import('../../_build/text-icon.mjs');
       成.好 === true && 成.路径 === 'data/plugins/notes/images/icon.svg' &&
       !fs.readFileSync(包路('notes/images/icon.svg')).equals(原) && fs.readFileSync(包路('notes/images/icon.svg')).includes('viewBox') &&
       fs.readdirSync(包路('notes/images')).length === 1, JSON.stringify(成).slice(0, 70));
-    台.判('9 五把守门各拦各的：包名往外钻 / 包名大写 / 文件名换成别的 / 后缀不在六种 / 那一包里本来没这张',
+    台.判('9 四把守门各拦各的：包名往外钻 / 包名大写 / 文件名换成别的 / 后缀不在六种',
       /小写字母/.test(那.插件封面('../..', 'icon.svg').错) && /小写字母/.test(那.插件封面('Notes', 'icon.svg').错) &&
-      /只认 icon/.test(那.插件封面('notes', 'other.svg').错) && /只认 icon/.test(那.插件封面('notes', 'icon.exe').错) &&
-      /本来没有那张封面/.test(那.图标写插件('nosuch', 'icon.svg', 新).错), '五道都拦');
+      /只认 icon/.test(那.插件封面('notes', 'other.svg').错) && /只认 icon/.test(那.插件封面('notes', 'icon.exe').错), '四道都拦');
+    台.判('9b 那一格里还没有那一张的（占位符那一手，他 2026-10-17 点名要）：写下去就当场新建，落点连仓名一起报回来，不再拿"本来没有那张封面"顶回去',
+      (() => {
+        const 成 = 那.图标写插件('gate-none-pack', 'icon.svg', 新);
+        const 盘 = path.join(沙包, 'gate-none-pack', 'images', 'icon.svg');
+        return 成.好 === true && 成.新建 === true && fs.existsSync(盘) &&
+          fs.readFileSync(盘).equals(Buffer.from(新, 'base64')) && 成.出自 === '沙盒那一格' &&
+          成.路径 === 'data/plugins/gate-none-pack/images/icon.svg';
+      })(), JSON.stringify(那.插件封面('gate-none-pack', 'icon.svg')).slice(0, 90));
     台.判('10 往外钻的文件名拦得住（icon.svg 之外一律拒，../../ 那种连试的机会都不给）',
       /只认 icon/.test(那.插件封面('notes', '../../evil.svg').错) && !fs.existsSync(path.join(ROOT, 'evil.svg')));
     台.判('11 超大与空图都拒、拒完那一张原样不动',
@@ -274,6 +310,7 @@ const 那 = await import('../../_build/text-icon.mjs');
   }
   fs.rmSync(沙, { recursive: true, force: true });
   fs.rmSync(path.join(探针沙盒, '插件封面-闸跑'), { recursive: true, force: true });
+  fs.rmSync(path.join(探针沙盒, 'src'), { recursive: true, force: true });   /* 出厂那一格跟着沙盒走，用完当场删（见 1c） */
 }
 
 台.题('九、图标柜（他 2026-10-17 第 2、3 条）：指定一格、真预览、点中一张去换 —— 全在沙盒那一格里真跑');
@@ -317,8 +354,11 @@ const 那 = await import('../../_build/text-icon.mjs');
     pg.includes("localStorage.getItem('fd图标柜那一格')") && pg.includes('localStorage.setItem(柜存') &&
     !/图柜/.test(rd('src/pack/publish.mjs')) /* 这一格是开发期的东西，绝不进装出去的那一枚包 */);
   台.判('7 换这张不再走系统那个选文件框（每张卡上那枚隐藏 file input 撤了），改成挂成待挑、到柜里点中一张',
-    !/data-档="/.test(pg) && pg.includes("挑 = { 类:'换', 名: 换.dataset['换'] }") &&
+    !/data-档="/.test(pg) && pg.includes("挑 = { 类:'换', 名: d['换'] }") &&
     pg.includes("挑 = { 类:'换包'") && pg.includes('async function 送那张(') && pg.includes('柜开口()'));
+  台.判('7b 图标柜一次摆全（他 2026-10-17 那句「给我展示全部！！有时候我不知道名字需要看图啊」）：页面里没有 slice(0,600) 那一刀，也没有"先画前几张"那一句话；图交给浏览器懒取，脚上那句报的是这一筛几张全摆出来',
+    !/slice\(0, ?600\)/.test(pg) && !/先画前/.test(pg) && /loading="lazy"/.test(pg) && /全摆出来了/.test(pg) &&
+    !/4000/.test(pg) && ui.includes('const 柜上限 = 30000') && /单\.length >= 柜上限/.test(ui) && /全: 单\.length < 柜上限/.test(ui));
   台.判('8 图标柜与那一片卡是左右并列（他 2026-10-17 那句「滚动下去了就看不到图标库怎么挑！！换成左右并列」）：两栏网格、柜栏排在卡栏前面、两栏各自定高各自滚、柜栏顶上填路径那一行钉住不动',
     /\.两栏\{ display:grid; grid-template-columns:minmax\(340px,32%\) 1fr/.test(pg) &&
     /\.柜栏\{[^}]*height:calc\(100vh - 150px\)/.test(pg) && /\.卡栏\{ height:calc\(100vh - 150px\); overflow:auto/.test(pg) &&
@@ -336,7 +376,97 @@ const 那 = await import('../../_build/text-icon.mjs');
   /\.字行:hover\{ background:/.test(pg));
 台.判('2b 勾一下当场翻那一行的状态（不用等「保存这些句子」）',
   /classList\.toggle\(['"]删['"]/.test(pg));
-台.判('2c 画出来时就带上已勾的那几条（重看一遍之后，勾着的还是勾着的）',
-  /项 字行' \+ \(r\.del/.test(pg) && /r\.del \? ' 删' : ''/.test(pg));
+台.判('2c 画出来时就带上状态（重看一遍之后，改过的、划掉的还是看得见）：行上那一个 class 由 改没() 现算',
+  /const 改没 = r => r\.del \? '删'/.test(pg) && /项 字行' \+ \(改没\(r\) === '删' \? ' 删'/.test(pg) &&
+  /（填了改动）/.test(pg) && /（已划掉）/.test(pg));
+/* ---- 他 2026-10-17 17:24 点名要的那条：换图标、改句子要实时显示，看得出哪一条改过了 ---- */
+台.判('2d 换 / 加 / 删过的那一张当场标出来：卡片一圈绿边 + 名字后「刚动过」+ 一行时刻 + 顶上那句「这一屏你动过几张」',
+  /\.笔\.动\{ border-top-color:var\(--好\)/.test(pg) && /content:' · 刚动过'/.test(pg) &&
+  /function 记一笔\(名, 做\)/.test(pg) && /记一笔\(名, 哪道\)/.test(pg) && /记一笔\('data\/plugins\/' \+ 包/.test(pg) &&
+  /function 图上数\(\)/.test(pg) && /这一屏你动过 /.test(pg) && pg.includes('id="图动"'));
+台.判('2e 预览不吃缓存：刚动过那一张的图地址带上时间戳（路由回的是 no-store，可 img 元素自己那层缓存照吃，不换地址就还是旧图）',
+  /\(动 \? '&t=' \+ 动\.时 : ''\)/.test(pg));
+台.判('2f 打字与勾选当场翻那一行的样子，不等「保存这些句子」；计数跟着动；两栏各有一颗筛选（只看我动过的 / 只看改过的）',
+  /字格'\)\.addEventListener\('input'/.test(pg) && /行\.classList\.toggle\('改'/.test(pg) &&
+  /function 字数\(\)/.test(pg) && /整份清单改了/.test(pg) &&
+  pg.includes('id="图筛"') && pg.includes('id="字筛"') && /只看动过 = !!e\.target\.checked/.test(pg) && /只看改过 = !!e\.target\.checked/.test(pg));
+台.判('2g 删掉的那一张不拿一张不存在的卡假装「动过」：它从卡片区消失，只在顶上那一行列出名字',
+  pg.includes("名 !== '__删过__'") && /删掉的是：/.test(pg));
+
+台.题('十一、换一张图要落进程序里那两处（他 2026-10-17 18:07 那句「保存呢？改的图标要复制替换程序内原版图标的保存呢！！」）');
+{
+  /* 出厂那一格 src\pack\icons\ 是"装到机器上带的那一份"，而它从前由 src\_build\ico-dump.mjs 无条件按线稿重画 ——
+     只往树根 icons\ 写的话，他换的图活在本地，下一趟生成与打包带出去的还是线稿。两头都得钉住。 */
+  const dump = path.join(探针沙盒, '出厂那一格-闸跑');
+  fs.rmSync(dump, { recursive: true, force: true });
+  const { 铺图标一层 } = await import('../../_build/ico-dump.mjs');
+  const 厂 = p => path.join(dump, 'src', 'pack', 'icons', p);
+  const 根 = p => path.join(dump, 'icons', p);
+  const 一 = 铺图标一层(dump);
+  const 齿 = fs.readFileSync(厂('gear.svg'));
+  fs.writeFileSync(厂('gear.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 3"/>');
+  fs.writeFileSync(根('gear.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 3"/>');
+  const 样 = fs.readFileSync(厂('home.svg'));
+  fs.rmSync(厂('home.svg'), { force: true });
+  const 二 = 铺图标一层(dump);
+  台.判('1 那一趟真跑（沙盒一棵）：第一趟把出厂画齐（' + 一.出厂 + ' 张），第二趟里被人换过的那一张保住不重画，没被换过的那一张照旧按代码重画回来',
+    一.出厂 > 50 && 一.保住出厂 === 0 && 二.保住出厂 >= 1 &&
+    /viewBox="0 0 3 3"/.test(fs.readFileSync(厂('gear.svg'), 'utf8')) &&
+    fs.readFileSync(厂('home.svg')).equals(样) && 二.出厂 < 一.出厂,
+    '第一趟 画' + 一.出厂 + '/保' + 一.保住出厂 + ' → 第二趟 画' + 二.出厂 + '/保' + 二.保住出厂);
+  台.判('2 树根那一层他改过的照旧不动（原来就有的那一张绝不被生成那一趟吃掉）',
+    /viewBox="0 0 3 3"/.test(fs.readFileSync(根('gear.svg'), 'utf8')));
+  {
+    /* 树根缺那一张时，补上去的必须拿出厂那一份 —— 出厂那张可能是人换过的，拿现画的线稿塞进树根，
+       同一棵里两层就各说一套（界面上读的是树根，打包带的是出厂）。临时那一棵正是空的，打包那一趟天天踩这一条。 */
+    fs.rmSync(根('gear.svg'), { force: true });
+    铺图标一层(dump);
+    台.判('2b 树根补缺拿的是出厂那一份，不是现画的线稿（出厂那张是人换过的 → 树根补出来的也得是那一张）',
+      fs.readFileSync(根('gear.svg'), 'utf8') === fs.readFileSync(厂('gear.svg'), 'utf8') &&
+      /viewBox="0 0 3 3"/.test(fs.readFileSync(根('gear.svg'), 'utf8')) &&
+      fs.readFileSync(根('cal.svg'), 'utf8') !== fs.readFileSync(根('gear.svg'), 'utf8'), 根('gear.svg'));
+  }
+  台.判('3 那颗报数报得出"保住了几张人换过的"（屏上看不见的吞图，得在终端那一行里看得见）—— 生成那一趟（src\\_fd\\build.mjs）叫它时也是同一句',
+    rd('src/_build/ico-dump.mjs').includes('保住出厂: 保出厂') && rd('src/_build/ico-dump.mjs').includes('保住人换过的') &&
+    rd('src/_fd/build.mjs').includes('保住人换过的'));
+  fs.rmSync(dump, { recursive: true, force: true });
+  /* 沙盒那一格里把图标层重新摆一遍（第八、九节用完就删了），这一节要的是 图标单() 报得出出厂同不同 */
+  fs.mkdirSync(沙, { recursive: true });
+  fs.writeFileSync(path.join(沙, '索引.txt'),
+    '【图标索引】一张图一行：文件名 = 这是干什么的（引用它的代码）\n\n# —— 通用图标（icons\\ 文件夹）——\ngear = 设置（齿轮）：某处 —— 引用：src/_fd/src/fd3-shell.js×1\ncal = 日历：某处 —— 引用：没有代码直接叫它\ntools-cog = 齿圈：某处 —— 引用：没有代码直接叫它\n', 'utf8');
+  fs.writeFileSync(path.join(沙, 'gear.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>', 'utf8');
+  fs.mkdirSync(path.join(沙, 'tools'), { recursive: true });
+  fs.writeFileSync(path.join(沙, 'tools', 'cog.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>', 'utf8');
+  那.进出厂('gear.svg');                     /* 只把这一张复制进出厂，剩下两张留着当"不一样/没有"的对照 */
+  const 单 = 那.图标单();
+  台.判('4 数出来的那一份带得出出厂同不同：刚写过的算「同」，出厂还没有的算「没有」，两边字节不一样的算「不一样」，并汇总成没进厂那一串',
+    单.单.find(x => x.名 === 'gear.svg').出厂 === '同' && 单.没进厂.includes('gear.svg') === false &&
+    那.出厂看('cal.svg') === '没有' && (() => { fs.writeFileSync(path.join(沙, 'cal.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9"/>', 'utf8');
+      const 前 = 那.出厂看('cal.svg'); fs.writeFileSync(path.join(那.厂层, 'cal.svg'), '<svg/>', 'utf8');
+      return 前 === '没有' && 那.出厂看('cal.svg') === '不一样' && 单.没进厂.indexOf('cal.svg') < 0; })(), 单.没进厂.join('、'));
+  台.判('5 索引登记了、icons 里却没那张图的：一条一张占位卡，落点算得回来（根下就是 <名>.svg，键里带 "-" 且那一格确实是子文件夹的是 <子文件夹>/<名>.svg）',
+    单.没图条目.length === 1 && 单.没图条目[0].键 === 'cal' && 单.没图条目[0].补 === 'cal.svg' &&
+    单.没图.length === 1 && 那.图标单().没图条目.every(x => !/^\//.test(x.补) && !/\.\./.test(x.补)), JSON.stringify(单.没图条目));
+  {
+    /* 子文件夹那一条也真算一遍：盘上确实有 tools 那一格 */
+    fs.writeFileSync(path.join(沙, '索引.txt'),
+      '【图标索引】一张图一行：文件名 = 这是干什么的（引用它的代码）\n\n# —— 通用图标（icons\\ 文件夹）——\ntools-cog = 齿圈：某处 —— 引用：没有代码直接叫它\nno-such = 没这一张：某处 —— 引用：没有代码直接叫它\n', 'utf8');
+    const 又 = 那.图标单();
+    const 找 = k => 又.没图条目.find(x => x.键 === k);
+    台.判('5b 同名那一把尺认的两条分开：tools 那一格在盘上 → 补到 tools/cog.svg；没有那一格 → 补到根下 no-such.svg（不乱钻）',
+      !找('tools-cog') && 找('no-such') && 找('no-such').补 === 'no-such.svg' &&
+      又.单.some(x => x.名 === 'tools/cog.svg' && x.出厂 === '没有'), JSON.stringify(又.没图条目.map(x => x.补)));
+  }
+  台.判('6 屏上三处都接上了：卡片底下那颗「复制进出厂」/ 顶上那一颗一把补齐 / 占位卡上那枚「放一张进去」与插件那枚「放一张封面进去」都挂得能使的钮',
+    pg.includes('data-厂=') && pg.includes('id="厂全"') && pg.includes('const 厂行 = x =>') && pg.includes('async function 进厂(单, 话)') &&
+    pg.includes('data-补=') && pg.includes('data-补包=') && pg.includes('class="占位"') && pg.includes('还没有图') &&
+    pg.includes('放一张进去') && pg.includes('放一张封面进去') && pg.includes('张和出厂那一格不一样') &&
+    !pg.includes('取不到这个文件'));
+  台.判('7 换 / 加 那一发回来看的是两处都落了（出厂那一步砸了要红着报，不许闷着说"换好了"）；删只删一层这句话也写在屏上',
+    /厂\.好 \? 'icons\\\\ 与出厂/.test(pg) && pg.includes('但出厂那一格没写进去') && pg.includes('只删 icons\\\\ 那一层，出厂') &&
+    /待挑那一手带了固定名字的/.test(pg) && pg.includes('待.名 || 取(\'加名\')'));
+  fs.rmSync(沙, { recursive: true, force: true });
+  fs.rmSync(path.join(探针沙盒, 'src'), { recursive: true, force: true });
+}
 
 台.收尾();

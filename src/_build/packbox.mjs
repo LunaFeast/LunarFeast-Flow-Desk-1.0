@@ -69,6 +69,38 @@ export function 签名段(算法 = 0, 钥匙号 = 0){
   return 出;
 }
 
+/** 读一颗已经压好的容器：回 { 信息, 件:Map(路径→字节) }，逐份的字节数与 SHA-256 都当场核。
+    谁要"从盒子里把东西拿出来看一眼"都走这一颗（发布那一趟摆货架、搬仓那颗读回来对账），
+    别处不许再各写一遍那四段的偏移 —— 头 12 / 信息段 / 每份一块（块头 6：长度 4 + 序号 2）/ 签名 72，
+    这一份与壳里那一枚 pack_box.rs 是同一套读法。 */
+export function 读容器(字){
+  const 有 = Buffer.isBuffer(字) ? 字 : Buffer.from(字);
+  if(有.length < 头长 + 签名长) 停('这一颗太短，不是容器：' + 有.length + ' 字节');
+  if(有.subarray(0, 4).toString('ascii') !== 标记) 停('头四个字节不是 ' + 标记 + '：这一颗不是这台打包手压出来的');
+  const 版 = 有.readUInt16BE(4);
+  if(版 !== 格式版本) 停('容器格式版本 ' + 版 + '，这一颗只认 v' + 格式版本);
+  const 信长 = 有.readUInt32BE(8);
+  if(信长 <= 0 || 头长 + 信长 > 有.length) 停('信息段长度不成样子：' + 信长);
+  let 信 = null;
+  try{ 信 = JSON.parse(有.subarray(头长, 头长 + 信长).toString('utf8')); }
+  catch(e){ 停('信息段读不懂（不是 JSON）：' + String((e && e.message) || e)); }
+  const 件 = new Map();
+  let 偏 = 头长 + 信长;
+  (信.files || []).forEach((份, 序) => {
+    if(偏 + 块头长 > 有.length) 停('第 ' + 序 + ' 份的块头读不到：' + 份.path);
+    const 长 = 有.readUInt32BE(偏), 号 = 有.readUInt16BE(偏 + 4);
+    if(号 !== 序) 停('块号对不上：第 ' + 序 + ' 份写的是 ' + 号);
+    偏 += 块头长;
+    if(偏 + 长 > 有.length) 停('第 ' + 序 + ' 份超出这一颗的末尾：' + 份.path);
+    const 字块 = 有.subarray(偏, 偏 + 长); 偏 += 长;
+    if(字块.length !== 份.len) 停('份数对不上：' + 份.path + ' 信息段写 ' + 份.len + ' 字节，盒里是 ' + 字块.length + ' 字节');
+    if(crypto.createHash('sha256').update(字块).digest('hex') !== 份.sha256) 停('哈希对不上：' + 份.path + '（这一颗被人改过，或者压到一半）');
+    件.set(份.path, 字块);
+  });
+  if(偏 + 签名长 !== 有.length) 停('末尾多出 ' + (有.length - 偏 - 签名长) + ' 字节（这一颗不是完整的一颗）');
+  return { 信息: 信, 件, 格式: 版 };
+}
+
 /** 打包：件 = [{路径, 字节}]，信 = 那十个键（files 由这一颗自己算，不许外面递进来） */
 export function 打包(件, 信, 时间秒){
   if(!件 || !件.length) 停('一份文件都没有，压不出包');

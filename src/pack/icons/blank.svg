@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 3.4h11.4M2.8 6.6h11.4M2.8 13.4h11.4M2.8 16.6h11.4"/><path d="M17.4 3.4v13.2"/><path d="M6.4 9.2h4.2"/></svg>
+<!-- @license lucide-static v1.59.0 - ISC -->
+<svg
+  class="lucide lucide-align-vertical-space-around"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect width="10" height="6" x="7" y="9" rx="2" />
+  <path d="M22 20H2" />
+  <path d="M22 4H2" />
+</svg>
