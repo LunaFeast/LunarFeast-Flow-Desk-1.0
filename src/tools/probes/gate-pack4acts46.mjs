@@ -136,9 +136,10 @@ const 试 = 只认代码("const a = 'x';\n/* 注释里写「没装」不算 */\n
   桌.includes('const 上了 = 桌上.has(id) || 桌上.has(件名);') && !/加载中/.test(桌));
 台.判('2 列表按他说的来：plugins 路径里存在插件包的就列（不再按 host 挑掉不归本宿主的那几家）',
   桌.includes('.filter(p => p.manifest && p.manifest.id)') && !/forHost\(p\.manifest\)/.test(桌));
-台.判('3 每一行三颗全摆：加载、卸载、删除（从前加载/卸载二选一，还要 .filter(Boolean) 摘掉回 null 的那颗）',
-  桌.includes('PackOps.loadButton(id, 名), PackOps.unloadButton(id, draw), PackOps.removeButton(id, draw)]') &&
-  !/上了 \? PackOps\.unloadButton/.test(桌) && !/\.filter\(Boolean\)\)\n/.test(桌));
+台.判('3 每一行四颗全摆：加载、卸载、删除、换版（从前加载/卸载二选一，还要 .filter(Boolean) 摘掉回 null 的那颗；换版那颗也常在，按下去自己说这一趟不用换）',
+  桌.includes('PackOps.loadButton(id, 名), PackOps.unloadButton(id, draw), PackOps.removeButton(id, draw),\n            PackOps.updateButton(id, draw)]')
+  && !/上了 \? PackOps\.unloadButton/.test(桌) && !/\.filter\(Boolean\)\)\n/.test(桌)
+  && !/updateButton\(id, after\)\{\s*const 一 = this\.换版表\.get\(String\(id\)\);\s*if\(!一\) return null;/.test(名单));
 台.判('4 四颗钮一律回一颗钮（「安装」那颗要始终在屏上）：读不到路径这种时候按下去把话说明白，不靠藏起来当提示',
   !/if\(!this\.can\(\)\) return null;/.test(名单) && 名单.includes('这一台能使()') &&
   /installButton\(\)\{\s*return h\('button'/.test(名单));

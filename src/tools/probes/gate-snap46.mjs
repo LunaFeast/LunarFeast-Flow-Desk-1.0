@@ -60,8 +60,17 @@ const 壳式 = /let 外留 = \(宽 \/ 横份\)\.min\(高 \/ 竖份\)/.test(判�
 
 /* ---------- 四、吸附真挂在事件上 ---------- */
 台.题('四、吸附真挂在窗口事件上');
-台.判('Resized 那一支先吸形状再报状态', /WindowEvent::Resized\(尺\) => \{\s*吸形状\(w, 尺\);\s*报状态\(w\.app_handle\(\)\)/.test(窗口));
-台.判('Moved 那一支吸落点', /WindowEvent::Moved\(位\) => 吸落点\(w, 位\)/.test(窗口));
+台.判('Resized 那一支先吸形状再报状态（事件给的是 Window，吸附那几颗统一吃 WebviewWindow，取那一张再动手）',
+  /WindowEvent::Resized\(尺\) => \{[\s\S]*?if let Some\(窗\) = 主窗口\(w\.app_handle\(\)\) \{ 吸形状\(&窗, 尺\); \}\s*报状态\(w\.app_handle\(\)\)/.test(窗口));
+台.判('Moved 那一支不再当场改位置：只排队（issue #64 拖动跟不住鼠标 —— Windows 那一路拖标题栏是套死的消息循环，循环里回手 SetWindowPos 就是那一下）',
+  /WindowEvent::Moved\(位\) => 排队吸落点\(w, 位\)/.test(窗口)
+  && !/WindowEvent::Moved\(位\) => 吸落点\(w, 位\)/.test(窗口));
+台.判('排队那一道：记下最新落点 + 换一代，等 140 毫秒内不再来 Moved 才吸，且动窗口本体回主线程',
+  /fn 排队吸落点\(w: &tauri::Window, 位: &tauri::PhysicalPosition<i32>\)/.test(窗口)
+  && 窗口.includes('from_millis(140)') && 窗口.includes('run_on_main_thread')
+  && 窗口.includes('if *锁(&手.挪代) != 代 { return; }'));
+台.判('账上那两格（最新落点 + 第几代）挂在窗口那本账上，不另起全局可变量',
+  /挪: Mutex<Option<\(i32, i32\)>>/.test(窗口) && /挪代: Mutex<u64>/.test(窗口));
 台.判('两处开头都挡掉最大化与全屏', (窗口.match(/不该吸\(w\)/g) || []).length >= 2);
 台.判('不该吸那一颗真问了这两档', /is_maximized/.test(窗口) && /is_fullscreen/.test(窗口));
 台.判('事件回调里改的是窗口本体（set_size / set_position 各一颗）',

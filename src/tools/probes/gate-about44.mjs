@@ -51,7 +51,9 @@ function 全扫(认){
   && rd('src/_tauri/src/tauri_bind/pack_cmds.rs').includes('zip_pack'));
 台.判('发布脚本不再收 update\\packages 那一格（那一格是那条路的产物）', !发.includes('packages'));
 台.判('那一格在盘上也收走了（树里已经没有 update\\packages）', !在('update/packages'));
-台.判('覆盖升级换下来的旧东西还照原样进 update\\backups（这一格留着）', /"backups"/.test(壳));
+台.判('覆盖升级不再往 update\\backups 留旧版本（壳里不写那一格，关于那一屏也没有那一列了）',
+  !/"backups"/.test(壳) && !rd('src/_tauri/src/core/about_info.rs').includes('备份列') &&
+  !/r\.backups/.test(rd('src/_fd/src/fd4-builtin.js')));
 台.判('「改页面文字」那台小工具认的文件名跟着换（不再认 updater.cjs）',
   !单.includes('src/pack/updater.cjs') && 单.includes('src/pack/zip-read.cjs'));
 

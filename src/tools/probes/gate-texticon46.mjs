@@ -39,6 +39,15 @@ fs.writeFileSync(path.join(沙, '索引.txt'),
   '【图标索引】一张图一行：文件名 = 这是干什么的（引用它的代码）\n\n# —— 通用图标（icons\\ 文件夹）——\ngear = 设置（齿轮）：某处 —— 引用：src/_fd/src/fd3-shell.js×1\ncal = 日历：某处 —— 引用：没有代码直接叫它（可能是备用或已改名）\n');
 process.env.FD_ICONS = 沙;
 process.env.FD_PLUGINS = 沙包;
+/* 隔壁那一棵（插件自己那一仓）也拿沙盒里的一棵顶上：这一台递给自己那份界面文字那颗的邻居名单，
+   闸跑的那一句就写进这一棵里，绝不可能落到他真那几家仓（他 2026-10-18 那条：插件的文字要能一起改）。 */
+const 假邻 = path.join(探针沙盒, '邻居那一棵-闸跑');
+const 邻那份 = path.join(假邻, 'data', 'plugins', 'notes', 'main.js');
+const 邻那句 = '闸跑：这一句住在插件自己那一棵里';
+fs.rmSync(假邻, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(邻那份), { recursive: true });
+fs.writeFileSync(邻那份, 'const 话 = "' + 邻那句 + '";\nexport default 话;\n', 'utf8');
+process.env.FD_TEXT_NEIGHBORS = JSON.stringify([假邻]);
 const 那 = await import('../../_build/text-icon.mjs');
 
 台.题('一、这一台只管两样，不实现发布动作');
@@ -131,7 +140,7 @@ const 那 = await import('../../_build/text-icon.mjs');
   台.判('3 索引文件自己的标题行（中间也带 " = "）不许变成一条图标：段首之前的一律不算数据',
     ui.includes('if(!当段){ continue; }') && ui.includes('段首之前的一律不算数据'));
   台.判('4 插件包那七张的位置问邻居那把尺（本仓 data\\plugins 先问、再问 plugins\\<仓名>\\ 那七棵），不混进 icons 那一格里比"丢图"，也不在这台里抄第二份仓名表',
-    ui.includes("import { 找 as 邻找, 出自 as 邻出自 } from './邻居.mjs'") &&
+    ui.includes("import { 找 as 邻找, 出自 as 邻出自, 根列表 as 邻根列表 } from './邻居.mjs'") &&
     ui.includes('function 插件找(包, 档)') && ui.includes('邻找(插件相(包, 档))') &&
     !/from '\.\/(pack-repo|布局)\.mjs'/.test(ui) && ui.includes('const 通用没图 =') && ui.includes('插件丢图: 插件.filter(x => !x.在不在)'));
   台.判('4b 真读一眼他这一棵（另起一个不带 FD_ 环境变量的进程，只读不写）：那七张封面张张取得到、报的是它自己那一家的仓名 —— 从前只认主程序仓那一格，七张全报「取不到」',
@@ -467,6 +476,44 @@ const 那 = await import('../../_build/text-icon.mjs');
     /待挑那一手带了固定名字的/.test(pg) && pg.includes('待.名 || 取(\'加名\')'));
   fs.rmSync(沙, { recursive: true, force: true });
   fs.rmSync(path.join(探针沙盒, 'src'), { recursive: true, force: true });
+}
+
+台.题('十二、插件那一句也改得回去（他 2026-10-18 那句「我要插件文字可以一起改！！！」）');
+{
+  台.判('1 这一台加载那一刻就把邻居名单递给界面文字那一颗（不递，插件那几家的句子只列得出、写不回去）',
+    /字\.设邻居\(界面邻居\)/.test(ui) && 那.界面邻居.length === 1 && 那.界面邻居[0] === 假邻,
+    '递进去的名单：' + 那.界面邻居.join('、'));
+  台.判('2 名单只有一份：从 src\\_build\\邻居.mjs 的 根列表 去掉本仓那一格，这一台不抄第二本仓名表',
+    ui.includes("import { 找 as 邻找, 出自 as 邻出自, 根列表 as 邻根列表 } from './邻居.mjs';")
+    && ui.includes('return 邻根列表().slice(1);') && !/Notes|Schedule|Your-Sentences|Music-Remote/.test(ui));
+  台.判('3 沙盒那一趟不往他家插件仓落一个字：FD_TREE 或 FD_PLUGINS 指着别处时名单是空的，闸要验这一手才自己指 FD_TEXT_NEIGHBORS',
+    /if\(process\.env\.FD_TREE \|\| process\.env\.FD_PLUGINS\) return \[\];/.test(ui)
+    && /if\(process\.env\.FD_TEXT_NEIGHBORS\)/.test(ui));
+  台.判('4 真跑：填一句插件自己那一棵里的话，plan 认得到它（从前这一台没递名单，这一句直接落进「对不上」）',
+    (() => {
+      /* prog / page 不能瞎填：那一颗是按"哪一家 · 哪一页"配上的，就现扫一遍拿它自己报出来的那两格 */
+      const 扫 = 那.界面文字那颗.collectAll(那.字树);
+      const 处 = 扫.occ.filter(o => o.rel === 'data/plugins/notes/main.js');
+      台.数('  现扫到的那一句', 处.length + ' 处 · prog「' + (处[0] ? 处[0].prog : '?') + '」');
+      if(!处.length) return false;
+      const 一条 = 处[0];
+      const 果 = 那.界面文字那颗.plan(那.字树, [{ prog: 一条.prog, page: 一条.page, from: 一条.text, to: '闸跑：换成另一句', del: false }]);
+      台.数('  plan 回执', '认到 ' + 果.list.length + ' 句 · 对不上 ' + 果.miss.length + ' 句 · 落点 ' + 果.list.map(x => x.at.join(',')).join(' '));
+      return 果.list.length === 1 && 果.miss.length === 0
+        && 果.list[0].at.some(a => String(a).startsWith('data/plugins/notes/main.js'));
+    })());
+  台.判('5 回执那一名说清写进了哪一棵：本仓报相对路径，隔壁那几棵报「仓名/路径」（看不见落在哪儿就等于不放心）',
+    那.那份在哪(path.join(那.字树, 'src/_fd/src/fd3-shell.js')) === 'src/_fd/src/fd3-shell.js'
+    && 那.那份在哪(邻那份) === '邻居那一棵-闸跑/data/plugins/notes/main.js', 那.那份在哪(邻那份));
+  台.判('6 那一屏顶上那一行报得出插件那几家在内（报的是名单里那几棵的名字）',
+    /邻居: 界面邻居\.map\(根 => path\.basename\(根\)\)/.test(ui) && pg.includes("对.邻居 || []"));
+  台.判('7 屏上写完那一步要把「写进了这些文件」整串列出来，不许拿 slice 截一半（他 2026-10-17 那条「给我展示全部」）',
+    pg.includes("对.写了 || []") && !/落点\.slice\(0, 12\)/.test(pg) && pg.includes('落点：\' + 文(落点.join'));
+  台.判('8 反证：把那句改成一个插件里根本没有的，plan 认不到（名单递了也不许"差不多就算认到"）',
+    (() => {
+      const 果 = 那.界面文字那颗.plan(那.字树, [{ prog: '你的便签', page: '闸跑那一句', from: 邻那句 + '后面多了一截', to: 'x', del: false }]);
+      return 果.list.length === 0 && 果.miss.length === 1;
+    })());
 }
 
 台.收尾();

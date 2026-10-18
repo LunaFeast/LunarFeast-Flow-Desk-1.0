@@ -94,7 +94,7 @@
     <button id="t图" class="页 主">图标素材</button>
     <button id="t字" class="页">界面文字</button>
   </div>
-  <div class="状态" id="状态">正在问现场……</div>
+  <div class="状态" id="状态">正在看现在的状况……</div>
 </header>
   <div class="提示" id="提示"></div>
   <div class="提示" id="git警"></div>
@@ -103,9 +103,9 @@
  <div class="两栏">
   <div class="柜栏">
     <div class="行">
-      <label for="柜路">图标柜</label>
-      <input type="text" id="柜路" placeholder="这台电脑上放图的一格" autocomplete="off" spellcheck="false" style="flex:1 1 160px;min-width:150px">
-      <button id="柜列">列这一格</button>
+      <label for="柜路">图标文件夹</label>
+      <input type="text" id="柜路" placeholder="这台电脑上放图标的那个文件夹" autocomplete="off" spellcheck="false" style="flex:1 1 160px;min-width:150px">
+      <button id="柜列">列出这个文件夹</button>
     </div>
     <div class="行">
       <label for="柜搜">找</label>
@@ -120,8 +120,8 @@
       <span class="状态" id="图情">正在数 icons 这个文件夹……</span>
       <span style="flex:1"></span>
       <button id="图重">重新数一遍</button>
-      <button id="图对">重新对齐一遍</button>
-      <button id="厂全">把和出厂不一样的都复制进出厂</button>
+      <button id="图对">重新生成图标索引</button>
+      <button id="厂全">把和打包用的那一份不一样的，全部复制过去</button>
       <label class="筛"><input type="checkbox" id="图筛"><span id="图筛标">只看我动过的</span></label>
     </div>
     <div class="行">
@@ -129,7 +129,7 @@
       <input type="text" id="加名" placeholder="名字空着就照挑中的文件名改（如 gear2.svg；子文件夹写成 tools/gear2.svg）" autocomplete="off" spellcheck="false" style="min-width:220px">
       <input type="file" id="加档" accept=".svg,.png,.jpg,.jpeg,.webp,.gif">
       <button id="加送">添进去</button>
-      <button id="加柜">从图标柜挑一张添进去</button>
+      <button id="加柜">从图标文件夹里挑一张添进去</button>
     </div>
     <div class="提示" id="图果"></div>
     <div class="提示" id="图动"></div>
@@ -144,7 +144,7 @@
     <select id="字段"></select>
     <label for="字搜">找</label>
     <input type="text" id="字搜" placeholder="原句或改后的句子里含这几个字" autocomplete="off">
-    <span class="状态" id="字情">正在读 data\ui-text.yaml……</span>
+    <span class="状态" id="字情">正在读句子清单 data\ui-text.yaml……</span>
   </div>
   <div class="行">
     <span style="flex:1"></span>
@@ -152,7 +152,7 @@
     <button id="字存">保存这些句子</button>
     <button id="字预">预览改动</button>
     <button id="字落" class="主">写进源码</button>
-    <button id="字重">重新生成产物</button>
+    <button id="字重">重新生成页面</button>
     <label class="筛"><input type="checkbox" id="字筛"><span id="字筛标">只看改过的</span></label>
   </div>
   <div class="提示" id="字数"></div>
@@ -498,7 +498,8 @@ async function 字读(){
   if(对.错){ 取('字情').innerHTML = '<b class="坏">' + 文(对.错) + '</b> —— 先点「刷新清单」生成它'; return; }
   字条 = 对.条;
   取('字段').innerHTML = 对.段.map(s => '<option' + (s === 取('字段').value ? ' selected' : '') + '>' + 编(s) + '</option>').join('');
-  取('字情').textContent = '清单 ' + 对.段.length + ' 页 / ' + 对.字条 + ' 条 · 填了先点「保存这些句子」写进 data\\ui-text.yaml，预览与写进源码都以这个文件为准';
+  取('字情').textContent = '清单 ' + 对.段.length + ' 页 / ' + 对.字条 + ' 条 · 填了先点「保存这些句子」写进 data\\ui-text.yaml，预览与写进源码都以这个文件为准'
+    + ' · 插件那几家的句子一起在内，改完写回它自己那一棵（隔壁那几棵：' + ((对.邻居 || []).join('、') || '这台没摆') + '）';
   字数();
   字画();
 }
@@ -554,7 +555,8 @@ async function 字走(哪道, 话){
   取('字果').innerHTML = (对.落 ? '<b>已经写进源码 ' + 对.写了.length + ' 份文件</b> · ' : '预览（一个字没写）· ')
     + '清单里填了 ' + 对.递 + ' 句 · ' + (对.落 ? '写掉了' : '对得上位置、要改') + ' ' + 对.成.length + ' 句（' + 落点.length + ' 处）'
     + (对.对不上.length ? ' · <b class="坏">对不上 ' + 对.对不上.length + ' 句</b>（清单里那一句原话在当前源码里一处都认不到，多半是那句已经被别处改过：先点「刷新清单」再看）' : '')
-    + (对.落 && 对.成.length ? '<br>落点：' + 文(落点.slice(0, 12).join('、')) + (落点.length > 12 ? ' …（共 ' + 落点.length + ' 处）' : '')
+    + (对.落 && 对.成.length ? '<br>落点：' + 文(落点.join('、'))
+        + '<br>写进了这些文件（隔壁那几棵的写成「仓名/路径」）：' + 文((对.写了 || []).join('、') || '一份没有')
         + '<br><b>界面上这会儿还没变</b>：改的是源码，得再点一次「重新生成产物」（' + 文((对.重跑 || []).join(' → ')) + '），重开窗口才看得见。' : '');
 }
 取('字预').onclick = () => 字走('预览', '预览改动');

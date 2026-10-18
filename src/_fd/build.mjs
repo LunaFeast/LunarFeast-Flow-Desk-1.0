@@ -67,7 +67,28 @@ const BOOT = 'fd6-boot.js';
 let js = '\n/* ==== 版本号 · 真身在 src\\_build\\version.json，这一趟生成写进来，别处不再抄一份 ==== */\n'
   + 'var FD_VERSION = ' + JSON.stringify(版) + ';\n'
   + '/* ==== 包 id 改名那一张表 · 真身在 src\\_build\\pack-rename.mjs，桌面搬家和 node 那头共用同一份 ==== */\n'
-  + 'var PACK_RENAME = ' + JSON.stringify(PACK_RENAME) + ';\n';
+  + 'var PACK_RENAME = ' + JSON.stringify(PACK_RENAME) + ';\n'
+  /* 启动砸了要在屏上说话（2026-10-18 08:53 那一次：桌面全空、什么都点不开，屏上一点凭据都没留）。
+     这一段拼在最前面，比后面任何一段都先跑，所以哪一段抛了都接得住：屏顶一条红字写第一颗异常与所在行，
+     递得动桥就再往 data\启动报错.txt 落一份带栈的。红字只写第一颗，免得刷屏把现场盖掉。 */
+  + '\n/* ==== 启动那一颗兜底 · 由 src\\_fd\\build.mjs 拼在最前面，砸了就在屏顶说一句话 ==== */\n'
+  + 'var FD_BOOT_ERR = "";\n'
+  + '(function(){ var 报过 = false;\n'
+  + '  function 报(e){ try{ if(报过) return; 报过 = true;\n'
+  + '    var m = (e && (e.message || e.reason)) || "不知道哪一句砸了";\n'
+  + '    var 处 = (e && e.filename) ? String(e.filename).replace(/^.*[\\/\\\\]/, "") + ":" + e.lineno + ":" + (e.colno || 0) : "";\n'
+  + '    FD_BOOT_ERR = m + (处 ? " @ " + 处 : "");\n'
+  + '    var 条 = document.createElement("div");\n'
+  + '    条.setAttribute("style", "position:fixed;left:0;right:0;top:0;z-index:99999;background:#b3261e;color:#fff;padding:6px 10px;font:13px/1.5 system-ui;white-space:pre-wrap");\n'
+  + '    条.textContent = "启动砸了：" + FD_BOOT_ERR + " · 屏顶这一行就是凭据，念给我就行";\n'
+  + '    (document.body || document.documentElement).appendChild(条);\n'
+  + '    try{ var 全 = FD_BOOT_ERR + "\\n" + (((e && e.error && e.error.stack) || (e && e.stack) || "")).split("\\n").slice(0, 12).join("\\n");\n'
+  + '      if(window.FD_APP && FD_APP.dataWrite) FD_APP.dataWrite("启动报错.txt", new Date().toISOString() + "\\n" + 全);\n'
+  + '    }catch(x){}\n'
+  + '  }catch(x){} }\n'
+  + '  window.addEventListener("error", 报, true);\n'
+  + '  window.addEventListener("unhandledrejection", 报, true);\n'
+  + '})();\n';
 /* 批⑤-6 · 界面文字清单：构建时把 数据\ui-text.yaml 跟着源码刷新一遍（已经写进源码的那几句自动回到「原句」那一栏）。
    这一份产物里从来不嵌，程序运行时也不读它 —— 它是「GitHub 版本资源助手」那一屏的工作台：
    在那里填一句 → 写回源码那一份 → 重跑下面这三趟 → 界面上就是新句子（2026-10-13 方案甲）。 */

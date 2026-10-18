@@ -34,7 +34,7 @@ import { pathToFileURL } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
 import { TREE } from './plugin-repos.mjs';
 /* 一家一仓之后，插件那一张封面住在隔壁那一棵里；"到底在哪一格"只问这一把尺，别处不许再算第二套。 */
-import { 找 as 邻找, 出自 as 邻出自 } from './邻居.mjs';
+import { 找 as 邻找, 出自 as 邻出自, 根列表 as 邻根列表 } from './邻居.mjs';
 /* 往远程送东西、记版本号、打安装包那些都不在这一屏上了（2026-10-16 他点的：这一台只留改文字与改图标），
    所以 pr.mjs / push-list.mjs / version.mjs / forward-features.mjs 那四本这一份一概不再 import —— 那些动作还在命令行里。 */
 
@@ -205,6 +205,31 @@ const 界面文字那颗 = 字;
    闸要在沙盒里真写真改这一摊，不能往他仓里落一个字 —— 没这个口子就只能「假设它写得对」。 */
 const 字树 = process.env.FD_TREE ? path.resolve(process.env.FD_TREE) : TREE;
 const 清单文件 = 字.uiTextPath(字树);
+/* 插件那几家的句子也在这本清单里 —— 一家一仓之后它们的源码住在隔壁那几棵，认句子与写回去都得拿到同一把尺。
+   从前这一台没把名单递过去，屏上列得出的 2,924 行插件句子（清单里那些段：声笔输入法练习 / 推演组件定制 / 为写，
+   还有便签、日程、你的句子、音乐遥控器那几段底下的）点「把改动写进程序」全落进「对不上」，一个字都写不回去
+   —— 他 2026-10-18 那一句「我要插件文字可以一起改」量的就是这一处。
+   名单与生成页面那一趟是同一份（src\_fd\build.mjs 递的也是 邻居.mjs 的 根列表，去掉本仓那一格），这一头不抄第二本。
+   沙盒那一趟默认不递：FD_TREE / FD_PLUGINS 指着别处时是闸在临时那一棵里真跑，不许往他家插件仓落一个字；
+   闸要验这一手就自己指一份 FD_TEXT_NEIGHBORS（JSON 一串仓根）。 */
+const 界面邻居 = (() => {
+  try{ if(process.env.FD_TEXT_NEIGHBORS) return JSON.parse(process.env.FD_TEXT_NEIGHBORS); }catch(e){ return []; }
+  if(process.env.FD_TREE || process.env.FD_PLUGINS) return [];
+  return 邻根列表().slice(1);
+})();
+字.设邻居(界面邻居);
+/* 回执上那一名要说清写进了哪一棵：本仓报相对路径，隔壁那几棵报「仓名/相对路径」
+   （一家一仓之后插件那一句落回它自己那一棵，看不见落在哪儿就等于不放心） */
+function 那份在哪(全){
+  const 定 = path.resolve(String(全));
+  for(const 根 of [字树, ...界面邻居]){
+    const 绝 = path.resolve(根);
+    if(定 === 绝 || 定.startsWith(绝 + path.sep))
+      return 根 === 字树 ? path.relative(绝, 定).split(path.sep).join('/')
+        : path.basename(绝) + '/' + path.relative(绝, 定).split(path.sep).join('/');
+  }
+  return 定;
+}
 function 文字读(){
   let 文 = '';
   try{ 文 = fs.readFileSync(清单文件, 'utf8'); }catch(e){ return { 错:'读不到 ' + 清单文件 + '：' + ((e && e.code) || (e && e.message) || e), 段:[], 条:[] }; }
@@ -212,7 +237,7 @@ function 文字读(){
   const 段 = [];
   for(const r of 条){ const k = r.src; if(!段.includes(k)) 段.push(k); }
   return { 错:'', 段, 条:条.map(r => ({ 段:r.src, prog:r.prog, page:r.page, from:r.from, to:r.to, del:!!r.del })),
-    重跑: 字.artifactBuilds(), 字条: 条.length };
+    重跑: 字.artifactBuilds(), 字条: 条.length, 邻居: 界面邻居.map(根 => path.basename(根)) };
 }
 /* 只改对得上的那几行的冒号右边：段首行、注释行、没动过的行原样留着。
    一行怎么切成"名字 + 值"用的是 uitext 那一份 kvOf —— 与 parse() 同一个读法：带引号的句子（"对齐: 居中" 那种）
@@ -482,7 +507,7 @@ const 服务器 = http.createServer(async (req, res) => {
     try{ 果 = (路 === '/api/文字/预览' ? 字.plan : 字.apply)(字树, 用); }
     catch(e){ 发(res, 500, '停下来：' + String((e && e.message) || e)); return; }
     JSON发(res, { 好:true, 落:路 === '/api/文字/落', 递:用.length, 成:果.list || [], 对不上:果.miss || [],
-      写了:(果.files || []).map(f => path.relative(字树, f).split(path.sep).join('/')), 重跑:果.builds || [] });
+      写了:(果.files || []).map(那份在哪), 重跑:果.builds || [] });
     return;
   }
   /* 源码里的句子换完了，界面上还看不见 —— 得把产物重新生成一遍。跑的就是 uitext 那一份里
@@ -589,4 +614,4 @@ if(被当命令跑) 服务器.on('error', e => {
    借的人不会听到端口 —— 上面那道 被当命令跑 挡着。 */
 export { 被当命令跑, 文字读, 文字写, 清单文件, 字树, 图标单, 读索引, 叫得动git, 界面文字那颗, 现场,
   图标落点, 图标写, 图标删, 图标上限, 插件封面, 图标写插件, 插件层, 柜列, 柜一张, 图标后缀,
-  厂层, 进出厂, 出厂看, 插件找, 柜上限 };
+  厂层, 进出厂, 出厂看, 插件找, 柜上限, 界面邻居, 那份在哪 };

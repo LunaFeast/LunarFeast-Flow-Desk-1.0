@@ -3,7 +3,7 @@
    照 src\pack\main.cjs 里那五颗 ipcMain.handle 搬，收什么、回什么形状都是那两份原文量下来的：
      icons:list   → 一张「名字: 地址」的表，没有参数
      font:list    → { fonts: […], faces: { 名字: [{w, 名}] } }，收 force 一栏
-     about:info   → { ok, pages, data, versions: { fd }, backups: […], packs: [{id, name, version}] }
+     about:info   → { ok, pages, data, versions: { fd }, packs: [{id, name, version}] }
      ming:system  → { dark }
      ocr:swatch   → { ok, lang, ow, oh, lines: [{t, x, y, w, h}] }，不成就 { ok:false, msg }，收一个路径
    app:restart 不在这一格 —— 那一颗跟着窗口与收摊走，落在 win_cmds。
@@ -304,7 +304,6 @@ pub struct 一个关于 {
     pages: String,
     data: String,
     versions: 一套版本,
-    backups: Vec<String>,
     packs: Vec<一行插件>,
 }
 
@@ -322,13 +321,12 @@ pub struct 一行插件 {
 
 #[tauri::command]
 pub fn about_info() -> 一个关于 {
-    let (树, 页, 数) = 三个格();
+    let (_, 页, 数) = 三个格();
     一个关于 {
         ok: true,
         pages: 页.clone(),
         data: 数.clone(),
         versions: 一套版本 { fd: 页面的号(&页) },
-        backups: 账上::备份列(&列名字(&Path::new(&树).join("update").join("backups"))),
         packs: 装着的那几家(&数),
     }
 }

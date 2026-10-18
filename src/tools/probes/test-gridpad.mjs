@@ -29,7 +29,10 @@ function 开一台(fitGrid){
       querySelector: () => null,
       documentElement: { style: { setProperty(k, v){ 发[k] = v; } } }
     },
-    Theme: { cfg: { gap: 0 } }        /* 间距走「自动」：这一台只管四边那条边界，不碰方案里钉死的那一档 */
+    Theme: { cfg: { gap: 0 } },       /* 间距走「自动」：这一台只管四边那条边界，不碰方案里钉死的那一档 */
+    /* place() 末尾那一句是 #66 加的：卡片挪了位置要重量一次卡外的按钮气泡。
+       这一台只量四边留白，气泡那一头给它一个「当前没开着任何一颗」的空登记，别把 ReferenceError 当结果。 */
+    ToolPop: { cur: null }
   };
   vm.createContext(ctx);
   vm.runInContext(常量, ctx);

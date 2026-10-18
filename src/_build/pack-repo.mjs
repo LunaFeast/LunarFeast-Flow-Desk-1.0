@@ -454,7 +454,7 @@ export function 打包(id, 根){
     { cwd: 路, encoding: 'utf8' });
   const 件 = path.join(路, 'dist', id + '.' + 扩展名());     /* 后缀问壳里那一枚，不在这一颗里再抄一份 */
   const 字 = fs.existsSync(件) ? fs.readFileSync(件) : 停('那条命令没落文件：' + 件);
-  /* 读回来对一遍：头部那三个数、信息段那六个必填键、每一份的字节数与哈希 —— 全对才算这一趟成了 */
+  /* 读回来对一遍：头部那三个数、信息段那六个必填键与 created 那一格、每一份的字节数与哈希 —— 全对才算这一趟成了 */
   const 头 = { 记: 字.subarray(0, 4).toString('ascii'), 版: 字.readUInt16BE(4), 志: 字.readUInt16BE(6), 信长: 字.readUInt32BE(8) };
   const 信 = JSON.parse(字.subarray(12, 12 + 头.信长).toString('utf8'));
   /* 对账对的是**这一棵自己那一格**（出包那第一步刚把内核铺进去的那一份也在里面）——
@@ -470,7 +470,7 @@ export function 打包(id, 根){
   })(格, '');
   const 对得上 = 信.files.length === 现.length
     && 信.files.every((份, i) => { const 原 = 现.find(x => x.路 === 份.path); return !!原 && 原.字节 === 份.len; });
-  return { 件, 字节: 字.length, 头, 键: ['id','name','version','min_shell','author','source','key_id','files']
+  return { 件, 字节: 字.length, 头, 键: ['id','name','version','min_shell','author','source','key_id','files','created']
     .filter(k => 信[k] !== undefined).length, 份数: 信.files.length, 对得上, 现: 现.map(x => x.路), 报: 报.trim() };
 }
 
@@ -513,7 +513,7 @@ if(process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === impo
         + '\n  ' + 结.新落 + '\n  ' + 结.推); }
     else if(val('--打包', '')) { const 结 = 打包(做, 根);
       console.log(结.报 + '\n  读回来对过：' + (结.对得上 ? '每一份的字节数与清单对得上' : '对不上！')
-        + ' · 信息段八键到 ' + 结.键 + ' 格 · 头 ' + 结.头.记 + ' v' + 结.头.版 + ' 标志 ' + 结.头.志); }
+        + ' · 信息段九键到 ' + 结.键 + ' 格 · 头 ' + 结.头.记 + ' v' + 结.头.版 + ' 标志 ' + 结.头.志); }
     else if(has('--分自检')){
       const 表 = 分自检();
       const 堆 = {};

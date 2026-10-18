@@ -28,7 +28,7 @@ function 拿壳(){
 const 请壳 = (n, 包) => 拿壳().core.invoke(n, 包);
 const 听壳 = (n, 手) => { const 壳 = window.__TAURI__;
   return (壳 && 壳.event) ? 壳.event.listen(n, 手) : Promise.reject(new Error('壳没给事件那一层')); };
-const 参表 = {"backup_roots":[],"backup_run":["cfg"],"backup_last":["dest"],"backup_check":["cfg"],"cfg_close_get":[],"cfg_close_set":["mode"],"cfg_rime_get":[],"cfg_rime_set":["p"],"code_cat_rename":["from","to"],"comp_read":["id","rel"],"comp_write":["id","rel","text"],"comp_delete":["id"],"box_inspect":["id"],"box_verify":["id"],"data_dir":[],"data_read":["rel"],"data_write":["rel","text"],"data_list":[],"data_wipe":[],"lib_read":["name"],"lib_write":["name","text"],"fs_read":["p"],"fs_read_range":["p","start","length"],"fs_stat":["p"],"fs_write":["p","data","mkdir"],"fs_append":["p","text"],"fs_mkdir":["p"],"fs_unlink":["p","recursive"],"fs_list":["p"],"fs_tree":["p","exts"],"fs_read_text":["p"],"fs_resolve":["p"],"img_peek":["p","maxw"],"img_open":["p"],"icons_list":[],"font_list":["force"],"about_info":[],"ming_system":[],"ocr_swatch":["p"],"media_state":[],"media_hold":[],"media_release":[],"media_cmd":["msg"],"media_players":[],"media_pin":["target"],"media_dir_pick":[],"media_dir_set":["p"],"media_flag":["k","v"],"media_bridge":[],"pack_list":[],"pack_file":["id","rel"],"pack_set":["ids"],"pack_import":["payload"],"pack_wipe":["files","shared"],"fsa_pick_files":["opts"],"fsa_pick_dir":["opts"],"sys_rebuild":[],"vol_get":[],"vol_set":["v"],"vol_mute":["mode"],"web_title":["url"],"win_ctl":["act"],"app_restart":[],"win_close_answer":["action"]};
+const 参表 = {"backup_roots":[],"backup_run":["cfg"],"backup_last":["dest"],"backup_check":["cfg"],"cfg_close_get":[],"cfg_close_set":["mode"],"cfg_rime_get":[],"cfg_rime_set":["p"],"code_cat_rename":["from","to"],"comp_read":["id","rel"],"comp_write":["id","rel","text"],"comp_delete":["id"],"box_inspect":["id"],"box_verify":["id"],"data_dir":[],"data_read":["rel"],"data_write":["rel","text"],"data_list":[],"data_wipe":[],"lib_read":["name"],"lib_write":["name","text"],"fs_read":["p"],"fs_read_range":["p","start","length"],"fs_stat":["p"],"fs_write":["p","data","mkdir"],"fs_append":["p","text"],"fs_mkdir":["p"],"fs_unlink":["p","recursive"],"fs_list":["p"],"fs_tree":["p","exts"],"fs_read_text":["p"],"fs_resolve":["p"],"img_peek":["p","maxw"],"img_open":["p"],"icons_list":[],"font_list":["force"],"about_info":[],"ming_system":[],"ocr_swatch":["p"],"media_state":[],"media_hold":[],"media_release":[],"media_cmd":["msg"],"media_players":[],"media_pin":["target"],"media_dir_pick":[],"media_dir_set":["p"],"media_flag":["k","v"],"media_bridge":[],"pack_list":[],"pack_file":["id","rel"],"pack_set":["ids"],"pack_import":["payload"],"pack_updates":[],"pack_update":["id"],"pack_wipe":["files","shared"],"fsa_pick_files":["opts"],"fsa_pick_dir":["opts"],"sys_rebuild":[],"vol_get":[],"vol_set":["v"],"vol_mute":["mode"],"web_title":["url"],"win_ctl":["act"],"app_restart":[],"win_close_answer":["action"]};
 const 名换算 = n => n.replace(/:/g, '_').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 const 对不上 = (n, 有, 递) => {
   if(递 <= 有) return true;
@@ -442,6 +442,11 @@ window.FD_APP = {
     catch(e){ return { ok:false, msg:'导入没接上：' + ((e && e.message) || e) }; } },
   /* 两个数组两把尺：files 删用户目录里那几份（notes.json 那种），
      shared 删数据层根那一侧跟着功能走的东西（词库底本 <包名>-bank/data.txt 那种）。 */
+  /* 更新那两道（他 2026-10-17 定的形状）：哪几颗与这一格上的号不一样 → 点一下把那一颗换进那一格，换完那颗包删掉 */
+  async packUpdates(){ try{ return await ipcRenderer.invoke('pack:updates'); }
+    catch(e){ return { ok:false, msg:'问不到有没有新包：' + ((e && e.message) || e) }; } },
+  async packUpdate(id){ try{ return await ipcRenderer.invoke('pack:update', String(id || '')); }
+    catch(e){ return { ok:false, msg:'更新没接上：' + ((e && e.message) || e) }; } },
   async packWipe(files, shared){ try{ return await ipcRenderer.invoke('pack:wipe', Array.from(files || []), Array.from(shared || [])); }
     catch(e){ return { ok:false, msg:'数据没清掉：' + ((e && e.message) || e) }; } },
   /* 一键清理所有用户数据（外42 二）：只排一张字条，真删在下一趟开机 —— 浏览器存储那一格此刻被内核占着，

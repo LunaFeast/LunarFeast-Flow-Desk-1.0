@@ -222,6 +222,8 @@ fn main() {
                装没装音乐遥控器与收后台监听朝 media_cmds 借 —— 都没另起第二把尺。 */
             tauri_bind::pack_cmds::pack_set,
             tauri_bind::pack_cmds::pack_import,
+            tauri_bind::pack_cmds::pack_updates,
+            tauri_bind::pack_cmds::pack_update,
             tauri_bind::pack_cmds::pack_wipe,
         ])
         .run(tauri::generate_context!())

@@ -98,10 +98,27 @@ pub fn 压包成名(名: &str) -> Option<&str> {
     名.strip_suffix(压包后缀)
 }
 
-/// 一份自有容器名折成包名（`<包名>.fdpkg` → `<包名>`）：后缀那一枚住 pack_box::带点后缀，
-/// 这一层不再写第二个字面（他定的"代码里的常量要留成一处"，规格第五节那条）
+/// 一份自有容器名折成包名：后缀那一枚住 pack_box::带点后缀，这一层不再写第二个字面（他定的"代码里的常量要留成一处"，规格第五节那条）。
+/// 认两种写法（2026-10-17 跟着出货那一格放宽的一格）：
+///   `<包名>.fdpkg` 与 `<包名>-<版本号>.fdpkg` —— 出货那一格里每一颗的名字都带着自己那一号
+///   （他原话：「一个插件文件夹，里面插件包的名字是插件名字带上版本号」），把这样的名字丢进插件路径还认得回这一家。
+/// 折法只一条：从左数**第一个后面紧跟数字的横杠**处砍一刀。为什么是这一条：包名自己就带横杠
+///   （your-sentences / music-remote / singbit-input-practice / why-not-write），而号永远以数字开头（1.0.0-alpha+build.<那一笔>），
+///   所以号前那一根横杠是唯一"后面跟着数字"的一根；号里面那些横杠（-alpha）在砍完之后就不算了。
+/// 一道兜底：折出来的这一串只是"文件名说是哪一家"，装之前还有一道闸把信息段里那一栏与它逐字比
+///   （规格那张表：目录名必须与信息段一样），对不上就一句退回，绝不含认成另一家。
 pub fn 容器成名(名: &str) -> Option<&str> {
-    名.strip_suffix(crate::fd_core::pack_box::带点后缀)
+    let 干 = 名.strip_suffix(crate::fd_core::pack_box::带点后缀)?;
+    let 节 = 干.as_bytes();
+    for 位 in 0..节.len() {
+        if 节[位] != b'-' { continue; }
+        if 位 + 1 < 节.len() && 节[位 + 1].is_ascii_digit() {
+            let 头 = &干[..位];
+            if !头.is_empty() { return Some(头); }
+            return Some(干);
+        }
+    }
+    Some(干)
 }
 
 /* ---------- 三趟收：文件夹赢同名的运输形状（zip 与自有容器都算运输形状） ---------- */
@@ -534,6 +551,103 @@ pub fn 包那一格留着(落: &str, 包格: &str) -> bool {
     落 == 跟 || 落.starts_with(&format!("{}\\", 跟))
 }
 
+/// 号里参与比大小的那两段：`主.次.补丁` 与（有的话）预发布。`+build.…` 那一截丢掉 ——
+/// semver 明写 build 元数据不参与排序，比它比出来的"新"是假的。读不出回 None（读不出与相等是两件事）。
+fn 拆号(号: &str) -> Option<(Vec<u64>, Option<Vec<String>>)> {
+    let 取 = 号.trim().split('+').next()?.trim();
+    let (核, 预) = match 取.find('-') {
+        Some(i) => (&取[..i], 取[i + 1..].split('.').map(|s| s.to_string()).collect::<Vec<_>>()),
+        None => (取, Vec::new()),
+    };
+    let 有预 = 取.find('-').is_some();
+    let 段: Vec<u64> = 核.split('.').map(|s| s.parse::<u64>().ok()).collect::<Option<_>>()?;
+    if 段.len() != 3 { return None; }
+    Some((段, if 有预 { Some(预) } else { None }))
+}
+
+/// 预发布那一段照 semver 第 11 条比：逐段来，纯数字段按数比、其余按字典比，数字段排在非数字段前面；
+/// 前面每一段都平而段数少的算小。
+fn 比预(甲: &[String], 乙: &[String]) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    for i in 0..甲.len().min(乙.len()) {
+        let (x, y) = (&甲[i], &乙[i]);
+        let (数x, 数y) = (x.parse::<u64>().ok(), y.parse::<u64>().ok());
+        let 结 = match (数x, 数y) {
+            (Some(a), Some(b)) => a.cmp(&b),
+            (Some(_), None) => Ordering::Less,
+            (None, Some(_)) => Ordering::Greater,
+            (None, None) => x.cmp(y),
+        };
+        if 结 != Ordering::Equal { return 结; }
+    }
+    甲.len().cmp(&乙.len())
+}
+
+/// 比两串号的新旧：包上 vs 装着的。读不出任何一边回 None（不许当成相等，也不许当成谁新）。
+pub fn 比号(甲: &str, 乙: &str) -> Option<std::cmp::Ordering> {
+    use std::cmp::Ordering;
+    let (a核, a预) = 拆号(甲)?;
+    let (b核, b预) = 拆号(乙)?;
+    for i in 0..3 {
+        let 结 = a核[i].cmp(&b核[i]);
+        if 结 != Ordering::Equal { return Some(结); }
+    }
+    Some(match (a预, b预) {
+        (None, None) => Ordering::Equal,
+        (None, Some(_)) => Ordering::Greater,      /* 1.0.0 比 1.0.0-alpha 新 */
+        (Some(_), None) => Ordering::Less,
+        (Some(x), Some(y)) => 比预(&x, &y),
+    })
+}
+
+/// 那一格打包时刻（`created`，Unix 秒 —— 与 docs\插件容器格式.md 那张表同一格同名同义）。
+/// 空、不成数、0 都回 None：拿不出就是拿不出，不许当成"最早"或"最新"。
+fn 时刻(串: &str) -> Option<u64> {
+    串.trim().parse::<u64>().ok().filter(|秒| *秒 > 0)
+}
+
+/// 那一颗躺在插件路径里的运输件值不值得提醒一句：**包上那份必须比这一格上的新**才提醒。
+/// ① 先比号里参与排序那两段（`+build.` 那一截不算）；分得出高低就照它。
+/// ② 平手（今天每一家的号都是 `1.0.0-alpha+build.<那一笔>`，那一段本来就比不出）再比两头的打包时刻
+///    —— 时刻写在清单自己那一格里（`created`），摊开之后文件夹里那一份与盒里那一份一字不差。
+/// ③ 时刻也拿不出（改动之前出的旧包没写那一格）就不提醒：**宁可不提一句，
+///    也不许拿一份来路说不清的包把好好的一格换下去**（他 2026-10-18 那一句"点下去是降级"）。
+pub fn 该提醒换(装着的: &str, 包上的: &str, 装的时刻: &str, 包的时刻: &str) -> bool {
+    use std::cmp::Ordering;
+    let (甲, 乙) = (装着的.trim(), 包上的.trim());
+    if 甲.is_empty() || 乙.is_empty() { return false; }
+    match 比号(乙, 甲) {
+        Some(Ordering::Greater) => return true,
+        Some(Ordering::Less) => return false,
+        /* 平手或有一边读不出：往下走时刻那一道 */
+        _ => {}
+    }
+    match (时刻(装的时刻), 时刻(包的时刻)) {
+        (Some(旧), Some(新)) => 新 > 旧,
+        _ => false,
+    }
+}
+
+/// 换进来那两道的临时名：下划线开头那一格 算一家 不认（off.json 那种也不是家），所以不会在半路被列成一家
+pub fn 换进来名(包名: &str) -> String { format!("_换进来-{}", 包名) }
+pub fn 换下去名(包名: &str) -> String { format!("_换下去-{}", 包名) }
+
+/// 同一家在插件路径里躺着好几颗运输件时留哪一颗：**最近放进去的那一颗**（回的是选中那一颗的原文件名）。
+/// 为什么不比号：`比号` 那一颗把 `+build.` 后面那一截丢掉，两颗平手；
+/// 为什么不按名字排：`notes-1.0.0-…` 排在 `notes-2.0.0-…` 前面，按名字留头一颗就会提醒人换成**旧的那一号**。
+/// 时间一样（同一秒里丢进两颗）时按名字倒着排，至少每次跑选的是同一颗。
+pub fn 一家留最新一颗(名册: &[(String, u64)]) -> Vec<String> {
+    let mut 排 = 名册.to_vec();
+    排.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| b.0.cmp(&a.0)));
+    let mut 出: Vec<(String, String)> = vec![];
+    for (名, _) in 排 {
+        let 包名 = match 容器成名(&名) { Some(v) => v.to_string(), None => continue };
+        if !出.iter().any(|已| 已.0 == 包名) { 出.push((包名, 名)); }
+    }
+    出.sort_by(|a, b| a.0.cmp(&b.0));
+    出.into_iter().map(|(_, 名)| 名).collect()
+}
+
 #[cfg(test)]
 mod 验判断 {
     use super::*;
@@ -583,6 +697,51 @@ mod 验判断 {
         assert!(是容器那份(&format!("甲/notes.{}", 扩展名)), "收不收那一条认的也是同一枚常量");
         assert!(是容器那份("甲/notes.FDPKG"), "大小写两种都算（与 zip 同一把尺）");
         assert!(!是容器那份("甲/notes.zip"));
+    }
+
+    #[test]
+    fn 出货那一格的名字带着号也折得回这一家() {
+        /* 2026-10-17 那一格：插件包里每一颗的名字都写成 <包名>-<版本号>.fdpkg，号永远以数字开头，
+           所以"第一个后面紧跟数字的横杠"就是包名与号的分界；号自己里面还有横杠（-alpha）也不能砍错。 */
+        let 后 = crate::fd_core::pack_box::带点后缀;
+        let 折 = |名: &str| 容器成名(&format!("{}{}", 名, 后)).map(|出| 出.to_string());
+        assert_eq!(折("notes-1.0.0-alpha+build.deadbeef"), Some("notes".to_string()));
+        /* 包名自己带横杠的这几家：横杠后面跟的是字母，不算分界 */
+        assert_eq!(折("your-sentences"), Some("your-sentences".to_string()));
+        assert_eq!(折("your-sentences-1.0.0"), Some("your-sentences".to_string()));
+        assert_eq!(折("music-remote-2.0.0-beta+build.1a2b3c4"), Some("music-remote".to_string()));
+        assert_eq!(折("singbit-input-practice-0.9.1"), Some("singbit-input-practice".to_string()));
+        assert_eq!(折("why-not-write"), Some("why-not-write".to_string()));
+        /* 号不以数字开头（有人手写了一段字）就不砍：那一串原样当包名，装的时候由「信息段 == 文件名」那道闸退回，不含认 */
+        assert_eq!(折("notes-最新"), Some("notes-最新".to_string()));
+        assert_eq!(折("-1.0.0"), Some("-1.0.0".to_string()), "横杠前是空串不许折成空包名");
+    }
+
+    #[test]
+    fn 同一家躺着两颗留最近放进去的那一颗() {
+        /* 出货那一格的名字带号，所以按名字排会把旧号排在前面 —— 这一颗认的是文件时间 */
+        let 名册 = vec![
+            ("notes-1.0.0-alpha+build.aaa.fdpkg".to_string(), 100u64),
+            ("notes-2.0.0-alpha+build.bbb.fdpkg".to_string(), 200u64),
+            ("schedule-1.0.0-alpha+build.ccc.fdpkg".to_string(), 150u64),
+        ];
+        assert_eq!(一家留最新一颗(&名册), vec![
+            "notes-2.0.0-alpha+build.bbb.fdpkg".to_string(),
+            "schedule-1.0.0-alpha+build.ccc.fdpkg".to_string()], "一家只留一颗，且留的是新放进去的那一颗");
+        /* 不带号那一种写法也一起认：同一家两种写法都躺着，还是留时间新的 */
+        let 混 = vec![
+            ("notes.fdpkg".to_string(), 300u64),
+            ("notes-1.0.0.fdpkg".to_string(), 100u64),
+        ];
+        assert_eq!(一家留最新一颗(&混), vec!["notes.fdpkg".to_string()]);
+        /* 时间打平时按名字倒着来，至少每次跑选同一颗 */
+        let 平 = vec![
+            ("notes-1.0.0.fdpkg".to_string(), 7u64),
+            ("notes-2.0.0.fdpkg".to_string(), 7u64),
+        ];
+        assert_eq!(一家留最新一颗(&平), vec!["notes-2.0.0.fdpkg".to_string()]);
+        /* 不是容器的那些名一律不进这一列（zip 与文件夹归另两趟） */
+        assert!(一家留最新一颗(&[("说明.txt".to_string(), 9u64), ("甲.zip".to_string(), 9u64)]).is_empty());
     }
 
     #[test]
@@ -941,5 +1100,71 @@ mod 验判断 {
            名字像但不是的那一种照旧不挡（原件比的是 resolve 完的前缀） */
         assert!(!包那一格留着("某处\\一棵树\\data\\plugins-factory\\甲家", 包格));
         assert!(!包那一格留着("某处\\一棵树\\data\\logs", 包格));
+    }
+
+    #[test]
+    fn 包上那份必须比这一格新才提醒() {
+        /* 号里 +build. 那一截不参与排序：两边都是 1.0.0-alpha，时刻也拿不出 —— 不提醒。
+           2026-10-18 那六颗旧包被当成"新版"、点下去是降级，就是从这一条被拦住的 */
+        assert!(!该提醒换("1.0.0-alpha+build.094eeb7", "1.0.0-alpha+build.2ac34ee", "", ""));
+        assert!(!该提醒换("1.0.0-alpha+build.2ac34ee", "1.0.0-alpha+build.2ac34ee", "", ""));
+        /* 两头都有空格也算同一串（号是从清单与信息段里读的，不该被空格骗出一次提醒） */
+        assert!(!该提醒换(" 1.0.0 ", "1.0.0 ", "", ""));
+        /* 这一格还没摊出号（清单读不出、那一格里没 manifest.json）不提醒 —— 那是要重装的那一家，不是要换版的那一家 */
+        assert!(!该提醒换("", "1.0.0-alpha+build.2ac34ee", "", ""));
+        /* 包上没号也不提醒（不许拿一个空号去换掉好好的一格） */
+        assert!(!该提醒换("1.0.0-alpha+build.2ac34ee", "", "", ""));
+    }
+
+    #[test]
+    fn 号分得出高低就照号不看时刻() {
+        /* 主段大的赢，哪怕包上那一刻更早 —— 号是明写的新旧，时刻只是号比平时的备用尺 */
+        assert!(该提醒换("1.0.0-alpha.7+build.aaaaaaa", "1.0.0-alpha.8+build.bbbbbbb",
+            "1760099999", "1760000000"));
+        assert!(!该提醒换("1.0.0-alpha.8+build.bbbbbbb", "1.0.0-alpha.7+build.aaaaaaa",
+            "1760000000", "1760099999"));
+        /* 预发布比正式版旧：1.0.0-alpha 不比 1.0.0 新 */
+        assert!(!该提醒换("1.0.0", "1.0.0-alpha", "", ""));
+        assert!(该提醒换("1.0.0-alpha", "1.0.0", "", ""));
+        /* 预发布里数字段按数比：alpha.9 输给 alpha.10（拿字典比就会翻过来） */
+        assert!(该提醒换("1.0.0-alpha.9", "1.0.0-alpha.10", "", ""));
+        /* 段数少的算小：alpha < alpha.1 */
+        assert!(该提醒换("1.0.0-alpha", "1.0.0-alpha.1", "", ""));
+        /* 主段先赢：1.0.1 的 alpha 也比 1.0.1 的正式版旧 */
+        assert!(!该提醒换("1.0.1", "1.0.1-alpha", "", ""));
+    }
+
+    #[test]
+    fn 号平时才看打包时刻两样都拿不出就不提醒() {
+        /* 今天每一家的号都是 1.0.0-alpha+build.<那一笔>，比不出高低 —— 这时看清单里 created 那一格（Unix 秒） */
+        assert!(该提醒换("1.0.0-alpha+build.094eeb7", "1.0.0-alpha+build.2ac34ee", "1760000000", "1760003600"));
+        assert!(!该提醒换("1.0.0-alpha+build.094eeb7", "1.0.0-alpha+build.2ac34ee", "1760003600", "1760000000"));
+        /* 同一秒出的两颗：不比谁新（也不许因为"不一样"就提醒） */
+        assert!(!该提醒换("1.0.0-alpha+build.094eeb7", "1.0.0-alpha+build.2ac34ee", "1760000000", "1760000000"));
+        /* 只有一头有时刻：说不清谁新，就不提醒（不许拿"有一边没写"当成"另一边一定新"） */
+        assert!(!该提醒换("1.0.0-alpha", "1.0.0-alpha", "", "1760003600"));
+        assert!(!该提醒换("1.0.0-alpha", "1.0.0-alpha", "1760003600", ""));
+        /* 0 与不成话的写法都算拿不出 */
+        assert!(!该提醒换("1.0.0-alpha", "1.0.0-alpha", "0", "1760003600"));
+        assert!(!该提醒换("1.0.0-alpha", "1.0.0-alpha", "昨天", "今天"));
+    }
+
+    #[test]
+    fn 比号读不出回空不许当成相等() {
+        use std::cmp::Ordering;
+        assert_eq!(比号("1.0.0", "1.0.0"), Some(Ordering::Equal));
+        assert_eq!(比号("1.0", "1.0.0"), None);           /* 主段不是三段 */
+        assert_eq!(比号("甲.乙.丙", "1.0.0"), None);       /* 主段不是数字 */
+        assert_eq!(比号("", "1.0.0"), None);
+    }
+
+    #[test]
+    fn 换进来换下去那两名下划线开头列不成一家() {
+        /* 「哪一格算一家」那把尺住在 about_info 那一格（关于那一屏与管理页共用），这里借它验临时名 */
+        let 算 = crate::fd_core::about_info::算一家;
+        assert!(!算(&换进来名("notes")));
+        assert!(!算(&换下去名("notes")));
+        assert!(算("notes"));
+        assert!(换进来名("notes") != 换下去名("notes"));
     }
 }

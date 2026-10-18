@@ -9,8 +9,8 @@
 
    只用 Windows 自带的那点东西：.NET Framework 4 的 csc.exe 编译（Win10/11 就有），
    不引第三方压缩库 —— zip 的目录自己读，压住的那一段交给 DeflateStream。
-   这一颗既管首装也管升级：目标那一棵已经在了就照原样覆盖摊一遍，动手之前先把要被换掉的旧的
-   挪进 update\backups\<时间戳>\（src\ 那一层整层挪，别的一个文件挪一份），装完就还是程序本身，
+   这一颗既管首装也管升级：目标那一棵已经在了就照原样覆盖摊一遍，摊完再把 src\ 那一层里
+   这一包没带的散文件清掉（不留任何旧版本备份 —— 想用旧版就装旧版，数据本来就能导出导入），装完就还是程序本身，
    不靠系统里装了什么。data\ 从头到尾不碰 —— 包里一个 data\ 开头的路径都没有（publish 有一道硬闸盯着），
    这一层也就没有被覆盖的机会。
    参数（都是自测和特殊场合用的，双击时一个都不用给）：
@@ -251,7 +251,6 @@ static class Sfx
     }
 
     /* ---------- 覆盖升级用的三件事 ---------- */
-    static string Stamp(){ return DateTime.Now.ToString("yyyyMMdd-HHmmss"); }
 
     /* 这一棵现在装的是哪一版：读树根那份 flow-desk-install.json 里 label 那一行（首装那一步写进去的）。
        不引 JSON 库，掐字符串就够 —— 读不出来当"没记版本号"，不影响覆盖这件事。 */
@@ -287,38 +286,31 @@ static class Sfx
         return null;
     }
 
-    /* 旧的先去备份，再让新的进来 —— 落点是一台机器自己的更新账那一格（update\backups\<时间戳>\），
-       设置 → 程序 那一屏列的就是这些格子。两档口径是有理由的：
-         src\ 整层挪 —— 那一格是程序自己的源码，装好的那一棵里没有一个用户写的东西，
-                        挪干净才不会留下上一版的散文件；
-         别的一个文件挪一份 —— pages\ 同时是他放文稿的地方，整层挪走等于把他的稿子搬空。
-       中途挪不动就停下：已经挪走的都在那一格里，照着挪回去就还是上一版。 */
-    static Result Stash(string dest, Payload pl, string back)
+    /* 覆盖升级不留旧版本备份（他 2026-10-17 那条：本来就有数据的导出导入，想用旧版就装旧版再把数据导回去，
+       在这一格里留一份旧代码只是占地方）。但上一版留下的散文件不能不管：新包里少带哪一份，
+       那一棵里就多出一份没人管的旧码，所以摊完新的再把 src\ 那一层里"这一包没带"的那些清掉 ——
+       那一格全是程序自己的源码，没有一个字是用户写的。
+       pages\ 不在这趟里：它同时是他放文稿的地方，只覆盖包里带的，多出来的一个字不动；
+       icons\ 与 material\ 由 KeepUserFile 护住（他自己换过的那一张覆盖升级不许盖）。
+       清不动不算装失败（那一码还是上一版的，下一次覆盖升级再清），所以只数不报。 */
+    static Result Stash(string dest, Payload pl)
     {
         Result r = new Result();
-        string srcLayer = Path.Combine(dest, "src");
-        if(Directory.Exists(srcLayer))
-        {
-            string to = Path.Combine(back, "src");
-            try{
-                Directory.CreateDirectory(Path.GetDirectoryName(to));
-                Directory.Move(srcLayer, to);
-                r.Files++;
-            }catch(Exception e){ r.Error = "旧的 src\\ 那一层挪不动：" + e.Message; return r; }
-        }
+        string 层 = Path.Combine(dest, "src");
+        if(!Directory.Exists(层)) return r;
+        HashSet<string> 带 = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach(Entry it in pl.Items)
-        {
-            if(KeepUserFile(dest, it)) continue;   /* 也不把他那一份搬进备份 */
-            if(it.Name.StartsWith("src/")) continue;
-            string from = Path.Combine(dest, it.Name.Replace('/', Path.DirectorySeparatorChar));
-            if(!File.Exists(from)) continue;
-            try{
-                string to = Path.Combine(back, it.Name.Replace('/', Path.DirectorySeparatorChar));
-                Directory.CreateDirectory(Path.GetDirectoryName(to));
-                File.Move(from, to);
-                r.Files++;
-            }catch(Exception e){ r.Error = "旧的 " + it.Name + " 挪不动：" + e.Message; return r; }
-        }
+            if(it.Name.StartsWith("src/")) 带.Add(Path.Combine(dest, it.Name.Replace('/', Path.DirectorySeparatorChar)));
+        try{
+            foreach(string f in Directory.GetFiles(层, "*", SearchOption.AllDirectories))
+            {
+                if(带.Contains(f)) continue;
+                try{ File.Delete(f); r.Files++; }catch(Exception){ }
+            }
+            string[] 格 = Directory.GetDirectories(层, "*", SearchOption.AllDirectories);
+            Array.Sort(格, (a, b) => b.Length.CompareTo(a.Length));      /* 先清最里那一层，空了才删得掉 */
+            foreach(string d in 格){ try{ if(Directory.GetFileSystemEntries(d).Length == 0) Directory.Delete(d); }catch(Exception){ } }
+        }catch(Exception e){ r.Error = "清 src\\ 那一层时读不动：" + e.Message; return r; }
         return r;
     }
 
@@ -335,16 +327,14 @@ static class Sfx
     static readonly string UiDropTo = "摊到这儿（整个文件夹挪走就算卸载，不写注册表）：";
     static readonly string UiUpHave = "这一棵已经装了 ";
     static readonly string UiUpInto = "这一次覆盖成 ";
-    static readonly string UiUpStash = " · 旧的先挪进 update\\backups\\<这一趟>；程序自带那些插件的代码跟着这一版换新，你自己装的包、你写的词库与数据都不动";
+    static readonly string UiUpStash = " · 程序自带那些插件的代码跟着这一版换新，上一版留下的散文件这一趟直接清掉、不留备份；你自己装的包、你写的词库与数据都不动";
     static readonly string UiUpHere = "就是这儿：";
     static readonly string UiBusyHead = "这一棵正在开着，先别动它：";
     static readonly string UiBusyFiles = "正被咬住的文件：";
     static readonly string UiBusyQuit = "把它退干净（右下角托盘图标上右键 → 退出），再点一次。一个字节都还没动。";
-    static readonly string UiOldAllIn = "已经挪走的旧文件都在";
-    static readonly string UiPutBack = "照着挪回去就还是上一版。";
     static readonly string UiHalfIn = "已经摊出来的那一半在";
     static readonly string UiDeleteRetry = "整个文件夹删掉重来就行。";
-    static readonly string UiOldAt = "旧的在 ";
+    static readonly string UiStuckOld = " · 有几份上一版留下的没清掉（不影响这一版跑）";
 
     /* ---------- 界面：一句话 + 目标目录 + 一根进度条，别整花活 ---------- */
     class Dlg : Form
@@ -415,14 +405,14 @@ static class Sfx
 
     /* ---------- 动手那一条道：首装和覆盖升级走同一条 ----------
        认那一棵在不在 → 在就先把要覆盖的每一个文件问一遍能不能写（正开着的一概不动）→
-       旧的挪进 update\backups\<这一趟> → 摊新的。码和话一起带回去，界面那头只管摆。 */
+       摊新的 → 新的落稳了再清 src\ 那一层里这一包没带的散文件。码和话一起带回去，界面那头只管摆。
+       没有"旧的先挪去备份"这一步了（他 2026-10-17 撤的），所以这个次序不能倒。 */
     class Job { public int Code; public string Msg; public int Files; public long Bytes; }
 
     static Job Install(string self, Payload pl, string dest, Action<long, long> onProgress)
     {
         Job j = new Job();
         bool up = IsTree(dest);
-        string back = null;
         if(up)
         {
             string busy = Busy(dest, pl);
@@ -432,18 +422,17 @@ static class Sfx
                 j.Msg = UiBusyHead + NL + dest + NL + UiBusyFiles + busy + NL + UiBusyQuit;
                 return j;
             }
-            back = Path.Combine(Path.Combine(Path.Combine(dest, "update"), "backups"), Stamp());
-            Result s = Stash(dest, pl, back);
-            if(s.Error != null){ j.Code = 4; j.Msg = UiFailed + s.Error + NL + UiOldAllIn + NL + back; return j; }
         }
         Result r = Extract(self, pl, dest, onProgress);
         if(r.Error != null)
         {
             j.Code = 4;
-            j.Msg = UiFailed + r.Error +
-                (back != null ? NL + UiOldAllIn + NL + back + NL + UiPutBack : NL + UiHalfIn + NL + dest + NL + UiDeleteRetry);
+            j.Msg = UiFailed + r.Error + NL + UiHalfIn + NL + dest + NL + UiDeleteRetry;
             return j;
         }
+        /* 新的落稳了才清上一版留下的散文件 —— 没有备份可退，这个次序不能倒（先摊新的、再删多出来的） */
+        string 清不动 = null;
+        if(up){ Result s = Stash(dest, pl); r.Files += s.Files; if(s.Error != null) 清不动 = s.Error; }
         if(!File.Exists(Path.Combine(dest, "Flow-Desk.exe")))
         {
             j.Code = 6; j.Msg = "摊完了，可这棵树的根上没有 Flow-Desk.exe —— 这一包不全，换个下载来源再试。";
@@ -457,7 +446,7 @@ static class Sfx
         j.Code = 0; j.Files = r.Files; j.Bytes = r.Bytes;
         MemoWrite(dest);
         j.Msg = (up ? UiDidUp : UiDidNew) + r.Files + UiFilesOf + MB(r.Bytes) + " → " + dest +
-            (up ? NL + UiOldAt + back : "");
+            (清不动 != null ? NL + UiStuckOld : "");
         return j;
     }
 
@@ -475,7 +464,7 @@ static class Sfx
             return j.Code;
         }
         try{ d.Bar.Value = 1000; d.Stat.Text = UiOk + j.Files + UiFilesOf + MB(j.Bytes) +
-            (up ? " · 旧的在 update\\backups 里" : "") + (run ? "，这就开" : ""); }catch(Exception){ }
+            (up ? " · 上一版留下的散文件也清了" : "") + (run ? "，这就开" : ""); }catch(Exception){ }
         if(run) Launch(dest);
         Thread.Sleep(700);
         return 0;
