@@ -156,9 +156,12 @@ for(const id of 不上首页){
 
 台.题('五、红线：吸附、拖拽、四角缩放、展开模式与"已有的卡不许自动动"');
 {
-  台.判('网格吸附那两颗还在原位（snapQ 那一口 1/(GRID_STEP*4) 与 snapDelta 的折格算法一字没动）',
+  台.判('网格吸附那两颗还在原位（snapQ 那一口 1/(GRID_STEP*4) 与松手归格那颗 snapPos 的折格算法一字没动）',
     切(壳源, 'snapQ').includes('Math.max(1 / (GRID_STEP * 4)')
-    && 切(壳源, 'snapDelta').includes('snapQ(步, cell) * Math.round(px / cell / snapQ(步, cell))'));
+    && 切(壳源, 'snapPos').includes('Math.round(v / q) * q'));
+  台.判('拖动途中不再逐帧折格（他 2026-10-19 issue #45 那半句「僵硬的吸附」）：step 里只有按格长换算的连续增量，旧那颗 snapDelta 既不再声明也没人叫（注释里提一句老名字不算）',
+    !/snapDelta\(/.test(壳源) && !/const snapDelta/.test(壳源)
+    && /const dx = \(e\.clientX - x0\) \/ shell\.cellW;/.test(切方法(壳源, '  bindDrag(card, it, def){')));
   const 拖 = 切方法(壳源, '  bindDrag(card, it, def){');
   台.判('拖拽那颗还在原位（长按 180 毫秒那道门槛没改）', /setTimeout\(begin, 180\)/.test(拖));
   const 缩 = 切(壳源, 'resizeRect');

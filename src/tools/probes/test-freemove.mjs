@@ -124,9 +124,10 @@ R.题('五 · 接线与改坏对照');
   R.判('让开的每一张都当场重新落位（不整桌重画，组件不跟着重挂）',
     /document\.querySelector\('\[data-iid="' \+ m\.it\.id/.test(定done) && /if\(el\) shell\.place\(el, m\.it\)/.test(定done),
     (定done.match(/const el = document[^\n]*/) || [''])[0].trim());
-  R.判('只有真推不动、或改了尺寸、或换了展开那一档才重画整桌',
-    /if\(动\.length \|\| mode === 'resize' \|\| grew !== was\) shell\.render\(\);/.test(定done),
-    (定done.match(/if\(动\.length[^\n]*/) || [''])[0].trim());
+  R.判('只有改了尺寸、或跨过展开那一档才重画整桌；单纯挪位置不重画（他 2026-10-19 issue #45：重画会换新节点，让位那几张就滑不动，只能"啪"地蹦过去）',
+    /if\(mode === 'resize' \|\| grew !== was\) shell\.render\(\);/.test(定done)
+    && !/if\(动\.length \|\| mode === 'resize'/.test(定done),
+    (定done.match(/if\(mode === 'resize'[^\n]*/g) || []).join(' ⏎ '));
   /* 改坏：把 推开 里「四条边都不通就找第一块空地」那一圈拆掉（换成从前那种一步一格都扫不到） */
   const 坏推 = 取('推开').replace('for(let y = 0; y + r.h <= GRID_ROWS; y += 0.5)', 'for(let y = 0; y + r.h <= GRID_ROWS; y += 99)');
   R.判('坏的那一份确实只动了「找空地」那一圈（改不动就是这台在自欺）',

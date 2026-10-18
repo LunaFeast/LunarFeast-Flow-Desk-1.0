@@ -56,10 +56,10 @@ const 清理 = (sfx.match(/static Result Stash\(string dest, Payload pl\)[\s\S]*
 台.判('清的就是 src\\ 那一层里"这一包没带"的那几份（带着的一份不删、清完把份数报进成功那一句）',
   清理.length > 100 && /StartsWith\("src\/"\)/.test(清理) && /带\.Contains\(f\)/.test(清理) &&
   /File\.Delete\(f\)/.test(清理) && /r\.Files\+\+/.test(清理), 清理.length + ' 字');
-台.判('删除只可能落在 dest\\src 那一层底下（整颗只认那一个根，data\\ 与 pages\\ 一个字都删不到）',
+台.判('删除只有两处：src\\ 那一层里这一包没带的（Stash）+ pages\\ 里按名字认得出的旧页（PrunePages）—— data\\ 底下永远轮不到',
   /string 层 = Path\.Combine\(dest, "src"\)/.test(清理) &&
-  (sfx.match(/File\.Delete/g) || []).length === 1 && (sfx.match(/Directory\.Delete/g) || []).length === 1 &&
-  !/Delete\([^)]*"data"/.test(sfx) && !/Delete\([^)]*pages/i.test(sfx),
+  (sfx.match(/File\.Delete/g) || []).length === 2 && (sfx.match(/Directory\.Delete/g) || []).length === 1 &&
+  !/Delete\([^)]*"data"/.test(sfx),
   'File.Delete ' + (sfx.match(/File\.Delete/g) || []).length + ' · Directory.Delete ' + (sfx.match(/Directory\.Delete/g) || []).length);
 台.判('空掉的那一层从最里往外删（先长后短排，不然先动的是删不掉的父格）', /b\.Length\.CompareTo\(a\.Length\)/.test(清理));
 台.判('清不动不算装失败，但那一句要摆到话里（不许悄悄少清）',
@@ -67,10 +67,26 @@ const 清理 = (sfx.match(/static Result Stash\(string dest, Payload pl\)[\s\S]*
 台.判('摊到一半砸了那一句不再提"挪回去就还是上一版"（没有备份可挪了），报的是这一棵删掉重装',
   !/UiOldAllIn|UiPutBack|挪回去/.test(sfx) && Install.includes('UiDeleteRetry'));
 
+台.题('三·补、pages\\ 里那几张旧页按名字清（他 2026-10-19 issue #57：装好那一台上堆了 7 张 Flow_Desk_<号>.html、每张 1.1 MB，运行时只挑最新那一张）');
+{
+  const 清页 = (sfx.match(/static Result PrunePages\(string dest, Payload pl\)[\s\S]*?\n    \}/) || [''])[0];
+  台.判('那颗在，且只认「Flow_Desk_ 打头、.html 结尾」那一种名字 —— 那一格同时是他放文稿的地方，别的文件一个字不动',
+    清页.length > 100 && /Directory\.GetFiles\(格, "Flow_Desk_\*\.html"\)/.test(清页)
+    && !/GetFiles\([^,]+, "\*"/.test(清页), 清页.length + ' 字');
+  台.判('只删这一包没带的那几张（包里带什么名字就留什么名字，不拿"最新时间"当尺）',
+    /it\.Name\.StartsWith\("pages\/"\)/.test(清页) && /带\.Contains\(Path\.GetFileName\(f\)\)/.test(清页)
+    && /File\.Delete\(f\)/.test(清页) && /r\.Files\+\+/.test(清页));
+  台.判('只在覆盖升级那一趟跑，与 Stash 同一档：清不动不算装失败，但那一句要摆进话里',
+    /PrunePages\(dest, pl\)/.test(Install) && Install.indexOf('Stash(dest, pl)') < Install.indexOf('PrunePages(dest, pl)')
+    && /if\(pg\.Error != null && 清不动 == null\) 清不动 = pg\.Error/.test(Install));
+  台.判('首装那一趟不跑这一颗（up 为假的时候 Stash 与 PrunePages 一起跳过）',
+    /if\(up\)\{[\s\S]{0,220}?PrunePages\(dest, pl\)/.test(Install));
+}
+
 台.题('四、data\\ 不碰这件事靠什么成立');
 台.判('publish 那道「包里不许有 data\\」的硬闸还在', pub.includes('首装那棵树里出现了数据层的格子'));
-台.判('这一颗只有三种落子：摊开、删 src\\ 里这一包没带的那几份、删空掉的层格（data\\ 底下永远轮不到）',
-  (sfx.match(/File\.Delete/g) || []).length === 1 && (sfx.match(/Directory\.Delete/g) || []).length === 1 &&
+台.判('这一颗只有四种落子：摊开、删 src\\ 里这一包没带的那几份、按名字删 pages\\ 里的旧页、删空掉的层格（data\\ 底下永远轮不到）',
+  (sfx.match(/File\.Delete/g) || []).length === 2 && (sfx.match(/Directory\.Delete/g) || []).length === 1 &&
   !/File\.Delete[^]*"data/.test(sfx.slice(0, sfx.indexOf('File.Delete') + 400)),
   'File.Delete ' + (sfx.match(/File\.Delete/g) || []).length + ' · Directory.Delete ' + (sfx.match(/Directory\.Delete/g) || []).length);
 台.判('摊开的目标只从选定的那一棵拼（不写死别的格）', /Path\.Combine\(dest, it\.Name\.Replace\(\'\/\', Path\.DirectorySeparatorChar\)\)/.test(sfx));

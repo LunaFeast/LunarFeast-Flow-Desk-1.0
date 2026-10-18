@@ -290,7 +290,8 @@ static class Sfx
        在这一格里留一份旧代码只是占地方）。但上一版留下的散文件不能不管：新包里少带哪一份，
        那一棵里就多出一份没人管的旧码，所以摊完新的再把 src\ 那一层里"这一包没带"的那些清掉 ——
        那一格全是程序自己的源码，没有一个字是用户写的。
-       pages\ 不在这趟里：它同时是他放文稿的地方，只覆盖包里带的，多出来的一个字不动；
+       pages\ 不在这一趟里（这一趟只走 src\ 那一层）：那一格同时是他放文稿的地方，
+       里面那几张旧页归下面那颗 PrunePages 按名字清，别的文件一个字不动；
        icons\ 与 material\ 由 KeepUserFile 护住（他自己换过的那一张覆盖升级不许盖）。
        清不动不算装失败（那一码还是上一版的，下一次覆盖升级再清），所以只数不报。 */
     static Result Stash(string dest, Payload pl)
@@ -311,6 +312,28 @@ static class Sfx
             Array.Sort(格, (a, b) => b.Length.CompareTo(a.Length));      /* 先清最里那一层，空了才删得掉 */
             foreach(string d in 格){ try{ if(Directory.GetFileSystemEntries(d).Length == 0) Directory.Delete(d); }catch(Exception){ } }
         }catch(Exception e){ r.Error = "清 src\\ 那一层时读不动：" + e.Message; return r; }
+        return r;
+    }
+
+    /* 生成页面那一格只留这一包带的那一张（他 2026-10-19 issue #57 现量：装到机器上那一台堆着 7 张
+       Flow_Desk_<号>.html、每张 1.1 MB，运行时只挑最新那一张看，其余全是历次覆盖升级留下的旧页）。
+       只认「Flow_Desk_ 打头、.html 结尾」这一种名字 —— 那一格同时是他放文稿的地方，
+       别的文件名一个字不动（上一条规矩照旧）。清不动同样不算装失败，与 Stash 同一档。 */
+    static Result PrunePages(string dest, Payload pl)
+    {
+        Result r = new Result();
+        string 格 = Path.Combine(dest, "pages");
+        if(!Directory.Exists(格)) return r;
+        HashSet<string> 带 = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach(Entry it in pl.Items)
+            if(it.Name.StartsWith("pages/")) 带.Add(Path.GetFileName(it.Name));
+        try{
+            foreach(string f in Directory.GetFiles(格, "Flow_Desk_*.html"))
+            {
+                if(带.Contains(Path.GetFileName(f))) continue;
+                try{ File.Delete(f); r.Files++; }catch(Exception){ }
+            }
+        }catch(Exception e){ r.Error = "清 pages\\ 里那几张旧页时读不动：" + e.Message; return r; }
         return r;
     }
 
@@ -432,7 +455,8 @@ static class Sfx
         }
         /* 新的落稳了才清上一版留下的散文件 —— 没有备份可退，这个次序不能倒（先摊新的、再删多出来的） */
         string 清不动 = null;
-        if(up){ Result s = Stash(dest, pl); r.Files += s.Files; if(s.Error != null) 清不动 = s.Error; }
+        if(up){ Result s = Stash(dest, pl); r.Files += s.Files; if(s.Error != null) 清不动 = s.Error;
+                Result pg = PrunePages(dest, pl); r.Files += pg.Files; if(pg.Error != null && 清不动 == null) 清不动 = pg.Error; }
         if(!File.Exists(Path.Combine(dest, "Flow-Desk.exe")))
         {
             j.Code = 6; j.Msg = "摊完了，可这棵树的根上没有 Flow-Desk.exe —— 这一包不全，换个下载来源再试。";

@@ -4,44 +4,43 @@
    data\plugins\<id>\ 当包了，卸掉哪个，产物里就没那一段，设置里也没那一档。
    ============================================================ */
 
-/* ---------- 启动卡：整张卡就是一块卡面，中间一行字，点卡打开 ----------
+/* ---------- 启动卡：整张卡就是一块卡面，中间摆这一家自己的封面，点卡打开 ----------
    启动卡是两个可卸的包（plugins\why-not-write\、plugins\singbit-input-practice\）。
-   卡上那行字和封面顶上的标题都用插件清单里那个中文名，包里不再抄一份。
+   卡面上从前写一整句引导文字（「打开为写，开始写作」），他 2026-10-19 issue #65 撤了：
+   认人靠看图不靠读字 —— 中间摆这一家自己那张封面，右上角一串浅色英文缩写
+   （缩写写在它自己的插件清单里：为写 WNW、声笔输入法练习 SIP），那两句原话挪进悬停提示。
    怎么把一张卡画出来是公共件，留在外壳这里，两个包共用，不各写一份。
    以前是一个铺满卡面的按钮，把卡片本身那块面盖住了；不用按钮也就不需要
    data-nodrag，长按 180ms 照样能起拖，短按就是打开。
-   字只许一行，卡片窄就把字号往下让，和别的内容一样 9px 封顶。
    摆法两家共用，「点开之后干什么」由包里递进来：为写和声笔输入法练习那两个递的都是内核
    （两份代码都在这一张页里，Flow-Desk 那份装配单把它们各收成一层闭包；练习那一段见 _build/rp-kernel.mjs）。
    以前这里写死 Cover.openUrl，于是外壳替两家决定了「入口只能开一个网页」—— 搬进宿主的
    那一家没法用自己的开法，只能被按回 iframe；那一条通道整个撤了，外壳不再知道有「地址」这回事。 */
 function mountLauncher(body, opts, ctx){
-  const title = opts.title || (ctx && ctx.pack && ctx.pack.name) || '';
-  const face = h('div', { style:'flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;' +
-    'font-size:1.02em;font-weight:600;color:var(--text);padding:0 8px;text-align:center;white-space:nowrap' });
-  const span = h('span', {}, '打开' + title + '，' + opts.action);
-  face.appendChild(span);
+  const 包 = (ctx && ctx.pack) || {};
+  const title = opts.title || 包.name || '';
+  const face = h('div', { class:'fd-launch', title:'打开' + title + '，' + (opts.action || '') });
+  const 图 = h('span', { class:'fd-launch-ico', html: icoFor(包.id, 包.icon || opts.icon || 'card') });
+  face.appendChild(图);
+  const 缩 = String(包.abbr || opts.abbr || '').trim();
+  if(缩) face.appendChild(h('span', { class:'fd-launch-abbr' }, 缩));
   face.onclick = () => opts.open();
   body.appendChild(face);
+  /* 图标大小跟着卡面走：卡片改大小、窗口改宽窄都重量一次（取两轴里短的那条的一半，封顶 44 像素） */
   let busy = false;
-  const fit = () => {
+  const 量 = () => {
     if(busy) return;
     busy = true;
-    face.style.fontSize = '1.02em';
-    /* 居中的flex容器量不出往两边溢出的那截，只能问里面那个 span 本身多宽 */
-    const need = span.offsetWidth;
-    /* 挂载这一刻卡片还没进网格，量不到宽度，就按格子数自己算一个 */
-    const guess = ctx && ctx.item ? Math.round(ctx.item.w * Shell.cellW - Shell.gap) : 0;
-    const avail = Math.max(0, (face.clientWidth || guess) - 16);
-    if(avail > 0 && need > avail){
-      face.style.fontSize = Math.max(FIT_MIN_PX, parseFloat(getComputedStyle(face).fontSize) * avail / need) + 'px';
-    }
+    const w = face.clientWidth, ht = face.clientHeight;
+    const 猜 = (!w || !ht) && ctx && ctx.item && Shell.cellW
+      ? Math.min(ctx.item.w * Shell.cellW - Shell.gap, ctx.item.h * Shell.cellH - Shell.gap) : 0;
+    const 短 = Math.min(w || 猜, ht || 猜);
+    if(短 > 0) 图.style.fontSize = Math.max(16, Math.min(44, Math.round(短 * .5))) + 'px';
     busy = false;
   };
-  const ro = new ResizeObserver(() => fit());
-  /* 盯 face 自己的宽度：卡片改大小它就变，量出来的一定是这一格的实际尺寸 */
+  const ro = new ResizeObserver(量);
   ro.observe(face);
-  fit();
+  量();
   return { unmount(){ ro.disconnect(); } };
 }
 

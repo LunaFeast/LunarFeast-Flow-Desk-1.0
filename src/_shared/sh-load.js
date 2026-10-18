@@ -86,6 +86,9 @@ const PackLoader = {
       order:(typeof m.order === 'number' ? m.order : 100),
       dataKeys:m.dataKeys || [], kvKeys:m.kvKeys || [], sharedKeys:m.sharedKeys || [], stateKeys:m.stateKeys || [],
       desc:m.desc || '', bank:m.bank || null, assets:m.assets || {},
+      /* 露脸那两张：icon 是插件清单里那个老字符（没有就用通用那张牌），abbr 是卡片右上角那一串浅色英文缩写
+         （issue #65：为写 WNW、声笔输入法练习 SIP —— 启动卡不写整句引导文字了，靠图标 + 这一串认人）。 */
+      icon:m.icon || '', abbr:m.abbr || '',
       type:m.type || 'widget', settings:!!m.settings, appChannels:m.appChannels || [],
       /* 这一家上不上首页那张桌面（默认上）。写了 home:false 就是"这张卡不摆"——
          它的入口在别家内部（推演定制 2026-10-16 那一改：它为的是为写那台工作台，不占首页一格）。
@@ -557,7 +560,8 @@ const PackCtx = {
       || (m.stateKeys || []).some(p => s.startsWith(String(p))); };
     const deny = what => { throw new Error('组件「' + nm + '」' + what + '，插件清单没带它'); };
     const ctx = {
-      pack:{ id, name:nm, version:m.version, author:m.author, source:m.source, where:m.where, desc:m.desc, type:m.type || 'widget' },
+      pack:{ id, name:nm, version:m.version, author:m.author, source:m.source, where:m.where, desc:m.desc, type:m.type || 'widget',
+        icon:m.icon || '', abbr:m.abbr || '' },
       el:h,
       icon:typeof icoMarkup === 'function' ? icoMarkup : () => '',
       toast:typeof toast === 'function' ? toast : () => {},

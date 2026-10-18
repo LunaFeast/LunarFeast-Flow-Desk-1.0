@@ -16,7 +16,7 @@ const 定snapQ = 切(S, 'snapQ');
    得到的就是从前「两轴各吃自己的半格」—— 一口恒为 0.5 格。 */
 const 坏snapQ = 定snapQ.replace(/GRID_STEP \* 4/g, 'GRID_STEP');
 const 常量 = Q => [切(S, 'GRID_COLS'), 切(S, 'GRID_STEP'), Q,
-  切(S, 'snapDelta'), 切(S, 'EXPAND_AREA'), 切(S, 'isExpanded'), 切(S, 'VSC_BASE'),
+  切(S, 'snapPos'), 切(S, 'EXPAND_AREA'), 切(S, 'isExpanded'), 切(S, 'VSC_BASE'),
   切(LIB, 'lookGap')].join('\n') + '\n';
 
 const 定fitGrid = 切方法(S, '  fitGrid(){');
@@ -26,10 +26,11 @@ const 定hits = 切方法(S, '  hits(a, b){');
 const 定rect = 切方法(S, '  rect(it){');
 const 定bindDrag = 切方法(S, '  bindDrag(card, it, def){');
 
-/* 手按下去以后指针每走 1 像素问一次：吸附之后这一张卡的边落在哪个像素上 */
-const 扫 = 'p, snapDelta(p, Shell.cellW, 步) * Shell.cellW, snapDelta(p, Shell.cellH, 步) * Shell.cellH';
+/* 手按下去以后指针每走 1 像素问一次：松手归格之后这一张卡的边落在哪个像素上
+   （拖动途中不再折格，所以这一串量的是落盘那一步的细尺，不是手底下那一口） */
+const 扫 = 'p, snapPos(p / Shell.cellW, Shell.cellW, 步) * Shell.cellW, snapPos(p / Shell.cellH, Shell.cellH, 步) * Shell.cellH';
 
-/* 一台：真 fitGrid 出格长，再拿真 snapDelta + 指定那一份 snapQ 扫一趟指针 */
+/* 一台：真 fitGrid 出格长，再拿真 snapPos + 指定那一份 snapQ 扫一趟指针 */
 function 开一台(Q) {
   const 尺寸 = { w: 0, h: 0 };
   const 发 = {};
@@ -76,7 +77,7 @@ const 整倍 = v => Math.abs(v - Math.round(v)) < 1e-6;
 const 形状 = [['横版 1600×900', 1600, 900, 1.6], ['探针 966×1163', 966, 1163, 1.6],
   ['他截图那种竖版 700×1400', 700, 1400, 1.6], ['更窄长 500×1400', 500, 1400, 1.6], ['极窄 400×1600', 400, 1600, 2.0]];
 
-R.题('一 · 吸附那一步：两个轴必须是同一个像素数（真 fitGrid + 真 snapDelta + 真 snapQ）');
+R.题('一 · 松手归格那一步：两个轴必须是同一个像素数（真 fitGrid + 真 snapPos + 真 snapQ）');
 {
   const 台 = 开一台(定snapQ);
   for(const [名, w, h, 限] of 形状) {
@@ -110,9 +111,9 @@ R.题('二 · 改坏对照：把 snapQ 那一档从 1/8 格换回半格，漂移
   const 横老 = 析(开一台(坏snapQ).走(1600, 900).点);
   R.判('老写法在横版上本来就不吃亏（两轴一口几乎一样）—— 所以这个毛病只在竖屏出现，和他那句「横版正常」对得上',
     横老.步长比 < 1.1, 横老.步长比);
-  R.判('接线接对了：拖和拉那一颗走的是 snapDelta，从前那颗两轴各算的 snapCell 整个外壳里没有了',
-    /snapDelta\(e\.clientX - x0, shell\.cellW, 步\)/.test(定bindDrag) &&
-    /snapDelta\(e\.clientY - y0, shell\.cellH, 步\)/.test(定bindDrag) && !/snapCell/.test(S),
+  R.判('接线接对了：拖动途中跟手连续（step 里只按格长换算，一口都不折），折格只发生在松手那一下；从前那颗两轴各算的 snapCell 整个外壳里没有了',
+    /const dx = \(e\.clientX - x0\) \/ shell\.cellW;/.test(定bindDrag) && !/snapDelta/.test(定bindDrag)
+    && /snapPos\(r\.x, shell\.cellW, 步\)/.test(定bindDrag) && !/snapCell/.test(S),
     (定bindDrag.match(/const 步[^\n]*/) || [''])[0].trim());
   R.判('公共步长取的是两轴里较小的那一格的半口（拿较大的算，竖屏照旧粗）',
     /Math\.min\(shell\.cellW, shell\.cellH\) \/ GRID_STEP/.test(定bindDrag), (定bindDrag.match(/const 步[^\n]*/) || [''])[0].trim());

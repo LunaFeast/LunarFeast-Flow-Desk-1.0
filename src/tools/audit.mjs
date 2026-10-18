@@ -392,6 +392,42 @@ head('八、有没有哪一处想拿「改写」或「删掉」去碰逐字记�
   else say('  · 这一条一破，那一章的历史就不再是历史了（只往后面接的那条路在 src\\pack\\main.cjs 的 fs:append）');
 }
 
+/* ---------- 七、同一批字节带了两份、旧页攒了几张（他 2026-10-19 issue #57）---------- */
+head('七、重复与陈旧 · 只量不动手（清理归首装壳那两趟：Stash 与 PrunePages）');
+{
+  const MB = n => (n / 1048576).toFixed(1) + 'MB';
+  function 字节(格){ let n = 0; for(const r of walk(格, '')){ try{ n += fs.statSync(path.join(格, r)).size; }catch(e){} } return n; }
+  /* 出厂那两格是"铺到树根"的原件：出包时树根 icons\ 与 material\ 各带一份就够，
+     src 那一层再带一份就是白装 —— 2026-10-19 在他装好那一台上现量 material 两处各 24 MB（同一批 6 张纹理）。 */
+  for(const 格 of ['icons', 'material']){
+    const 源 = path.join(PACK_DIR, 格);
+    if(!exists(源)){ say('  ' + 格 + '：出厂那一格不在（没这一格就算不了）'); continue; }
+    say('  ' + 格 + '：出厂原件 ' + walk(源, '').length + ' 份 · ' + MB(字节(源)) + ' —— 出包只走树根那一层，src\\pack\\ 里这一份不再重复带');
+  }
+  const 发布 = path.join(PACK_DIR, 'publish.mjs');
+  if(exists(发布)){
+    const 文 = fs.readFileSync(发布, 'utf8');
+    const 闸 = /rel\.startsWith\('pack\/icons\/'\)/.test(文) && /rel\.startsWith\('pack\/material\/'\)/.test(文)
+      && /是开发层\(rel\) \|\| 出厂层\(rel\)/.test(文);
+    if(闸) say('  ✓ 发布那一道闸在（src 层里那两格被挡着）');
+    else bad('发布那一道闸没了：src 层又会把 src\\pack\\icons 与 src\\pack\\material 重复带一遍（装到机器上就是两份一样的字节）');
+  }
+  /* 旧页：pages\ 里 Flow_Desk_<号>.html 每覆盖升级一次多一张，运行时只挑最新那一张看 */
+  const 页格 = path.join(ROOT, 'pages');
+  if(exists(页格)){
+    const 页 = fs.readdirSync(页格)
+      .filter(n => /^Flow_Desk_.*\.html$/.test(n))
+      .map(n => { const s = fs.statSync(path.join(页格, n)); return { n, t: s.mtimeMs, s: s.size }; })
+      .sort((a, b) => b.t - a.t);
+    const 多 = 页.slice(1), 字 = 多.reduce((s, x) => s + x.s, 0);
+    if(!页.length) say('  pages\\：还没有生成的页');
+    else if(!多.length) say('  pages\\：只有最新那一张（' + 页[0].n + '）');
+    else { say('  pages\\：旧页 ' + 多.length + ' 张 · ' + MB(字) + ' —— 在用的只有 ' + 页[0].n);
+      for(const x of 多) say('      ' + x.n.padEnd(46) + MB(x.s));
+      say('      （装到机器上那一棵由首装壳按名字清；开发这一棵要清就自己删，这台工具一个字节不动）'); }
+  }
+}
+
 say('');
 say(hits ? '共 ' + hits + ' 件要人看一眼。这台工具什么都不改。' : '一件都没报。');
 console.log(out.join('\n'));

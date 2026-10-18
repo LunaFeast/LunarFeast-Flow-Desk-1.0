@@ -172,9 +172,15 @@ const 进版本 = (() => {
 }
 /* 二、页面层：当前这一支号那一张页 */
 addLayer('pages/', PAGES, rel => superseded(rel));
+/* 出厂那两格不在 src 这一层再带一遍（他 2026-10-19 issue #57 现量：装到机器上那一棵里
+   material\ 与 src\pack\material\ 各 24 MB、icons\ 与 src\pack\icons\ 各 1 MB —— 同一批字节装了两份）。
+   这两格的去处就是下面那两条 addLayer 铺出来的树根 icons\ 与 material\，运行时也只认树根那一层
+   （页面里那些 material/textures\ 的相对地址、图标那张表收的 icons\，都从 <树根>\ 取）。 */
+const 出厂层 = rel => rel.startsWith('pack/icons/') || rel.startsWith('pack/material/');
 /* 三、源码：重新生成页面要读的（node_modules 一个字节都不带 —— 生成页面只用 node 自带模块）。
-   两道闸：开发那一层不带走（上面 开发层 那份名单）、没进版本的一律不带走（这台的位置就住在这一类里）。 */
-addLayer('src/', path.join(TREE, 'src'), rel => inNodeModules(rel) || /(^|\/)\.[^/]/.test(rel) || 是开发层(rel) || !进版本.has('src/' + rel));
+   三道闸：开发那一层不带走（上面 开发层 那份名单）、出厂那两格不在这里重复带、没进版本的一律不带走
+   （这台的位置就住在这一类里）。 */
+addLayer('src/', path.join(TREE, 'src'), rel => inNodeModules(rel) || /(^|\/)\.[^/]/.test(rel) || 是开发层(rel) || 出厂层(rel) || !进版本.has('src/' + rel));
 /* 四、图标与随包素材那两格：取的是出厂那一份（src\pack\icons\、src\pack\material\），铺到树根同名那一格。
    运行时只认树根这一层 —— 图标那张表（info_cmds 收 icons\ 顶上与往下一层子格）、
    页面里 material/textures\ 那些相对地址，都从 <树根>\ 取；少了这两层，图标那一屏是空的、内置纹理取不到。

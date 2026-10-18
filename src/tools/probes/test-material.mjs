@@ -316,6 +316,15 @@ R.判('生成页面那一趟把随包素材铺到树根 material\\（页面按�
   R.判('发布那一趟带着 material 这一格出门，而且取的是 src\\pack\\material 那份原件（不是开发这棵树里他自己换过的那一层）',
     /addLayer\('material\/', path\.join\(TREE, 'src', 'pack', 'material'\)\)/.test(包)
     && !/addLayer\('material\/', path\.join\(TREE, 'material'\)\)/.test(包), '');
+  /* 2026-10-19 issue #57：同一批纹理从前在发布树里出现两次 —— 树根 material\ 一份、
+     src\pack\material\ 又一份（他装好那一台上现量各 24 MB）。出厂那一格只是"铺到树根"的原件，
+     src 那一层不该再带一遍。 */
+  R.判('src 那一层不再把 pack/material 与 pack/icons 重复带一遍（issue #57 那半句「重复」的根）',
+    /const 出厂层 = rel => rel\.startsWith\('pack\/icons\/'\) \|\| rel\.startsWith\('pack\/material\/'\);/.test(包)
+    && /是开发层\(rel\) \|\| 出厂层\(rel\)/.test(包), (包.match(/const 出厂层[^\n]*/) || [''])[0]);
+  R.判('改坏对照：把那道闸从 src 层的名单里摘掉，这一台就叫（不许是橡皮章）',
+    包.replace('是开发层(rel) || 出厂层(rel)', '是开发层(rel)') !== 包
+    && !/是开发层\(rel\) \|\| 出厂层\(rel\)/.test(包.replace('是开发层(rel) || 出厂层(rel)', '是开发层(rel)')), '');
 }
 {
   const 服 = rd('src/_fd/fd-serve.mjs');

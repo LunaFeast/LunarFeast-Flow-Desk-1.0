@@ -16,7 +16,10 @@ const GRID_STEP = 2;
    步长取「较小那格的半格」，两轴各自折回格数时归到 1/8 格这一档（落盘的数还是干净分数，
    横轴在等边格子上折回来正好是 0.5，跟从前一个字都不差）。 */
 const snapQ = (步, cell) => Math.max(1 / (GRID_STEP * 4), Math.round(步 / cell * GRID_STEP * 4) / (GRID_STEP * 4));
-const snapDelta = (px, cell, 步) => snapQ(步, cell) * Math.round(px / cell / snapQ(步, cell));
+/* 松手归格：把一个连续的格坐标收到那一把细尺上（两轴各自按自己的格长折，折出来的像素数同一个 —— 外33 第 2 条）。
+   从前这颗叫 snapDelta，吃的是指针像素增量、在拖动每一帧都折一次 —— 那就是他 2026-10-19 issue #45 说的「僵硬」：
+   手在连续动，卡在一格一格地蹦。现在拖动途中完全跟手，只有松手那一下走这一颗。 */
+const snapPos = (v, cell, 步) => { const q = snapQ(步, cell); return Math.round(v / q) * q; };
 /* 卡片面积到页面这个比例就算「展开」，组件在卡内直接给全部功能。
    插件清单里点了 noExpanded 的那一家不吃这一档（日程：任意大小都照卡面那一格画，全览只走 ⛶）。 */
 const EXPAND_AREA = .25;
@@ -1830,6 +1833,33 @@ const Shell = {
     return 动;
   },
   在界内(r){ return r.x >= 0 && r.y >= 0 && r.w >= 1 && r.h >= 1 && r.x + r.w <= GRID_COLS && r.y + r.h <= GRID_ROWS; },
+  /* 压得不深就别去动邻居：从最浅那条轴把这一张自己吸到与邻居首尾相接（重叠正好 0 格），
+     往哪一侧吸看这一张的中心落在邻居哪一边。任何一张压过半个格就回 null，交给上面 让位 那一路。
+     最多吸八轮（吸开这一张又压上那一张的连锁），吸完还压着人同样回 null。
+     这一颗就是 issue #45 那半句「允许卡片相邻」的落点：贴边放是允许的，从前贴边也照挤。 */
+  贴边(rect, self){
+    const 限 = 0.5, 尺 = 1e-6;
+    const r = { x:rect.x, y:rect.y, w:rect.w, h:rect.h };
+    for(let 轮 = 0; 轮 < 8; 轮++){
+      let 最 = null;
+      for(const it of this.layout.items){
+        if(it === self) continue;
+        const o = this.rect(it);
+        const 重x = Math.min(r.x + r.w, o.x + o.w) - Math.max(r.x, o.x);
+        const 重y = Math.min(r.y + r.h, o.y + o.h) - Math.max(r.y, o.y);
+        if(重x <= 尺 || 重y <= 尺) continue;
+        const 量 = Math.min(重x, 重y);
+        if(!最 || 量 < 最.量) 最 = { 量, 轴: 重x <= 重y ? 'x' : 'y', o };
+      }
+      if(!最) return this.在界内(r) ? r : null;
+      if(最.量 > 限 + 尺) return null;
+      const o = 最.o;
+      if(最.轴 === 'x') r.x = (r.x + r.w / 2) < (o.x + o.w / 2) ? o.x - r.w : o.x + o.w;
+      else r.y = (r.y + r.h / 2) < (o.y + o.h / 2) ? o.y - r.h : o.y + o.h;
+      if(!this.在界内(r)) return null;
+    }
+    return this.fits(r, self) ? r : null;
+  },
   /* 四个方向各试一次，取推得最少那一条；都不通再找第一块空地 */
   推开(r, 定){
     const 挡 = 定.find(o => this.hits(r, o));
@@ -2133,14 +2163,22 @@ const Shell = {
         window.removeEventListener('pointercancel', outUp, true);
       };
       const step = e => {
-        /* 按半格落位（原来一步一格，卡片想挪半格都挪不动），两轴吃同一个像素步长（外33 第 2 条） */
-        const 步 = Math.min(shell.cellW, shell.cellH) / GRID_STEP;
-        const dx = snapDelta(e.clientX - x0, shell.cellW, 步);
-        const dy = snapDelta(e.clientY - y0, shell.cellH, 步);
+        /* 拖动途中卡面按指针的像素连续走，不再一口一口跳（他 2026-10-19 issue #45 那句「僵硬的吸附」：
+           从前两轴各吃 5 像素上下一口，手在动、卡在一格一格地蹦）。归格是松手那一刻才做的事，
+           交给 done() 里那颗 归格() —— 落盘的数还是干净的细格分数，只是不再拿它去拦手。
+           两轴吃同一个换算（外33 第 2 条那条"操作漂移"的规矩没动）：各按各轴的格长折。 */
+        const dx = (e.clientX - x0) / shell.cellW;
+        const dy = (e.clientY - y0) / shell.cellH;
         cur = mode === 'move'
           ? { x:base.x + dx, y:base.y + dy, w:base.w, h:base.h }
           : resizeRect(base, dir, dx, dy, minW, minH);
         shell.place(card, cur);
+      };
+      /* 松手归格：吃模块级那颗 snapPos，不在这里抄第二份折格公式 */
+      const 归格 = r => {
+        const 步 = Math.min(shell.cellW, shell.cellH) / GRID_STEP;
+        return { x: snapPos(r.x, shell.cellW, 步), y: snapPos(r.y, shell.cellH, 步),
+                 w: snapPos(r.w, shell.cellW, 步), h: snapPos(r.h, shell.cellH, 步) };
       };
       const eat = e => { e.stopPropagation(); e.preventDefault(); };
       const begin = () => {
@@ -2163,19 +2201,34 @@ const Shell = {
         document.getElementById('fdGrid').classList.remove('dragging');
         document.body.classList.remove('dragging');
         /* 落点被占不再回弹：把这一张钉在落下的那一块，压着的别一张张推开（外34 第 1 条）。
-           只有整张桌面真装不下这么多卡时才作废回弹 —— 从前是「你这一格有人了」就弹回去。 */
-        const 落 = shell.夹进(cur);
+           只有整张桌面真装不下这么多卡时才作废回弹 —— 从前是「你这一格有人了」就弹回去。
+           他 2026-10-19 issue #45 补的两条规矩，按"压进去多少"分两档：
+             压得不深（最浅那条轴重叠不到半格）= 只想贴着邻居放 → 把这一张自己吸到贴边，邻居一张都不动；
+             真压进去了（超过半格）= 才走 让位 那一路，把压着的几张推开。
+           从前是压 1/8 格也把邻居整张推走，这就是他说的「僵硬的挤开」。 */
+        const 落 = shell.夹进(归格(cur));
+        const 贴 = shell.贴边(落, it);
+        if(贴){
+          Object.assign(it, 贴); shell.save();
+          shell.place(card, it);
+          if(mode === 'resize' || isExpanded(def, 贴) !== isExpanded(def, base)) shell.render();
+          ToolPop.重量();
+          return;
+        }
         const 动 = shell.让位(落, it);
         if(动){
           const grew = isExpanded(def, 落), was = isExpanded(def, it);
           for(const m of 动){
             m.it.x = m.x; m.it.y = m.y;
             const el = document.querySelector('[data-iid="' + m.it.id + '"]');
+            /* 让位的这几张只挪位置、不改大小：原地写新坐标，让它们顺着 CSS 那一条过渡滑过去。
+               从前这里写完坐标又整屏重建（render），节点是新的，滑不动 —— 看着就是"啪"地蹦过去。 */
             if(el) shell.place(el, m.it);
           }
           /* 他亲手拉的这一下 = 这张卡归他管，往后的默认大小都不动它 */
           Object.assign(it, 落); shell.save();
-          if(动.length || mode === 'resize' || grew !== was) shell.render();
+          /* 只有"只挪了位置"这一种情形跳过重建；改了大小或跨过展开那一档还得重建 */
+          if(mode === 'resize' || grew !== was) shell.render();
         } else {
           shell.place(card, base); toast('桌面装不下这么多了 · 已回弹');
         }
@@ -2297,7 +2350,10 @@ body{font-family:var(--fd-font,${FF_BASE_FD});font-weight:var(--fd-weight,400);f
   background-position:var(--pad-x,0px) var(--pad-y,0px);}
 .fd-grid.dragging .fd-guides{opacity:1;}
 body.dragging{user-select:none;cursor:grabbing;}
-.fd-card{position:absolute;display:flex;flex-direction:column;min-height:0;overflow:hidden;will-change:left,top,width,height;}
+.fd-card{position:absolute;display:flex;flex-direction:column;min-height:0;overflow:hidden;will-change:left,top,width,height;
+  transition:left .12s ease-out, top .12s ease-out;}
+/* 让位的邻居滑过去，不啪地蹦（他 2026-10-19 issue #45 那半句「僵硬的挤开」）：只给位置写过渡，
+   尺寸不写 —— 改大小那一路是手底下每一帧连续在动，加了过渡就成"跟不上手"。 */
 /* 卡片那层皮（底色、投影、发光、边框）全归 _shared/sh-look.js：
    这里以前自己写过 html[data-fx="glass"|"clear"|"solid"] 三条和 border:0，
    那等于把材质和外观模式两档又在自己家重画一遍 —— 选「纯平」要的那道细边框会被 border:0 抹掉，
@@ -2310,7 +2366,7 @@ body.dragging{user-select:none;cursor:grabbing;}
    用 outline 不用 border：outline 不占布局、不挤内容一格，贴着窗口最边上画一像素；
    颜色走分隔线那一条 token（--hair-color），四档外观与明暗那一轴都跟着走，不另定色。 */
 html{outline:1px solid var(--hair-color,rgba(0,0,0,.16));outline-offset:-1px;}
-.fd-card.lift{transform:translateY(-3px) scale(1.006);z-index:9;box-shadow:var(--sh-float,none);}
+.fd-card.lift{transform:translateY(-3px) scale(1.006);z-index:9;box-shadow:var(--sh-float,none);transition:none;}
 /* 顶栏按钮：和卡片同一套 color-mix 淡底，随配色走。原来一个死白、一个全透，
    在有色卡面上一个突兀一个根本看不见。 */
 .fd-top .fd-btn{background:color-mix(in srgb,var(--card-bg) 42%,transparent);
@@ -2353,6 +2409,13 @@ html{outline:1px solid var(--hair-color,rgba(0,0,0,.16));outline-offset:-1px;}
    松手落位后由 ToolPop.重量() 重新摆到新的落点旁边。 */
 .fd-card.lift > .fd-card-tools{opacity:0;pointer-events:none;}
 .fd-card.notitle .fd-card-body{padding-top:0;}
+/* 启动卡那一块卡面（他 2026-10-19 issue #65）：中间摆这一家自己那张封面，右上角一串浅色英文缩写。
+   缩写只是"这张卡是谁"的一角记号，不当说明用，所以只拿透明度压浅、不另配解释小字；
+   整句「打开为写，开始写作」退到悬停提示里。图标那一串的字号由 mountLauncher 按卡面短边现量。 */
+.fd-launch{position:relative;flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.fd-launch-ico{display:inline-flex;align-items:center;justify-content:center;color:var(--text);line-height:1;}
+.fd-launch-abbr{position:absolute;right:6px;top:3px;font-size:10px;font-weight:600;letter-spacing:.06em;
+  color:var(--text);opacity:.3;pointer-events:none;}
 /* F1：卡面就是配色本身，里面不再垫一层白边；有标题的卡留一点左右呼吸 */
 .fd-card-body{padding:0;}
 .fd-card:not(.notitle) .fd-card-body{padding:0 var(--pad);}
