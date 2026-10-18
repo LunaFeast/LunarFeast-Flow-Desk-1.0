@@ -4,7 +4,7 @@
      node src/tools/probes/gate-uitext46.mjs
    钉的是这么几件事：
      一 · 界面文字 apply 写回扫描量到的那一份源码（2026-10-13 他定的方案甲），
-          装机那一张页面文件一个字节都不碰；落完笔给的是重新生成产物那三趟的次序；
+          装机那一张页面文件一个字节都不碰；落完笔给的是重新生成页面那三趟的次序；
      二 · 落笔之前那一道语法闸：喂一份「原样读得通 / 改完读不通」的文本必须报红（反向验），
           静态 html 与 ESM 两种形状都量到；
      三 · plan()/apply() 不再收「那一张页面文件」那一个参数（收了就是还留着老那条路）；
@@ -98,9 +98,9 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
     /h\('button', '换成这句'\)/.test(读('data/plugins/demo/main.js')) && /^import x from /.test(读('data/plugins/demo/main.js')));
   台.判('静态 html 里属性上那句也落到了（title 换掉、标签之间那段没动）',
     /<title>换了标题<\/title>/.test(读('src/_fd/template.html')) && /<p>标签之间的一句<\/p>/.test(读('src/_fd/template.html')));
-  台.判('回执给的是重新生成产物那一串（插件分离第 5 批一家一仓之后只剩那一张页面那一趟 —— 那两颗内核归各家自己那一仓的 出包.mjs）',
+  台.判('回执给的是重新生成页面那一串（插件分离第 5 批一家一仓之后只剩那一张页面那一趟 —— 那两颗内核归各家自己那一仓的 出包.mjs）',
     JSON.stringify(r.builds) === JSON.stringify(['src/_fd/build.mjs']), JSON.stringify(r.builds));
-  台.判('重新生成产物跑哪几趟只住在 uitext 这一份里（artifactBuilds 一颗导出去），别处不抄第二份名单',
+  台.判('重新生成页面跑哪几趟只住在 uitext 这一份里（artifactBuilds 一颗导出去），别处不抄第二份名单',
     /function artifactBuilds\(/.test(文UIT) && /module\.exports[\s\S]*artifactBuilds,/.test(文UIT));
   台.判('写完刷新清单本身：已经落进源码的那几行不再算「他写的改动」（不然下一趟就成了认不到的孤儿行）',
     /refresh\(TREE, 丢\)/.test(颗(文UIT, 'apply')) && /function refresh\(TREE, 丢掉\)/.test(文UIT));

@@ -113,7 +113,7 @@ function 插件找(包, 档){
   return process.env.FD_PLUGINS ? path.resolve(插件层, 包, 'images', 档) : 邻找(插件相(包, 档));
 }
 function 插件出自(包, 档){
-  return process.env.FD_PLUGINS ? '沙盒那一格' : 邻出自(插件相(包, 档));
+  return process.env.FD_PLUGINS ? '沙盒里的那个文件夹' : 邻出自(插件相(包, 档));
 }
 function 读索引(){
   let 文 = '';
@@ -278,10 +278,10 @@ const 柜MIME = { '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg
 const 柜上限 = 30000;
 function 柜那格(路){
   const 串 = String(路 == null ? '' : 路).trim();
-  if(!串) return { 错:'先写一个文件夹（这台电脑上的任意一格，如 ' + path.join(TREE, 'icons') + '）' };
+  if(!串) return { 错:'先写一个文件夹（这台电脑上的任意一个，如 ' + path.join(TREE, 'icons') + '）' };
   let 统 = null;
-  try{ 统 = fs.statSync(串); }catch(e){ return { 错:'读不到这一格：' + ((e && e.code) || (e && e.message) || e) }; }
-  if(!统.isDirectory()) return { 错:'这一格不是文件夹：' + 串 };
+  try{ 统 = fs.statSync(串); }catch(e){ return { 错:'读不到这个文件夹：' + ((e && e.code) || (e && e.message) || e) }; }
+  if(!统.isDirectory()) return { 错:'这不是一个文件夹：' + 串 };
   return { 根: path.resolve(串) };
 }
 /* 只往下走一层（icons 那一格就是 根 + 子文件夹 两层，跟取图那两道路径闸一个口径）。
@@ -310,7 +310,7 @@ function 柜列(路){
 function 柜一张(路, 相){
   const 判 = 柜那格(路); if(判.错) return 判;
   const 全 = path.resolve(判.根, String(相 == null ? '' : 相));
-  if(!全.startsWith(判.根 + path.sep)) return { 错:'只许看这一格里面的图（不许往外钻）' };
+  if(!全.startsWith(判.根 + path.sep)) return { 错:'只许看这个文件夹里面的图（不许往外钻）' };
   const 后 = path.extname(全).toLowerCase();
   if(!图标后缀.includes(后)) return { 错:'只列这六种后缀：' + 图标后缀.join(' ') };
   let 字 = null;
@@ -350,13 +350,13 @@ function 出厂看(相){
     return fs.readFileSync(path.join(图标层, 相)).equals(fs.readFileSync(path.join(厂层, 相))) ? '同' : '不一样';
   }catch(e){ return '没有'; }
 }
-/* 把树根这一张原样复制进出厂那一格（同名同后缀同子文件夹）。换 / 加 写完紧跟着叫它，
+/* 把图标文件夹里这一张原样复制到打包用的那一份（同名同后缀同子文件夹）。换 / 加 写完紧跟着叫它，
    所以屏上点「换这张」之后落的是两处：icons\（程序此刻读的）与 src\pack\icons\（打安装包带的）。 */
 function 进出厂(相){
   const 从 = 图标落点(相), 到 = 图标落点(相, 厂层);
   if(从.错) return { 错:从.错 };
   if(到.错) return { 错:到.错 };
-  if(!fs.existsSync(从.全)) return { 错:'icons\\' + 相 + ' 这一张盘上没有，没什么可复制进出厂' };
+  if(!fs.existsSync(从.全)) return { 错:'图标文件夹里没有 ' + 相 + ' 这一张，没什么可复制过去的' };
   const 字 = fs.readFileSync(从.全);
   fs.mkdirSync(到.父, { recursive: true });
   fs.writeFileSync(到.全, 字);
@@ -374,7 +374,7 @@ function 图标写(名, 基64, 模式){
   if(字.length > 图标上限) return { 错:'这一张 ' + 字.length.toLocaleString() + ' 字节，超过 ' + 图标上限.toLocaleString() + ' 字节上限（图标该是几 KB 的线稿，多半是传错文件了）' };
   fs.mkdirSync(落.父, { recursive: true });
   fs.writeFileSync(落.全, 字);
-  /* 同一份字节跟着复制进出厂那一格 —— 不复制的话他换的图只活在本地这一层，下一趟生成与打包带的还是线稿 */
+  /* 同一份字节跟着复制到打包用的那一份 —— 不复制的话他换的图只活在本地这一层，下一趟生成与打包带的还是线稿 */
   const 厂 = 进出厂(path.relative(落.根, 落.全).split(path.sep).join('/'));
   return { 好:true, 新建:!在, 名, 大:字.length, 出厂:厂 };
 }
@@ -514,7 +514,7 @@ const 服务器 = http.createServer(async (req, res) => {
      artifactBuilds() 那几趟（现在是哪几趟、什么次序，都由那一颗说了算，这里不抄第二份）；
      中间任何一趟退出码不是 0，后面那几趟不接上跑。 */
   if(路 === '/api/文字/重生成'){
-    起连(字.artifactBuilds().map(相 => [相]), '重新生成产物（跑 src\\pack\\uitext.cjs 那份里 artifactBuilds() 那几趟：写的都是产物，源码一个字不碰）', res, 字树);
+    起连(字.artifactBuilds().map(相 => [相]), '重新生成页面（跑 src\\pack\\uitext.cjs 那份里 artifactBuilds() 那几趟：写的都是生成好的页面，源码一个字不碰）', res, 字树);
     return;
   }
   /* 某一张图标的样子：这一台自己把那一层里的一张图递出去（页面服务那台才有 /icons/，这台不占它的地盘）。
@@ -563,13 +563,13 @@ const 服务器 = http.createServer(async (req, res) => {
     JSON发(res, { 好:true, 名:r.名, 大:r.大, 新建:r.新建, 出厂:r.出厂 });
     return;
   }
-  /* 把树根 icons\ 里那几张复制进出厂 src\pack\icons\（装到机器上带的就是那一格）。
+  /* 把图标文件夹 icons\ 里那几张复制到打包用的那一份 src\pack\icons\（装到机器上带的就是那一份）。
      换 / 加 那两道自己已经带着复制了，这一颗管的是他在资源管理器里直接换掉的那几张。 */
   if(路 === '/api/图标/进厂'){
     const 身 = await 读体(req);
     const 单 = 身 && Array.isArray(身.单) ? 身.单.map(String)
       : (身 && 身.名 ? [String(身.名)] : []);
-    if(!单.length){ 发(res, 400, '没说要复制哪几张进出厂'); return; }
+    if(!单.length){ 发(res, 400, '没说要复制哪几张到打包用的那一份'); return; }
     const 成 = [], 坏 = [];
     for(const 名 of 单){ const r = 进出厂(名); if(r.好) 成.push(r); else 坏.push(名 + '：' + r.错); }
     JSON发(res, { 好:!坏.length, 成, 坏 });
@@ -598,7 +598,7 @@ const 服务器 = http.createServer(async (req, res) => {
     发(res, 200, r.字, 柜MIME[r.后] || 'application/octet-stream'); return;
   }
 
-  发(res, 404, '没这一格');
+  发(res, 404, '没有这个地址');
 });
 if(被当命令跑) 服务器.listen(PORT, '127.0.0.1', () => {
   console.log('文字与图标这一屏 = http://127.0.0.1:' + PORT + '/   （只管两样：改界面上的句子、改图标）');
@@ -606,7 +606,7 @@ if(被当命令跑) 服务器.listen(PORT, '127.0.0.1', () => {
 });
 for(const 信 of ['EADDRINUSE', 'ERR_SERVER_ALREADY_LISTEN']) void 信;
 if(被当命令跑) 服务器.on('error', e => {
-  console.error(e.code === 'EADDRINUSE' ? '端口 ' + PORT + ' 已经被占了（多半是这一台已经开着另一个窗口）。换个端口：set PORT=8793 再跑。' : '起不来：' + e.message);
+  console.error(e.code === 'EADDRINUSE' ? '端口 ' + PORT + ' 已经被占了（多半是小助手已经开着另一个窗口）。换个端口：set PORT=8793 再跑。' : '起不来：' + e.message);
   process.exit(1);
 });
 
