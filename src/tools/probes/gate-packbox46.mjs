@@ -114,10 +114,10 @@ const 喊过 = 页面层.filter(p => /packbox|打目录|打包手/.test(fs.readF
 const 桥 = rd('src/_tauri/ui/fd-bridge.js');
 台.判('桥与壳的注册单里没有"打包"那一颗（读的那一颗在，写的这一颗只在发布环节）',
   !/box:pack|pack:build|boxPack/.test(桥) && !壳注册单().some(n => /pack_build|box_pack/.test(n)));
-台.判('插件那份硬地板没多出"打包"那一颗：名单还是那 55 颗，读与核那两颗都在里头',
+台.判('插件那份硬地板没多出"打包"那一颗：名单是那 57 颗（换版那两颗也进了这一列 —— 换不换插件是宿主自己的事），读与核那两颗都在里头',
   (() => {
     const 名 = [...rd('src/_tauri/src/core/app_deny.rs').matchAll(/^\s{4}"([A-Za-z]+)",$/gm)].map(m => m[1]);
-    return 名.length === 55 && 名.includes('boxInspect') && 名.includes('boxVerify')
+    return 名.length === 57 && 名.includes('boxInspect') && 名.includes('boxVerify')
       && !名.some(n => /pack(Build|Box)|boxPack|packBuild/i.test(n));
   })());
 

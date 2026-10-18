@@ -3,7 +3,7 @@
    为什么要有这一份：硬地板是「清单点名也不给」那道闸，壳里那份判断（core::perm_rule）要认它，
    而它不许再抄第二份 —— 抄了就有两个真身，改一处忘一处。
    判据只有一条：这一颗是不是「宿主自己的事」（会动盘、会动别人家东西、会起网络都算）。
-   名单 55 颗，顺序与页面那一头一字不差。 */
+   名单 57 颗，顺序与页面那一头一字不差。 */
 
 /// 硬地板：插件清单点名也不给的通道名（生成物，来源见顶上那段）
 pub const 硬地板: &[&str] = &[
@@ -12,6 +12,8 @@ pub const 硬地板: &[&str] = &[
     "packFile",
     "packImport",
     "packWipe",
+    "packUpdates",
+    "packUpdate",
     "rebuild",
     "onRebuildDone",
     "onRebuildStep",

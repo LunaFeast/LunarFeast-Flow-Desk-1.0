@@ -67,8 +67,9 @@ use crate::fd_core::pack_rule::{
     落不成那句, 清单那份, 清单上的id, 清单上的名字, 清单读不成那句, 没带清单那句, 该看的名, 换成卸掉,
     递的那串, 读不出文本那句, 导入失败那句, 那一条, 已占那句, 是压包那份, 两不象那句,
     不是列表那句, 名单删不掉那句, 名单写不进那句, 封顶字节, 容器那种, 是容器那份,
+    容器成名, 该提醒换, 换进来名, 换下去名, 一家留最新一颗,
 };
-use crate::fd_core::pack_box::{取一块, 整包检查, 钥匙表};
+use crate::fd_core::pack_box::{取一块, 整包检查, 钥匙表, 一张信息, 一份检查, 带点后缀};
 use crate::fd_core::zip_pack::{取一份, 目录};
 use crate::tauri_bind::media_cmds::{装了音乐遥控器, 收监听, 媒体手};
 
@@ -217,7 +218,15 @@ fn 盘上有(p: &str) -> bool { fs::metadata(p).is_ok() }
 /// 运行时每读一份都跑一趟，代价要小）。读不到、不是容器、字段不齐 —— 一律 None = 没得核。
 fn 容器信息(格: &str, 包名: &str) -> Option<crate::fd_core::pack_box::一张信息> {
     let 到 = format!("{}{}", 并路(格, 包名), crate::fd_core::pack_box::带点后缀);
-    crate::fd_core::pack_box::读信息(&fs::read(到).ok()?)
+    if let Ok(字) = fs::read(&到) {
+        return crate::fd_core::pack_box::读信息(&字);
+    }
+    /* 那一颗的名字带着号（出货那一格那一种写法）：拼出来的那一名不在，才多问一次这一格里躺着的那一颗。
+       装成之后这一路本来就到不了这里 —— 那颗运输件摊完就删了（他 2026-10-17 那一条）。 */
+    let 名们: Vec<String> = fs::read_dir(格).ok()?.filter_map(|项| 项.ok().map(|x| x.file_name().to_string_lossy().to_string())).collect();
+    let 名册: Vec<(String, 盘上)> = 名们.into_iter().map(|名| (名, 盘上::是份)).collect();
+    let 那一名 = 容器那一名(&名册, 包名)?;
+    crate::fd_core::pack_box::读信息(&fs::read(并路(格, &那一名)).ok()?)
 }
 
 /// 运行时读到一份东西：拿着这一家那份容器指一下这一份。Some(那一句原话) = 与包上对不上，
@@ -254,7 +263,7 @@ fn 压包里的清单(节: &[u8]) -> Result<Value, String> {
 
 /// 一家摊开：文件夹那种读 <那一格>\manifest.json 并带上那一格里的名册，压缩包那种从包里拆清单。
 /// 回 None = 原件回 null 那两支（那一格里没带插件清单 / 那颗 zip 读不到），一家家收的时候直接跳过这一格。
-fn 摊开一家(格: &str, 名: &str, 种: &'static str) -> Option<一个包> {
+fn 摊开一家(格: &str, 名: &str, 种: &'static str, 件名: Option<&str>) -> Option<一个包> {
     if 种 == 文件夹那种 {
         let 那一格 = 并路(格, 名);
         let 清单 = 并路(&那一格, 清单那份);
@@ -283,10 +292,13 @@ fn 摊开一家(格: &str, 名: &str, 种: &'static str) -> Option<一个包> {
         let 挡 = crate::fd_core::perm_rule::挡下该挡的(&mut 单);
         return Some(一个包 { id: 名.to_string(), kind: 种, manifest: Some(单), files: Some(名册), error: None, 挡下的: 挡 });
     }
-    /* 自有容器那一支（插件分离第 3 批 3.4）：读 <包名>.fdpkg 的字节 → 整包检查 → 从包里取 manifest.json。
-       读不动与不过检回的都是「读不成」那一格（带那一句原话），一家家收的那一头不因此停整趟扫描。 */
+    /* 自有容器那一支（插件分离第 3 批 3.4）：读那颗容器的字节 → 整包检查 → 从包里取 manifest.json。
+       读不动与不过检回的都是「读不成」那一格（带那一句原话），一家家收的那一头不因此停整趟扫描。
+       件名 = 盘上那一份运输件自己叫什么（扫一遍那一名册折出来的）：出货那一格里名字带着号
+       （notes-1.0.0-alpha+build.x.fdpkg），拿包名拼出来的那一名不是它 —— 拼的那一种只当兜底。 */
     let 后缀 = if 种 == 容器那种 { crate::fd_core::pack_box::带点后缀 } else { 压包后缀 };
-    let 节 = match fs::read(并路(格, &format!("{}{}", 名, 后缀))) {
+    let 拼的 = format!("{}{}", 名, 后缀);
+    let 节 = match fs::read(并路(格, 件名.unwrap_or(&拼的))) {
         Ok(v) => v,
         Err(_) => return None,
     };
@@ -324,13 +336,15 @@ fn 摊开一家(格: &str, 名: &str, 种: &'static str) -> Option<一个包> {
    与导入那两路的分别只有两条：那一份包本身已经在这一格里了（不再拷第二份），
    以及「同名已占」这一判反过来用 —— 那一格已经在了就说明摊过，这一趟一个字节都不动。
    容器照旧先整包检查：不过检一个字节不落（报不动手），那一行带着那一句原话进管理页。 */
-fn 开机摊一家(格: &str, 名: &str, 种: &'static str) {
+fn 开机摊一家(格: &str, 名: &str, 种: &'static str, 件名: Option<&str>) {
     let 到 = 并路(格, 名);
     if 盘上有(&到) {
         return;
     }
     let 后缀 = if 种 == 容器那种 { crate::fd_core::pack_box::带点后缀 } else { 压包后缀 };
-    let 节 = match fs::read(并路(格, &format!("{}{}", 名, 后缀))) {
+    let 拼的 = format!("{}{}", 名, 后缀);
+    let 那一份 = 件名.unwrap_or(&拼的);
+    let 节 = match fs::read(并路(格, 那一份)) {
         Ok(v) => v,
         Err(_) => return,
     };
@@ -351,35 +365,14 @@ fn 开机摊一家(格: &str, 名: &str, 种: &'static str) {
         if 信.files.iter().any(|份| 份.加密) {
             return;     /* 带加密块这一版不摊（明文不许写盘那条硬规矩） */
         }
-        for (位, 份) in 出.块.iter().zip(信.files.iter()) {
-            let 文 = match 节.get(位.数据起点..位.数据起点.saturating_add(位.长度)) {
-                Some(v) => v,
-                None => {
-                    抹掉半截(&到);
-                    return;
-                }
-            };
-            let mut 落 = 到.clone();
-            for 一 in 拆成段(&份.路径) {
-                落 = 并路(&落, 一);
-            }
-            if 落 != 到 && !落.starts_with(&format!("{}\\", 到)) {
-                抹掉半截(&到);
-                return;
-            }
-            if let Some(父) = Path::new(&落).parent() {
-                if !父.as_os_str().is_empty() {
-                    if let Err(_) = fs::create_dir_all(父) {
-                        抹掉半截(&到);
-                        return;
-                    }
-                }
-            }
-            if let Err(_) = fs::write(&落, 文) {
-                抹掉半截(&到);
-                return;
-            }
+        /* 摊的这一手与装、换版共用同一颗（摊进一格），这一本里不落第二份写盘的代码 */
+        if let Err(_) = 摊进一格(&节, &出, &信, &到) {
+            抹掉半截(&到);
+            return;
         }
+        /* 摊成了就把那颗运输件删掉：插件路径里只留解开的这一份（他 2026-10-17 那条「装好以后 plugins 里就是上面那些文件夹，下面的 fdpkg 自动删除」）。
+           删不掉不算摊失败 —— 那一格已经是新的了，下一趟开机再删一次。 */
+        let _ = fs::remove_file(并路(格, 那一份));
         return;
     }
     /* zip 那一支：读名册 → 一份份摊；摊不动抹掉半截，那份 zip 留着，下一趟开机再试 */
@@ -396,6 +389,17 @@ fn 开机摊一家(格: &str, 名: &str, 种: &'static str) {
 
 /// 两趟收：文件夹那一趟先走、压缩包那一趟后走，同名让开判断与「只有真列出来的才算占上」
 /// 全在 core（分成两趟 / 同名那格已占 / 记为卸掉），这一颗只负责问盘、摊开、落那两份名单。
+/// 这一家在盘上配的那一颗容器叫什么名：先认 `<包名>.fdpkg` 那一种，认不到再拿名册里那一名折回来对
+///   —— 出货那一格里每一颗的名字都带着自己那一号（`<包名>-<号>.fdpkg`，他 2026-10-17 要的那种摆法），
+///   折法与分成三趟同一把尺（core::pack_rule::容器成名），这里不写第二把。zip 不需要这一手：它的原名就是包名加后缀。
+fn 容器那一名(名册: &[(String, 盘上)], 包名: &str) -> Option<String> {
+    let 拼 = format!("{}{}", 包名, 带点后缀);
+    if 名册.iter().any(|(名, _)| 名 == &拼) {
+        return Some(拼);
+    }
+    名册.iter().find(|(名, _)| 容器成名(名) == Some(包名)).map(|(名, _)| 名.clone())
+}
+
 fn 扫一遍(格: &str) -> 一次扫描 {
     let 目 = match fs::read_dir(格) {
         Ok(v) => v,
@@ -420,7 +424,7 @@ fn 扫一遍(格: &str) -> 一次扫描 {
     let mut 列: Vec<一个包> = vec![];
     let mut 扫到: Vec<String> = vec![];
     for 名 in &文件夹那一批 {
-        if let Some(包) = 摊开一家(格, 名, 文件夹那种) {
+        if let Some(包) = 摊开一家(格, 名, 文件夹那种, None) {
             列.push(包);
             扫到.push(名.clone());
         }
@@ -435,8 +439,8 @@ fn 扫一遍(格: &str) -> 一次扫描 {
         if 同名那格已占(&扫到, 包名) {
             continue;
         }
-        开机摊一家(格, 包名, 压包那种);
-        let 包 = 摊开一家(格, 包名, 文件夹那种).or_else(|| 摊开一家(格, 包名, 压包那种));
+        开机摊一家(格, 包名, 压包那种, None);
+        let 包 = 摊开一家(格, 包名, 文件夹那种, None).or_else(|| 摊开一家(格, 包名, 压包那种, None));
         if let Some(包) = 包 {
             列.push(包);
             扫到.push(包名.clone());
@@ -446,8 +450,10 @@ fn 扫一遍(格: &str) -> 一次扫描 {
         if 同名那格已占(&扫到, 包名) {
             continue;
         }
-        开机摊一家(格, 包名, 容器那种);
-        let 包 = 摊开一家(格, 包名, 文件夹那种).or_else(|| 摊开一家(格, 包名, 容器那种));
+        /* 那一名：盘上这一家配的那一颗容器叫什么 —— 出货那一格里带着号（<包名>-<号>.fdpkg），拿包名拼不出这一名 */
+        let 那一名 = 容器那一名(&名册, 包名);
+        开机摊一家(格, 包名, 容器那种, 那一名.as_deref());
+        let 包 = 摊开一家(格, 包名, 文件夹那种, None).or_else(|| 摊开一家(格, 包名, 容器那种, 那一名.as_deref()));
         if let Some(包) = 包 {
             列.push(包);
             扫到.push(包名.clone());
@@ -801,49 +807,242 @@ fn 落一份容器(格: &str, 那串: &str) -> 一份导入 {
     let 到 = 并路(格, &包名);
     let 压包位 = format!("{}{}", 到, 压包后缀);
     let 容器位 = format!("{}{}", 到, crate::fd_core::pack_box::带点后缀);
-    if 盘上有(&到) || 盘上有(&压包位) || 盘上有(&容器位) {
+    /* 「这里已经有一份」那一问不许把**正在装的那一颗自己**算成另一套：
+       他把 notes.fdpkg 丢进插件路径再点安装，那颗文件本身就在 容器位 上 —— 那一格不在才算没装，
+       拿自己当对手就会回一句「已经有一份了」，那条路永远走不通（他 2026-10-17 要的那条正是这一条）。 */
+    let 就是它 = Path::new(&容器位) == Path::new(那串);
+    if 盘上有(&到) || 盘上有(&压包位) || (!就是它 && 盘上有(&容器位)) {
         return 一份导入::不成(已占那句(&包名));
     }
-    /* 一、容器那份先放进来（放不进就什么都还没摊，不必收摊） */
-    if let Err(e) = fs::copy(那串, &容器位) {
-        return 一份导入::不成(format!("{}{}", 导入失败那句, 说错(e)));
+    /* 运输件不再往这一格里放一份（他 2026-10-17 那条：装好以后这一格里就是解开的文件夹，那颗 fdpkg 自动删除）：
+       直接按信息段那张表往 <这一格>\<包名>\ 摊；任何一份落不动就把那一整格抹掉，不留半截包。
+       摊这一手与换版那一趟共用同一颗（摊进一格），这一本里不落第二份解包写盘的代码。 */
+    let 数 = match 摊进一格(&字节, &出, &信, &到) {
+        Ok(n) => n,
+        Err(句) => {
+            抹掉半截(&到);
+            return 一份导入::不成(句);
+        }
+    };
+    /* 摊成了：挑的那一颗本来就丢在插件路径里 → 顺手删掉它（从别处挑的不动，那是他手里那份原件）。
+       删不掉不算装失败 —— 那一格已经是新的了。 */
+    if Path::new(那串).parent().map(|父| 父 == Path::new(格)).unwrap_or(false) {
+        let _ = fs::remove_file(那串);
     }
-    /* 二、按信息段那张表一份一份摊开；任何一份落不动就整格连容器那份一起抹掉（不留半截包） */
+    一份导入::成了(&包名, 数, 清单上的名字(&单, &包名))
+}
+
+/* ---------- 更新那两道（他 2026-10-17 定的形状：新包丢进插件路径 → 进软件提醒一句 → 点一下换进那一格 → 那颗包删掉） ----------
+   判"值不值得提醒"那一手在 core::pack_rule::该提醒换 —— **包上那份必须比这一格上的新才提醒**：
+   先比号里参与排序那两段（`+build.` 那一截按 semver 规定不参与排序），平手再比清单里 `created` 那一格打包时刻，
+   两样都拿不出就不提醒。从前这里只认"号不一样"，而每一家的号都是 `1.0.0-alpha+build.<那一笔>`，
+   那一段比不出高低 —— 结果路径里躺着六颗旧包也被当成"等着更新"，点下去是把旧的换进来、等于降级
+   （他 2026-10-18 那一句「点下去是降级」）。
+   用户写的东西不在这一趟的射程里：插件的数据住 数据\userdata-fd\，这一趟只动 <插件路径>\<包名>\ 那一格。
+   换的走法是"先摊到旁边那一格 → 旧的挪开 → 新的挪进 → 旧的删掉"：任何一步砸了都把旧的挪回来，
+   那一格任何时刻都是完整的一版，不会出现半新半旧跑起来说不清的状态。 */
+
+/// 壳给每一家留的那张来路条（摊成那一刻写进那一格）：下划线开头 = 算一家不认它，
+/// 它也不在容器那张表里、不参与「这一格被改过」那三道核。
+const 来路那份: &str = "_装过的.json";
+
+/// 这一格上现在挂的是哪一号、那一份是哪一刻打的（来路条里 `created` 那一格，Unix 秒）。
+/// 读不出号回空串 —— 空串不提醒，那是要重装的那一家，不是要换版的那一家；
+/// 时刻读不出回空串（这一格装上之前摊的那批没这张条），纯判断那一颗会因此比不出新旧（宁可不提，不许拿旧包换掉好好的一格）。
+fn 那一格的号与时刻(格: &str, 包名: &str) -> (String, String) {
+    let 家 = 并路(格, 包名);
+    let 号 = match fs::read_to_string(并路(&家, 清单那份)) {
+        Ok(文) => match serde_json::from_str::<Value>(&文) {
+            Ok(单) => 单.get("version").and_then(|v| v.as_str()).unwrap_or("").trim().to_string(),
+            Err(_) => String::new(),
+        },
+        Err(_) => String::new(),
+    };
+    let 秒 = fs::read_to_string(并路(&家, 来路那份)).ok()
+        .and_then(|文| serde_json::from_str::<Value>(&文).ok())
+        .map(|单| 清单上的一刻(&单)).unwrap_or_default();
+    (号, 秒)
+}
+
+/// 读一张 JSON 里那格 `created`（Unix 秒）。写成数或写成串都认；没有、读不出回空串。
+pub(crate) fn 清单上的一刻(单: &Value) -> String {
+    match 单.get("created") {
+        Some(v) => match (v.as_u64(), v.as_str()) {
+            (Some(秒), _) => 秒.to_string(),
+            (None, Some(串)) => 串.trim().to_string(),
+            _ => String::new(),
+        },
+        None => String::new(),
+    }
+}
+
+/// 插件路径里躺着的那几颗运输件：（包名, 那颗的路径, 包上的号, 包上那一格打包时刻, 那份插件清单）。
+/// 不过检的一颗先摘掉（坏包不配提醒），信息段那一名与文件名对不上也不列（规格那张表：目录名必须与信息段一样）。
+/// 同一家还剩两颗（新的丢进来、旧的忘了删）留哪一颗交给纯判断那一颗（一家留最新一颗：认文件时间，不认名字、也不比号）。
+fn 躺着的那几颗(格: &str) -> Vec<(String, String, String, String, Value)> {
+    let 目 = match fs::read_dir(格) {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+    let mut 候选: Vec<(String, u64, String, String, String, Value)> = vec![];   /* 原名 · 毫秒 · 路径 · 号 · 打的时刻 · 清单 */
+    for 项 in 目.filter_map(|x| x.ok()) {
+        let 名 = 项.file_name().to_string_lossy().to_string();
+        if 容器成名(&名).is_none() {
+            continue;
+        }
+        let 那串 = 并路(格, &名);
+        let 字节 = match fs::read(&那串) { Ok(v) => v, Err(_) => continue };
+        let 检 = 整包检查(&字节, &crate::version(), 钥匙表);
+        if !检.ok { continue; }
+        let 信 = match &检.信息 { Some(v) => v.clone(), None => continue };
+        let 包名 = match 容器成名(&名) { Some(v) => v.to_string(), None => continue };
+        if 信.id.trim() != 包名 || 信.files.iter().any(|份| 份.加密) { continue; }
+        let 单 = match 取一块(&字节, 清单那份) {
+            Some(文) => serde_json::from_slice::<Value>(&文).unwrap_or(Value::Null),
+            None => Value::Null,
+        };
+        let 毫 = 项.metadata().ok().and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64).unwrap_or(0);
+        /* 打包时刻读信息段那一份（created，Unix 秒；这一格装上之前出的旧包没写，回空串） */
+        候选.push((名, 毫, 那串, 信.version.trim().to_string(),
+                   if 信.created > 0 { 信.created.to_string() } else { String::new() }, 单));
+    }
+    let 选 = 一家留最新一颗(&候选.iter().map(|(名, 毫, ..)| (名.clone(), *毫)).collect::<Vec<_>>());
+    let mut 出列: Vec<(String, String, String, String, Value)> = vec![];
+    for 名 in 选 {
+        if let Some((_, _, 那串, 号, 刻, 单)) = 候选.iter().find(|(那一名, ..)| 那一名 == &名) {
+            出列.push((容器成名(&名).unwrap_or("").to_string(), 那串.clone(), 号.clone(), 刻.clone(), 单.clone()));
+        }
+    }
+    出列
+}
+
+#[derive(Serialize)]
+pub struct 一条换版 {
+    id: String,
+    name: String,
+    from: String,
+    to: String,
+    file: String,
+}
+
+#[derive(Serialize)]
+pub struct 一份换版列 {
+    ok: bool,
+    list: Vec<一条换版>,
+}
+
+/// pack:updates —— 哪几颗**比这一格上的新**（管理页那一行与开机那一句提醒都读这一份）
+#[tauri::command]
+pub fn pack_updates() -> 一份换版列 {
+    let 格 = 那一列的格();
+    let 列: Vec<一条换版> = 躺着的那几颗(&格).into_iter().filter_map(|(包名, 那串, 号, 打的刻, 单)| {
+        let 那一格 = 并路(&格, &包名);
+        /* 那一格不在 = 这一家还没装：那是"装"的那一路（开机自己会摊），不算换版提醒 */
+        if !盘上有(&那一格) { return None; }
+        let (现在, 现在的一刻) = 那一格的号与时刻(&格, &包名);
+        if !该提醒换(&现在, &号, &现在的一刻, &打的刻) { return None; }
+        Some(一条换版 { id: 包名.clone(), name: 清单上的名字(&单, &包名), from: 现在, to: 号, file: 那串 })
+    }).collect();
+    一份换版列 { ok: true, list: 列 }
+}
+
+/// 把一颗容器里的每一份按信息段那张表写进 到 那一格（不碰别的、不删别的）；砸了回那句原话，收摊交调用方
+fn 摊进一格(字节: &[u8], 检: &一份检查, 信: &一张信息, 到: &str) -> Result<u64, String> {
     let mut 数 = 0u64;
-    for (位, 份) in 出.块.iter().zip(信.files.iter()) {
+    for (位, 份) in 检.块.iter().zip(信.files.iter()) {
         let 文 = match 字节.get(位.数据起点..位.数据起点.saturating_add(位.长度)) {
             Some(v) => v,
-            None => {
-                抹掉半截(&到);
-                let _ = fs::remove_file(&容器位);
-                return 一份导入::不成(crate::fd_core::pack_box::块短了那句.to_string());
-            }
+            None => return Err(crate::fd_core::pack_box::块短了那句.to_string()),
         };
-        let mut 落 = 到.clone();
+        let mut 落 = 到.to_string();
         for 一 in 拆成段(&份.路径) {
             落 = 并路(&落, 一);
         }
         if 落 != 到 && !落.starts_with(&format!("{}\\", 到)) {
-            抹掉半截(&到);
-            let _ = fs::remove_file(&容器位);
-            return 一份导入::不成(脏路径那句(&份.路径));
+            return Err(脏路径那句(&份.路径));
         }
         if let Some(父) = Path::new(&落).parent() {
             if !父.as_os_str().is_empty() {
                 if let Err(e) = fs::create_dir_all(父) {
-                    抹掉半截(&到);
-                    let _ = fs::remove_file(&容器位);
-                    return 一份导入::不成(format!("{}{}", 落不成那句, 说错(e)));
+                    return Err(format!("{}{}", 落不成那句, 说错(e)));
                 }
             }
         }
         if let Err(e) = fs::write(&落, 文) {
-            抹掉半截(&到);
-            let _ = fs::remove_file(&容器位);
-            return 一份导入::不成(format!("{}{}", 落不成那句, 说错(e)));
+            return Err(format!("{}{}", 落不成那句, 说错(e)));
         }
         数 += 1;
     }
+    /* 摊成了，给这一格留一张来路条（壳自己那本账，不是插件的文件）：下划线开头 = 列一家时不认它，
+       它也不在容器那张表里、不参与「这一格被改过」那三道核。
+       为什么非留不可：号里 `+build.` 那一截按 semver 不比高低，比不出新旧时只剩"这一格是哪一刻摊出来的、
+       摊的是哪一刻打的那一颗"这一条凭据 —— 没有它，路径里躺着一颗旧包也会被当成"等着更新"，点下去是降级
+       （他 2026-10-18 那一句）。写砸了不影响这一格已经摊好的那些文件，所以只当没留成。 */
+    if let Ok(刻) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        let 条 = serde_json::json!({
+            "id": 信.id, "version": 信.version, "created": 信.created, "摊于": 刻.as_secs()
+        });
+        let _ = fs::write(并路(到, 来路那份), 条.to_string());
+    }
+    Ok(数)
+}
+
+/// pack:update { id } —— 点一下把那一颗换进已经在那一格里的那一家，换完把那颗包删掉
+#[tauri::command]
+pub fn pack_update(id: Option<String>) -> 一份导入 {
+    let 格 = 那一列的格();
+    let 包名 = match id { Some(v) => v.trim().to_string(), None => String::new() };
+    if !包名干净(&包名) {
+        return 一份导入::不成(format!("{}{}", 包名不干净那句, 包名));
+    }
+    let 那一格 = 并路(&格, &包名);
+    if !盘上有(&那一格) {
+        return 一份导入::不成(format!("「{}」这一格里此刻是空的 —— 那颗包直接丢进这一格、重启一次就是装它", 包名));
+    }
+    let 那串 = match 躺着的那几颗(&格).into_iter().find(|(名, _, _, _, _)| *名 == 包名) {
+        Some((_, 路径, _, _, _)) => 路径,
+        None => return 一份导入::不成(format!("这一格里没有「{}」那颗新包 —— 把那颗 {} 丢进这一格再点", 包名, 带点后缀)),
+    };
+    let 字节 = match fs::read(&那串) { Ok(v) => v, Err(e) => return 一份导入::不成(format!("{}{}", 导入失败那句, 说错(e))) };
+    let 检 = 整包检查(&字节, &crate::version(), 钥匙表);
+    if !检.ok {
+        return 一份导入::不成(检.头一句());
+    }
+    let 信 = match &检.信息 { Some(v) => v.clone(), None => return 一份导入::不成(检.头一句()) };
+    if 信.files.iter().any(|份| 份.加密) {
+        return 一份导入::不成(crate::fd_core::pack_box::块加密那句.to_string());
+    }
+    let 单 = match 取一块(&字节, 清单那份) {
+        Some(文) => match serde_json::from_slice::<Value>(&文) { Ok(v) => v, Err(e) => return 一份导入::不成(format!("{}{}", 清单读不成那句, e)) },
+        None => return 一份导入::不成(没带清单那句.to_string()),
+    };
+    /* 一、先整份摊到旁边那一格临时名（下划线开头那一格 算一家 不认，半路不会被列成一家） */
+    let 临时 = 并路(&格, &换进来名(&包名));
+    let 数 = match 摊进一格(&字节, &检, &信, &临时) {
+        Ok(n) => n,
+        Err(句) => {
+            抹掉半截(&临时);
+            return 一份导入::不成(句);
+        }
+    };
+    /* 二、旧的挪开、新的挪进；挪进砸了就把旧的挪回来（这一格始终是完整的一版） */
+    let 旧的 = 并路(&格, &换下去名(&包名));
+    let _ = fs::remove_dir_all(&旧的);
+    if let Err(e) = fs::rename(&那一格, &旧的) {
+        抹掉半截(&临时);
+        return 一份导入::不成(format!("旧的那一格挪不开：{}", 说错(e)));
+    }
+    if let Err(e) = fs::rename(&临时, &那一格) {
+        let _ = fs::rename(&旧的, &那一格);
+        抹掉半截(&临时);
+        return 一份导入::不成(format!("新的那一格挪不进：{}", 说错(e)));
+    }
+    /* 三、换下来的那份不留（他 2026-10-17 那条：旧版本不备份，想用旧版就装旧版再把数据导回去）；
+       那颗运输件也删掉 —— 这一格里最后只剩解开的这一份 */
+    let _ = fs::remove_dir_all(&旧的);
+    let _ = fs::remove_file(&那串);
     一份导入::成了(&包名, 数, 清单上的名字(&单, &包名))
 }
 
@@ -993,8 +1192,12 @@ mod 临时落盘验 {
     #[test]
     fn 装一份容器进沙盒_成了再装就让开() {
         let 沙 = 沙盒("成");
+        /* 原件放在沙盒**外面**那一格：这一颗验的是"从别处挑"那一路 —— 手里那一份不该被删 */
+        let 外 = std::env::temp_dir().join(format!("fd-包原件-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&外);
+        fs::create_dir_all(&外).unwrap();
         let 源名 = format!("从别处挑的.{}", crate::fd_core::pack_box::扩展名);
-        let 源 = 沙.join(源名);
+        let 源 = 外.join(源名);
         fs::write(&源, 字节()).unwrap();
         let 沙串 = 沙.to_string_lossy().to_string();
         let 回 = serde_json::to_value(落一份容器(&沙串, &源.to_string_lossy())).unwrap();
@@ -1004,8 +1207,12 @@ mod 临时落盘验 {
         for 份 in ["main.js", "manifest.json", "box-kernel.js"] {
             assert!(沙.join("notes").join(份).exists(), "摊开那一格里少了 {}", 份);
         }
-        assert!(沙.join(format!("notes.{}", crate::fd_core::pack_box::扩展名)).exists(), "容器本身没跟着进路径");
-        /* 同一颗再走一遍：那一格与那份容器都算「已经有一套」，一个字节都不许多动 */
+        /* 运输件不再跟着进这一格（他 2026-10-17 那条：装好以后 plugins 里就是解开的文件夹，那颗 fdpkg 自动删除） */
+        assert!(!沙.join(format!("notes.{}", crate::fd_core::pack_box::扩展名)).exists(),
+            "路径里多出一份运输件 —— 那一格里只许留解开的那一份");
+        /* 从别处挑的原件不动（那是他手里那一份，删它没道理） */
+        assert!(源.exists(), "从别处挑的那一颗被删了");
+        /* 同一颗再走一遍：那一格已经在了，算「这里已经有一份」，一个字节都不许多动 */
         let 前 = fs::read(沙.join("notes").join("main.js")).unwrap();
         let 回2 = serde_json::to_value(落一份容器(&沙串, &源.to_string_lossy())).unwrap();
         assert_eq!(回2["ok"], false, "{:?}", 回2);
@@ -1015,7 +1222,37 @@ mod 临时落盘验 {
         let 行: Vec<&str> = 扫["packs"].as_array().unwrap().iter()
             .filter(|p| p["id"] == "notes").map(|p| p["kind"].as_str().unwrap()).collect();
         assert_eq!(行, vec!["dir"], "{:?}", 扫["packs"]);
+        let _ = fs::remove_dir_all(&外);
         let _ = fs::remove_dir_all(&沙);  /* 清不干净不算这一颗失败：Windows 上刚写的文件可能被索引器短暂占着 */
+    }
+
+    /* 丢进这一格再点安装：摊成了，那颗包就地删掉（同一格里不留两份真身） */
+    /* 出货那一格里那颗的名字带着号（`notes-1.0.0-alpha+build.x.fdpkg`，他 2026-10-17 要的那一种摆法）：
+       丢进插件路径以后还得认得回这一家 —— 折名字那一手在 core::pack_rule::容器成名，这里验的是它真被走到。 */
+    #[test]
+    fn 名字带着号的那一颗也认得回这一家() {
+        let 沙 = 沙盒("带号的名字");
+        let 沙串 = 沙.to_string_lossy().to_string();
+        fs::write(沙.join(format!("notes-1.0.0-alpha+build.deadbeef.{}", crate::fd_core::pack_box::扩展名)), 字节()).unwrap();
+        let 扫 = serde_json::to_value(扫一遍(&沙串)).unwrap();
+        let 行: Vec<(&str, &str)> = 扫["packs"].as_array().unwrap().iter()
+            .map(|p| (p["id"].as_str().unwrap_or("?"), p["kind"].as_str().unwrap_or("?"))).collect();
+        assert_eq!(行, vec![("notes", "dir")], "那一颗要折回 notes 这一家、摊成文件夹那一行：{:?}", 扫["packs"]);
+        assert!(沙.join("notes").join("manifest.json").exists(), "带着号的名字没摊出那一格");
+        let _ = fs::remove_dir_all(&沙);
+    }
+
+    #[test]
+    fn 挑的那颗就在路径里_摊成了把它删掉() {
+        let 沙 = 沙盒("就地删");
+        let 沙串 = 沙.to_string_lossy().to_string();
+        let 那颗 = 沙.join(format!("notes.{}", crate::fd_core::pack_box::扩展名));
+        fs::write(&那颗, 字节()).unwrap();
+        let 回 = serde_json::to_value(落一份容器(&沙串, &那颗.to_string_lossy())).unwrap();
+        assert_eq!(回["ok"], true, "{:?}", 回);
+        assert!(沙.join("notes").join("manifest.json").exists(), "那一格没摊出来");
+        assert!(!那颗.exists(), "摊成了那颗运输件还留着");
+        let _ = fs::remove_dir_all(&沙);
     }
 
     /* 他 2026-10-16 装空壳那一次量到的那一件：说明上写着「把那颗包丢进 data\plugins\，重启一次就认」，
@@ -1032,7 +1269,9 @@ mod 临时落盘验 {
         for 份 in ["main.js", "manifest.json", "box-kernel.js"] {
             assert!(沙.join("notes").join(份).exists(), "摊开那一格里少了 {}", 份);
         }
-        /* 第二趟开机：那一格已在，一个字节都不许多动（拿内容比，不比时间） */
+        /* 摊成了就把那颗运输件删掉：这一格里最后只留解开的那一份（他 2026-10-17 那条「fdpkg 自动删除」） */
+        assert!(!沙.join(format!("notes.{}", crate::fd_core::pack_box::扩展名)).exists(),
+            "开机摊成了，那颗包还留在路径里");
         let 前 = fs::read(沙.join("notes").join("main.js")).unwrap();
         let _ = 扫一遍(&沙串);
         assert_eq!(fs::read(沙.join("notes").join("main.js")).unwrap(), 前, "那一格已在就不许再动它");

@@ -4,7 +4,7 @@
      node src/tools/probes/gate-uitext46.mjs
    钉的是这么几件事：
      一 · 界面文字 apply 写回扫描量到的那一份源码（2026-10-13 他定的方案甲），
-          装机那一张页面文件一个字节都不碰；落完笔给的是重新生成产物那三趟的次序；
+          装机那一张页面文件一个字节都不碰；落完笔给的是重新生成页面那三趟的次序；
      二 · 落笔之前那一道语法闸：喂一份「原样读得通 / 改完读不通」的文本必须报红（反向验），
           静态 html 与 ESM 两种形状都量到；
      三 · plan()/apply() 不再收「那一张页面文件」那一个参数（收了就是还留着老那条路）；
@@ -84,7 +84,7 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
   const 页前 = hash(页);
   const r = U.apply(树, [
     { prog:'Flow-Desk', page:'z1-view.js', from:'整屏', to:'满屏' },
-    { prog:'功能包', page:'演示卡', from:'插件自己的一句', to:'换成这句' },
+    { prog:'插件', page:'演示卡', from:'插件自己的一句', to:'换成这句' },
     { prog:'Flow-Desk', page:'页面骨架', from:'沙盒标题', to:'换了标题' },
   ]);
   const 落 = r.files.map(f => path.relative(树, f).split(path.sep).join('/')).sort();
@@ -98,9 +98,9 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
     /h\('button', '换成这句'\)/.test(读('data/plugins/demo/main.js')) && /^import x from /.test(读('data/plugins/demo/main.js')));
   台.判('静态 html 里属性上那句也落到了（title 换掉、标签之间那段没动）',
     /<title>换了标题<\/title>/.test(读('src/_fd/template.html')) && /<p>标签之间的一句<\/p>/.test(读('src/_fd/template.html')));
-  台.判('回执给的是重新生成产物那一串（插件分离第 5 批一家一仓之后只剩那一张页面那一趟 —— 那两颗内核归各家自己那一仓的 出包.mjs）',
+  台.判('回执给的是重新生成页面那一串（插件分离第 5 批一家一仓之后只剩那一张页面那一趟 —— 那两颗内核归各家自己那一仓的 出包.mjs）',
     JSON.stringify(r.builds) === JSON.stringify(['src/_fd/build.mjs']), JSON.stringify(r.builds));
-  台.判('重新生成产物跑哪几趟只住在 uitext 这一份里（artifactBuilds 一颗导出去），别处不抄第二份名单',
+  台.判('重新生成页面跑哪几趟只住在 uitext 这一份里（artifactBuilds 一颗导出去），别处不抄第二份名单',
     /function artifactBuilds\(/.test(文UIT) && /module\.exports[\s\S]*artifactBuilds,/.test(文UIT));
   台.判('写完刷新清单本身：已经落进源码的那几行不再算「他写的改动」（不然下一趟就成了认不到的孤儿行）',
     /refresh\(TREE, 丢\)/.test(颗(文UIT, 'apply')) && /function refresh\(TREE, 丢掉\)/.test(文UIT));
@@ -110,6 +110,38 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
   台.判('那三句新词回到了清单左栏（成了下一轮的「原话」，屏上看得见）',
     /^\s+换了标题:/m.test(清) && /^\s+换成这句:/m.test(清) && /^\s+满屏:/m.test(清),
     清.split(/\r?\n/).filter(x => /换了标题|换成这句|满屏/.test(x)).join(' ⏎ '));
+}
+
+/* ---------- 一·五 · 隔壁那一棵里那一句：扫得到、也写回去（2026-10-18 他那句「我要插件文字可以一起改」） ----------
+   一家一仓之后插件的 main.js 不在主程序仓里，而本仓 data\plugins\ 那一格是「空的一格还在」。
+   从前 listFiles 与 packNames 都只问一次（那格 拿到的就是主程序仓那枚空格子），于是清单里 data/plugins 一份没有 ——
+   现量过：4,842 句全在 src 底下。这一节钉的是：把邻居那一棵指过去，那一句既进得了清单，也真写得回去。 */
+台.题('一·五 · 隔壁那一棵（插件自己那一仓）里的句子扫得到、也写得回去');
+{
+  const 邻根 = path.join(沙, '邻居家那一棵');
+  const 写 = (rel, 内) => { const p = path.join(邻根, rel); fs.mkdirSync(path.dirname(p), { recursive:true }); fs.writeFileSync(p, 内, 'utf8'); return p; };
+  const 邻那份 = 写('data/plugins/n2/main.js', 'export default { view(){ return h(\'button\', \'邻居家的一句\') } };\n');
+  写('data/plugins/n2/manifest.json', '{"name":"邻家的卡","type":"tool"}');
+  U.设邻居([邻根]);
+  try{
+    const 扫 = U.collectAll(树);
+    const 插件份 = 扫.files.filter(r => String(r).startsWith('data/plugins/'));
+    台.数('走到的 data/plugins 那几份', 插件份.join('、') || '一份没有');
+    台.判('1 本仓那一格是空的、隔壁那一棵里有 —— 每一棵都走一遍，隔壁那一份照样进名册',
+      插件份.includes('data/plugins/n2/main.js') && 插件份.includes('data/plugins/demo/main.js'), 插件份.join('、'));
+    台.判('2 那一段的标题读的是它自己那份插件清单里的名字（不在这台里抄第二张家名表）',
+      JSON.stringify(U.packNames(树)) === JSON.stringify({ demo:'演示卡', n2:'邻家的卡' }), JSON.stringify(U.packNames(树)));
+    const r = U.apply(树, [{ prog:'插件', page:'邻家的卡', from:'邻居家的一句', to:'换成邻居这句', del:false }]);
+    台.判('3 真写得回去：认到那一句、落点在隔壁那一棵那一份里',
+      r.list.length === 1 && r.miss.length === 0 && r.files.length === 1 && path.resolve(r.files[0]) === path.resolve(邻那份),
+      r.list.length + ' 句 · ' + r.files.join('、'));
+    台.判('4 隔壁那一棵里那句真的换了（读回来验字节，不认回执）',
+      fs.readFileSync(邻那份, 'utf8').includes("'换成邻居这句'"));
+    台.判('5 清单左栏出现「插件 · 邻家的卡」那一段，新词成了下一轮的原话',
+      new RegExp('^\\s*换成邻居这句:', 'm').test(fs.readFileSync(path.join(树, 'data', 'ui-text.yaml'), 'utf8')));
+  } finally { U.设邻居([]); }
+  台.判('6 跑完把名单收回去（这一台后面那几节量的是不带邻居的那一棵）',
+    U.collectAll(树).files.filter(r => String(r).startsWith('data/plugins/')).join('|') === 'data/plugins/demo/main.js');
 }
 
 /* ---------- 二 · 落笔之前那一道语法闸 ---------- */
@@ -234,8 +266,9 @@ const 源码清单 = ['src/_fd/src/z1-view.js', 'src/_fd/src/z2-view.js', 'src/_
     有('开始安装') && 有('覆盖升级') && 有('还没开始') && 有('正在摊开 {1} / {2}'),
     行.length + ' 行');
   台.判('覆盖升级那三行话、装坏与装完那几句也都在（从前它们夹着换行，一句都进不了清单）',
-    有('这一棵已经装了 ') && 有('这一次覆盖成 ') && 有('就是这儿：') && 有('已经挪走的旧文件都在') &&
-    有('照着挪回去就还是上一版。') && 有('整个文件夹删掉重来就行。') && 有('弄好了 · ') && 有(' 个文件 · '),
+    有('这一棵已经装了 ') && 有('这一次覆盖成 ') && 有('就是这儿：') &&
+    有(' · 程序自带那些插件的代码跟着这一版换新，上一版留下的散文件这一趟直接清掉、不留备份；你自己装的包、你写的词库与数据都不动') &&
+    有(' · 有几份上一版留下的没清掉（不影响这一版跑）') && 有('整个文件夹删掉重来就行。') && 有('弄好了 · ') && 有(' 个文件 · '),
     行.map(g => g.text).slice(0, 3).join(' / '));
 
   /* 反向验：句子里夹 \r\n 的那种写法，清单那一行只能写一句，扫描本来就不收 —— 顶上那一格是承重的，不是摆设 */

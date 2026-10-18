@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { 找 } from './邻居.mjs';
+import { 找, 根列表 } from './邻居.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const FACTORY = path.join(ROOT, 'src', 'pack', 'icons');
@@ -110,7 +110,7 @@ const DESC = {
   up:         '上移（杆顶箭头）：列表、轨道上下换序',
   down:       '下移：同上',
   dock:       '停靠到右栏（右侧带线的面板）：为写停靠入口',
-  cycle:      '再来一轮（绕圈箭头）：生成器不合格重试、重新抽',
+  cycle:      '绕圈箭头：生成器不合格重试、重新抽；插件管理那一行的「更新」（把路径里那颗新包摊进这一格）',
   sort:       '拖行换序（两根带箭头竖杆）：白板轨道、字体列表',
   h1: '标题 1 档：工具条标题六档之一',
   h2: '标题 2 档：同上', h3: '标题 3 档：同上', h4: '标题 4 档：同上',
@@ -256,18 +256,28 @@ if(onlyDesc.length){
   lines.push('', '# —— 说明了但文件夹里没这张图（该补图或删这条说明）——');
   for(const r of onlyDesc) lines.push(r.n + ' = ' + r.where + ' —— 引用：' + r.refTxt);
 }
-/* 插件自己那张也登记进来 */
+/* 插件自己那张也登记进来。一家一仓之后主程序这一棵是空壳、data\plugins\ 那一格是空的 ——
+   只扫自己这一棵就会把包图标报成 0 张（2026-10-18 08:1x 就这么把索引里那七行重新生成没了）。
+   照邻居那把尺把每一棵的 data\plugins\ 都扫一遍，同一家只登记一次（先扫到的那一棵算数）。 */
 const packRows = [];
-try{
-  const dir = path.join(ROOT, 'data', 'plugins');
-  for(const st of fs.readdirSync(dir, { withFileTypes:true })){
-    if(!st.isDirectory() || st.name.startsWith('.') || st.name.startsWith('_')) continue;
-    const idir = path.join(dir, st.name, 'images');
-    let f = '';
-    try{ f = (fs.readdirSync(idir).find(x => EXT.includes(path.extname(x).toLowerCase())) || ''); }catch(e){}
-    if(f) packRows.push('pack-' + st.name + ' = 组件「' + st.name + '」露脸那一张（功能列表、卡片标题） · ' + f);
+{
+  const 见 = new Set();
+  for(const 根 of 根列表()){
+    const dir = path.join(根, 'data', 'plugins');
+    let 项 = [];
+    try{ 项 = fs.readdirSync(dir, { withFileTypes:true }); }catch(e){ continue; }
+    for(const st of 项){
+      if(!st.isDirectory() || st.name.startsWith('.') || st.name.startsWith('_') || 见.has(st.name)) continue;
+      const idir = path.join(dir, st.name, 'images');
+      let f = '';
+      try{ f = (fs.readdirSync(idir).find(x => EXT.includes(path.extname(x).toLowerCase())) || ''); }catch(e){}
+      if(!f) continue;
+      见.add(st.name);
+      packRows.push('pack-' + st.name + ' = 组件「' + st.name + '」露脸那一张（功能列表、卡片标题） · ' + f);
+    }
   }
-}catch(e){}
+  packRows.sort();
+}
 if(packRows.length){
   lines.push('', '# —— 插件图标（住在各包自己的 images\\ 里）——');
   lines.push(...packRows);

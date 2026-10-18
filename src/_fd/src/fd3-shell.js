@@ -1622,6 +1622,30 @@ const Bus = {
   emit(k, data){ (this.map[k] || []).forEach(fn => { try{ fn(data); }catch(e){ console.error(e); } }); }
 };
 
+/* ---------- 卡片外那颗按钮气泡（issue #66）----------
+   他举的形状是手机长按图标冒出来的快捷菜单：鼠标一进这张卡，那几颗钮不在卡里面占地方，
+   而是在卡外面冒一排。那一排还留在卡片的 DOM 里（Tab 顺序、:focus-within 一律不动），
+   只是改成固定定位、坐标按卡片此刻的矩形现算 —— 固定定位不吃 .fd-card / .fd-grid 那两层
+   overflow:hidden 的裁剪，才真能画到卡外面去（从前就卡在这条上，只能在卡里挤着）。
+   ----------------------------------------------------------------
+   露不露由这一颗管，不再交给 CSS 的 :hover（2026-10-18 08:20 他指着录屏问「这么难点中？」的根）：
+   从前写的是 .fd-card:hover 才亮，而气泡与卡边中间留了 6 像素缝 —— 鼠标一挪进那道缝，
+   卡片的 :hover 当场上没了、气泡当场消失，等于逼人在它消失之前点中一颗正在跑的钮。两处一起改：
+   ① 气泡的下沿压进卡边 6 像素，中间不留缝（:hover 顺着 DOM 祖先算，人站在气泡上就等于还在这张卡上）；
+   ② 离开之后留 200 毫秒宽限，这一趟真没再进来才收。
+   这里还记着「现在哪一张卡的气泡是开着的」，窗口改大小和卡片挪位置都重量这一张。 */
+const ToolPop = {
+  cur:null, 延:0,
+  开(card){ clearTimeout(this.延); if(!card._popTools) return; card._popTools(); this.cur = card; card.classList.add('tools-on'); },
+  关(card, 等){
+    clearTimeout(this.延);
+    if(等){ this.延 = setTimeout(() => this.关(card), 200); return; }
+    if(this.cur === card){ this.cur = null; card.classList.remove('tools-on'); }
+  },
+  重量(){ if(this.cur && this.cur.isConnected) this.cur._popTools(); else this.cur = null; },
+};
+window.addEventListener('resize', () => ToolPop.重量());
+
 /* ---------- 外壳 ---------- */
 const Shell = {
   layout:{ items:[] },
@@ -1708,7 +1732,7 @@ const Shell = {
         { id:w + '-' + Date.now().toString(36), widget:w, slot:this.layout.items.length % 5 }, r));
       补++;
     }
-    if(挤不下的.length) toast('桌面那一格放不下这几张卡：' + 挤不下的.join('、') + ' · 先挪一挪或撤一张，再按一次「加载」');
+    if(挤不下的.length) toast('桌面放不下这几张卡：' + 挤不下的.join('、') + ' · 先挪一挪或撤一张，再按一次「加载」');
     return 补;
   },
   autoPlaceAll(){
@@ -1968,10 +1992,13 @@ const Shell = {
       html:icoMarkup('font'), onclick:() => this.fontDlg(it) }));
     /* 撤下这张卡 = 卸载这一家（#30 那四个动作里的一颗，不留「加载了但桌上没这张卡」那种中间状态）：
        走的是插件管理那一屏同一颗钮、同一个问话（里面给着「同步清除数据」那个勾）。 */
-    tools.push(h('button', { class:'fd-tool', title:'卸载「' + def.name + '」· 从使用页撤下来（包留在插件路径里，随时再加载）',
+    tools.push(h('button', { class:'fd-tool', title:'卸载「' + def.name + '」· 从使用页撤下来（安装包留在插件文件夹里，随时可以再加载）',
       html:icoMarkup('eject'), onclick:() => PackOps.unloadAsk(cid) }));
-    if(bare) card.appendChild(h('div', { class:'fd-card-head float' }, [h('span',{class:'sp'}), h('span',{class:'fd-card-tools'}, tools)]));
-    else card.appendChild(h('div', { class:'fd-card-head' }, [h('span',{class:'dot'}), h('span',{class:'ttl'},def.name), h('span',{class:'sp'}), h('span',{class:'fd-card-tools'}, tools)]));
+    /* 那几颗钮不再摆在标题条里（#66）：标题条只留圆点和名字，钮那一排挂在卡片自己身上，
+       悬停或键盘走进来时冒到卡外面。没有标题的那两种从前专门浮一条空标题条就是为了摆这几颗钮，
+       如今那条整条不必留。 */
+    if(!bare) card.appendChild(h('div', { class:'fd-card-head' }, [h('span',{class:'dot'}), h('span',{class:'ttl'},def.name), h('span',{class:'sp'})]));
+    card.appendChild(this.bindTools(card, tools));
     const body = h('div', { class:'fd-card-body' });
     card.appendChild(body);
     const ff = this.fontOf(it);
@@ -2014,6 +2041,32 @@ const Shell = {
     draw();
     Modal.open('这张卡的字体', body, [h('button', { class:'fd-btn primary', onclick:() => Modal.close() }, '好')]);
   },
+  /* #66：这一排钮挂在卡片上、固定定位画到卡外面。坐标不写死在样式里 —— 卡片会拖、会缩放、
+     窗口会改大小，所以每次要露出来之前按卡片此刻的矩形现量一次。
+     先试卡的上方（对齐卡的右上角），上面顶到窗口边了就翻到卡的下方。 */
+  bindTools(card, tools){
+    const row = h('span', { class:'fd-card-tools' }, tools);
+    card._popTools = () => {
+      const r = card.getBoundingClientRect();
+      const 宽 = row.offsetWidth, 高 = row.offsetHeight;
+      if(!宽 || !高) return;
+      /* 压进卡边 6 像素，不留缝：从前那 6 像素的空档就是「点不中」的根 —— 鼠标一进去，
+         卡片不再算悬停、气泡当场上消失。压进来之后，人站在气泡上就等于还在这张卡上。 */
+      const 压 = 6;
+      let 上 = r.top - 高 + 压;
+      if(上 < 6) 上 = Math.min(r.bottom - 压, window.innerHeight - 高 - 6);
+      let 左 = Math.min(r.right - 宽, window.innerWidth - 宽 - 6);
+      row.style.left = Math.round(Math.max(6, 左)) + 'px';
+      row.style.top = Math.round(Math.max(6, 上)) + 'px';
+    };
+    card.addEventListener('pointerenter', () => ToolPop.开(card));
+    /* 离开给 200 毫秒宽限（这一趟真没再进来才收）：绕着那道缝走、手抖出界都不算走 */
+    card.addEventListener('pointerleave', () => ToolPop.关(card, true));
+    /* 键盘走进这一排也把它露出来（无障碍走查 C-3 那条规矩照旧成立，只是换了一处落点） */
+    row.addEventListener('focusin', () => ToolPop.开(card));
+    row.addEventListener('focusout', () => ToolPop.关(card, true));
+    return row;
+  },
   place(card, it){
     card.style.left = 'calc(' + it.x + ' * var(--cw) + var(--gap-half) + var(--pad-x, 0px))';
     card.style.top = 'calc(' + it.y + ' * var(--ch) + var(--gap-half) + var(--pad-y, 0px))';
@@ -2024,6 +2077,9 @@ const Shell = {
        那就是「小卡顶着一层大晕」的一半原因。边长四格上下算满，越小收得越多。 */
     const side = Math.max(2, Math.min(it.w, it.h));
     card.style.setProperty('--ck', Math.max(.5, Math.min(1, (side - 2) / 3)).toFixed(2));
+    /* 卡片挪了、缩放了的这一刻，要是它那颗气泡正开着，跟着重量一次（拖拽中气泡是藏着的，
+       松手走完这一步就把它摆到新的落点旁边） */
+    if(ToolPop.cur === card) card._popTools();
   },
   /* 组件请求改变自身高度（日程 6 行月要长到 9 格），只在放得下时生效 */
   setHeight(it, h){
@@ -2123,6 +2179,9 @@ const Shell = {
         } else {
           shell.place(card, base); toast('桌面装不下这么多了 · 已回弹');
         }
+        /* 落位走完再量一次气泡：卡片带着 transform 的那一段时间里它一直藏着，
+           这一句把它摆到松手之后的真正落点旁边 */
+        ToolPop.重量();
       };
       if(grip) begin(); else { hold = setTimeout(begin, 180); onWindow(); }
       card.addEventListener('pointerup', done);
@@ -2147,6 +2206,8 @@ const Shell = {
     const draw = async () => {
       const kw = q.trim().toLowerCase();
       const d = await PackOps.disk();
+      /* 先问一遍哪几格里躺着号不一样的新包（更新那颗钮摆不摆就看这一趟）：问不动就当没有，一句不报 */
+      try{ await PackOps.查更新(); }catch(e){}
       /* 「上了没」问的是**这一轮真加载进页面了没有**（登记表里有它才算），不是问那份名单 ——
          从前这里读的是 PackOps.ids()（名单），于是运输形状那几种（还摊不开的 .fdpkg 与 zip）
          明明一行代码都没进页面，格子上却写着「已加载」、那颗钮还是灰的（他 2026-10-16 指着那一片问：插件无法加载）。 */
@@ -2179,11 +2240,14 @@ const Shell = {
           h('button', { class:'fd-addpick', disabled:上了, title:(m.desc || '') + (上了 ? ' · 已经在用页上了' : ' · 请进使用页') + 名号,
             onclick:async () => { await PackOps.load(id); } },
             [h('span', { class:'w-mk', html:icoFor(id, m.icon || 'card') }),
-             h('span', {}, 名), h('span', { class:'fd-addtag' }, 上了 ? '已加载' : '没加载'), ...记]),
-          /* 三颗钮每一行都在（他 2026-10-17 issue #56：不要加载/卸载二选一）——
-             哪一颗此刻真能使，按下去由那颗自己说，不靠藏起来当提示 */
+             h('span', {}, 名), h('span', { class:'fd-addtag' }, String(m.version || '')),
+             h('span', { class:'fd-addtag' }, 上了 ? '已加载' : '没加载'), ...记]),
+          /* 四颗钮每一行都在（他 2026-10-17 issue #56 那一条：不要加载/卸载二选一，也不许拿"这家没东西可换"藏一颗）——
+             哪一颗此刻真能使，按下去由那颗自己说，不靠藏起来当提示。
+             第四颗「更新」：插件路径里躺着一颗号不一样的新包就把那一格换成它（他 2026-10-17 那条：新包丢进来 → 提醒 → 点一下换进那一格 → 那颗包删掉）。 */
           h('div', { class:'fd-addops' }, [
-            PackOps.loadButton(id, 名), PackOps.unloadButton(id, draw), PackOps.removeButton(id, draw)])
+            PackOps.loadButton(id, 名), PackOps.unloadButton(id, draw), PackOps.removeButton(id, draw),
+            PackOps.updateButton(id, draw)])
         ]));
       }
       const 一行 = grid.children.length;
@@ -2197,7 +2261,7 @@ const Shell = {
       h('input', { type:'search', class:'fd-input', placeholder:'搜插件名', style:'flex:1 1 auto',
         oninput:ev => { q = ev.target.value; draw(); } }),
       PackOps.installButton(),
-      h('button', { class:'wnw-btn mini', title:PackOps.can() ? '重看一遍插件路径里有什么' : '这台机器读不到插件路径',
+      h('button', { class:'wnw-btn mini', title:PackOps.can() ? '重看一遍插件路径里有什么' : '这台机器找不到插件文件夹',
         html:icoMarkup('cycle') + '重看', onclick:() => draw() })
     ]));
     box.appendChild(grid);
@@ -2240,6 +2304,12 @@ body.dragging{user-select:none;cursor:grabbing;}
    选「凝态 / 霜态」的模糊会被 backdrop-filter:none 顶掉。全删，只留布局。
    2026-10-04 材质那一档整档撤了（卡片底只有实色），这三条选择器再没人写，注释留在这儿说明为什么不许加回来。
    拖起来那一下的抬高手感不归外观模式管：那是这一张卡临时浮起来了，用浮层那一档的高度。 */
+/* 无边框的窗口要跟别的窗口分得开，得有一道很细的轮廓线（他 2026-10-18 10:33 拿资源管理器那一圈对比之后要的）：
+   系统那道投影已经关了（建窗口那一句 .shadow(false) —— 关掉的其实是"让出一圈客户区给影子"，
+   跟着没的还有贴着边那一道），所以这一道由页面自己画。
+   用 outline 不用 border：outline 不占布局、不挤内容一格，贴着窗口最边上画一像素；
+   颜色走分隔线那一条 token（--hair-color），四档外观与明暗那一轴都跟着走，不另定色。 */
+html{outline:1px solid var(--hair-color,rgba(0,0,0,.16));outline-offset:-1px;}
 .fd-card.lift{transform:translateY(-3px) scale(1.006);z-index:9;box-shadow:var(--sh-float,none);}
 /* 顶栏按钮：和卡片同一套 color-mix 淡底，随配色走。原来一个死白、一个全透，
    在有色卡面上一个突兀一个根本看不见。 */
@@ -2257,37 +2327,55 @@ body.dragging{user-select:none;cursor:grabbing;}
 .fd-card-head{cursor:grab;}
 .fd-additem.off{opacity:.42;cursor:not-allowed;}
 .fd-additem.off:hover{border-color:var(--hair-color);color:var(--text);}
-.fd-card-head.float{position:absolute;left:0;right:0;top:0;z-index:7;padding:0;pointer-events:none;}
-.fd-card-head.float .fd-card-tools{pointer-events:auto;opacity:0;}
-/* 浮着的标题条归浮着：notitle（摊平）和 noname（只少个名字）都不占行高，钮悬停才露 */
-.fd-card:hover .fd-card-head.float .fd-card-tools{opacity:1;}
-/* 浮着的那一款自己又写了一遍 opacity:0，选择器比宿主那一条重，:focus-within 顶不住，
-   所以这一款单独补一条同样加重的（无障碍走查 C-3）。 */
-.fd-card:focus-within .fd-card-head.float .fd-card-tools{opacity:1;}
+/* #66：卡片上那几颗钮挪到卡片外面 —— 鼠标一进这张卡，那一排在卡的上方冒出来一颗气泡。
+   固定定位的那一排仍然挂在卡片里（Tab 走进卡片的顺序、:focus-within 一个字没动），
+   只是坐标由 bindTools() 按卡片此刻的矩形现量。为什么非要用固定定位：
+   .fd-card 和 .fd-grid 两层都写着 overflow:hidden，从前这几颗钮怎么摆都被卡边剪掉，
+   只有固定定位不受祖先裁剪（卡片本身没有 transform / filter，唯一带 transform 的是拖起来那一下）。
+   藏着的时候必须连点都点不着 —— 这一排如今悬在卡外面、正压着上面那一张卡，
+   只写 opacity:0 会让一排看不见的钮把邻居卡吃掉；也不能改用 visibility:hidden，
+   那样键盘就走不进来了（无障碍走查 C-3 要的就是键盘能走进这一排）。 */
+.fd-card-tools{position:fixed;left:0;top:0;z-index:40;gap:2px;padding:2px 3px;
+  border-radius:var(--r-btn,5px);background:var(--card-bg);box-shadow:var(--sh-float,none);
+  opacity:0;pointer-events:none;transition:opacity .12s;}
+/* 悬停这一趟把整张卡抬到最上层（他 2026-10-18 08:24 那一句「气泡置顶」）：
+   那一排是卡片的子节点，光给它自己写 z-index 不算数 —— 卡片在 .fd-grid 这一摞里排第几，
+   子节点就跟着排在第几，冒到上面那张卡外面就被那张卡盖住。抬卡片才是把这整一份（连同气泡）一起抬起来。
+   40 这一档：高于其余卡片与四角把手（5）、拖起来那一趟（9），低于封面（50）、弹窗（60）、菜单（70）。 */
+.fd-card.tools-on{z-index:40;}
+/* 露不露由 ToolPop 挂的 .tools-on 管（鼠标一进这张卡就挂上，离开 200 毫秒后才摘），
+   :focus-within 那一条是给键盘的，两条各写各的、不合并（无障碍走查 C-3）。
+   从前这一排靠 .fd-card:hover 亮：气泡与卡边中间那道 6 像素的空档里鼠标既不算在卡上、也不算在排上，
+   一排当场上消失，几颗钮就成了"要在它消失前点中"的靶子（他 2026-10-18 08:20 那一问）。 */
+.fd-card.tools-on > .fd-card-tools,
+.fd-card:focus-within > .fd-card-tools{opacity:1;pointer-events:auto;}
+/* 拖起来那一下卡片带着 transform，固定定位会改成按卡片自己算坐标；这一排在起拖那一刻整个藏掉，
+   松手落位后由 ToolPop.重量() 重新摆到新的落点旁边。 */
+.fd-card.lift > .fd-card-tools{opacity:0;pointer-events:none;}
 .fd-card.notitle .fd-card-body{padding-top:0;}
 /* F1：卡面就是配色本身，里面不再垫一层白边；有标题的卡留一点左右呼吸 */
 .fd-card-body{padding:0;}
 .fd-card:not(.notitle) .fd-card-body{padding:0 var(--pad);}
-/* 标题条浮起来以后正文顶到卡边了：只少名字那三种补一道顶部呼吸，浮着的钮不至于压着第一行字 */
+/* 没有标题的那两种（notitle / noname）如今连标题条都不摆了，正文就是卡片最上面那一块；
+   只少名字那一种补一道顶部呼吸，别贴着卡边。 */
 .fd-card.noname .fd-card-body{padding:calc(10px * var(--vsc,1)) var(--pad) 0;}
 /* 角上那个小勾（靠内画的拖动提示）撤了：四角本身已经能拖着改大小，再画一道提示反而多余。
    18×18 的透明热区和四根光标方向都得留着 —— 热区就是唯一能下手的地方，
    它背景透明、无边框，显不显形都不改画面，所以不必再靠 opacity 藏着。 */
 .fd-grip{position:absolute;width:18px;height:18px;z-index:5;background:transparent;border:0;padding:0;}
-/* 右上角那个 ×（还有整排按钮）压在 ne 角把手上面：谁离角近谁让路 —— 按钮是点名要按的，
-   看不见的 ne 把手只留按钮圈不到的边角。以前把手 z-index 5 盖住标题条的 4，小卡上 × 永远按不着。 */
-.fd-card-tools{position:relative;z-index:6;}
+/* 右上角那颗 × 压在 ne 角把手上面：谁离角近谁让路 —— 按钮是点名要按的，
+   看不见的 ne 把手只留按钮圈不到的边角。以前跟把手争这一角的是卡面上那一排钮，
+   #66 之后那一排整个挪到卡外面（固定定位、z-index 40），不再压在把手上面。 */
 /* 卡面缩到一小格以后，四角那个看不见的把手会盖住插件自己的控件：便签卡 82×85 那一张里，
    输入框的左下角整个压在 sw 和 se 把手底下（elementFromPoint 在那两点上量出来上面是把手不是输入框），
    点下去只是给卡片起了一次缩放。跟右上角 × 同一处理、同一个道理 —— 控件是点名要按的，
    把手只留控件圈不到的边角。z-index 只对定位元素有效，所以静态控件先给一层 position:relative；
-   这一条用 :where() 写成零特异性，插件自己写了 absolute 的控件不会被它挪位置。
-   浮着的标题条跟着从 4 抬到 7：组件控件抬到 6 之后，那几个钮还得压在它们上面。 */
+   这一条用 :where() 写成零特异性，插件自己写了 absolute 的控件不会被它挪位置。 */
 .fd-card-body :is(button,a,input,select,textarea,[role="button"]){z-index:6;}
 .fd-card-body :where(button,a,input,select,textarea,[role="button"]){position:relative;}
 /* 外13-H：四角把手从内缩 3px 改成贴死卡片最边角（像窗口边框那种）。
    热区挪偏内是之前用户点名的毛病。右上角 × 依旧点得到：
-   上面 :1508/:1511 那两条压着——grip z-index 5、fd-card-tools z-index 6，
+   上面那两条压着——grip z-index 5、卡面控件 z-index 6，
    谁压谁按老规矩（全-6 的结论），这里只挪位置不动层级。 */
 .fd-grip[data-dir="nw"]{left:0;top:0;cursor:nwse-resize;}
 .fd-grip[data-dir="ne"]{right:0;top:0;cursor:nesw-resize;}
@@ -2403,22 +2491,34 @@ body.dragging{user-select:none;cursor:grabbing;}
 #toast,.fd-grid::-webkit-scrollbar-thumb,.scroll-y::-webkit-scrollbar-thumb{border-radius:var(--r-pill,5px);}
 /* 推演组件定制要 1400px：只有它，词库编辑器、推演记录那些对话框还是原来的宽 */
 .fd-dialog.vwide{width:min(1400px,96vw);max-width:96vw;}
-/* 插件管理：面板锁在 560 宽 → 四列正方格，行数和列数差不多，不再摊成一条长带；
-   一格一家：整块点下去是「加载」，格脚那两颗管「卸载」（只在这家加载着才摆）与「删除」。 */
-.fd-addbox{width:min(560px,86vw);}
-.fd-gridpick{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));}
+/* 插件管理（他 2026-10-18 issue #63「卡片式按钮溢出/重叠导致无法操作」）：整屏改成**一行一家的列表**，
+   像 Windows 文件夹那种「详细信息」—— 名字那一格自己截断，四颗钮钉在行尾一字排开，永远不压到邻家。
+   从前是四列正方格：一家一格、格脚摆四颗小钮，格宽只有 112 上下，四颗一排就溢出，
+   隔壁那格的钮叠上来点不动（#56 让四颗常在之后更明显 —— 多出来的那颗把这一行顶得更宽）。 */
+.fd-addbox{width:min(760px,92vw);}
+.fd-gridpick{display:grid;grid-template-columns:1fr;gap:2px;max-height:min(58vh,520px);overflow-y:auto;}
 .fd-gridpick .fd-empty{grid-column:1/-1;}
-.fd-additem{aspect-ratio:1;padding:7px 6px;gap:5px;}
-.fd-addpick{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:8px;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;border-radius:var(--r-btn,5px);}
-.fd-addpick > span{overflow:hidden;text-overflow:ellipsis;}
+/* 一行一家（#63）—— 上一轮只把网格改成 1fr、没动模板里那一款小卡，等于什么都没排成一行：
+   模板「.fd-additem」写的是 flex-direction:column + justify-content:center + 一圈虚线框（一格一家那张门），
+   同特异性的这一句只补 display/align-items/gap/padding 收不掉那三样，名字与四颗钮就还是上下两排、还居中
+   （他 2026-10-18 08:14 那张截图正是这个）。这一款要的是资源管理器「详细信息」那种一字排开：
+   图标 | 名字 | 号 | 状态 | 四颗动作钮，整行左对齐、不要卡框，行与行之间一道分隔线。 */
+.fd-additem{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;
+  padding:5px 8px;min-width:0;border:0;border-radius:0;background:transparent;}
+/* 整行悬停不再跟着换字色（那是那张"点这里新建"的门留的）：能点的是名字那一段，它自己会变色 */
+.fd-additem:hover{color:var(--text);}
+.fd-additem + .fd-additem{border-top:1px solid var(--hair-color,rgba(0,0,0,.08));}
+.fd-addpick{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:9px;border:0;background:transparent;
+  color:inherit;font:inherit;cursor:pointer;text-align:left;border-radius:var(--r-btn,5px);padding:2px 4px;}
+.fd-addpick > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fd-addpick .w-mk{flex:0 0 auto;}
 .fd-addpick:disabled{cursor:not-allowed;}
 .fd-addpick:not(:disabled):hover{color:var(--accent-text,var(--accent));}
-/* 格脚那一行状态字（已加载 / 没加载）：淡一档，不描边不占高 —— 动作在钮上，这一行只报现状 */
-.fd-addtag{font-size:.72em;opacity:.62;}
+/* 行里那两格短信息（号 / 状态）：淡一档、不描边、不占高 —— 动作在钮上，这两格只报现状 */
+.fd-addtag{font-size:.72em;opacity:.62;flex:0 0 auto;}
 .fd-addtag.bad{color:var(--bad,#c0453a);opacity:1;}
-.fd-addops{display:flex;gap:4px;justify-content:center;flex:0 0 auto;}
-.fd-addops .wnw-btn{padding:1px 7px;font-size:.72em;}
+.fd-addops{display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto;}
+.fd-addops .wnw-btn{padding:1px 7px;font-size:.72em;white-space:nowrap;}
 /* 配色下拉：一行里摆「方案名 + 一排色点」，点开是浮着的第二层菜单（原生 select 摆不出色点）。
    形状照 RP 那个配色选择器来，颜色全吃当前这套 token，换肤跟着一起变。 */
 .fd-sel{position:relative;width:100%;max-width:360px;min-width:0}

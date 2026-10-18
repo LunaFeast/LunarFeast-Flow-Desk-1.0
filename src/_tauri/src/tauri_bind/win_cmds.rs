@@ -23,12 +23,15 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use crate::fd_core::grid_snap;
 use crate::fd_core::win_policy::zoom_step;
 
-/* 壳自己记着的三件事：当前缩放、关窗口那张框问出去没有、是不是已经在收摊 */
+/* 壳自己记着的三件事：当前缩放、关窗口那张框问出去没有、是不是已经在收摊
+   外加拖动那两格：最新那一个落点 + 第几趟挪的号（吸落点 那一段说为什么要有这一对） */
 #[derive(Default)]
 pub struct 窗口手 {
     缩放: Mutex<f64>,
     待回答: Mutex<bool>,
     退出中: Mutex<bool>,
+    挪: Mutex<Option<(i32, i32)>>,
+    挪代: Mutex<u64>,
 }
 
 /* 回报给页面的形状跟主进程那两颗一样：{ maximized, fullscreen } */
@@ -61,6 +64,44 @@ fn 报状态(app: &AppHandle) {
     let _ = app.emit("win:state", 现况(app));
 }
 
+/* ---------- 系统那一圈（issue #62 那两层窗口）----------
+   2026-10-18 08:26 记一次翻车，别再翻第二遍：这一度写成「亲手把 WS_CAPTION 从 GWL_STYLE 上摘掉」，
+   结果最大化把任务栏压掉了（他那一句「为什么最大化之后任务栏黑了」）。根因就在样式位本身：
+   Windows 算「最大化该占多大」看的是样式位 —— 带着 WS_CAPTION 的那一类最大化到工作区（让开任务栏），
+   摘掉那一位的那一类铺满整块屏幕。tao 把 WS_CAPTION 留在样式位上、只接住 WM_NCCALCSIZE 报零
+   把非客户区压成零高（window_state.rs:241 与 event_loop.rs:2074），拿的就是这一对：
+   看不见那一圈，又不碰最大化几何。
+   所以这里**只请 Tauri 自己撤，一个样式位都不改**；读回来的那一句照旧记进运行日志 ——
+   屏上再有两层，日志里那一笔就是凭据，不用再来回猜是哪一枚包、哪一步。 */
+fn 撤干净(w: &tauri::WebviewWindow, 为什么: &str, 每趟都记: bool) {
+    let _ = w.set_decorations(false);
+    match w.is_decorated() {
+        Ok(false) => {
+            if 每趟都记 {
+                crate::tauri_bind::log_cmds::记一笔("窗口",
+                    &format!("{}：系统那一圈已撤（tao 那份标记是无装饰，非客户区靠报零压住）", 为什么));
+            }
+        }
+        Ok(true) => crate::tauri_bind::log_cmds::记一笔("窗口",
+            &format!("{}：撤了，读回来还是「有装饰」—— 这一趟就是双层窗口，见 issue #62", 为什么)),
+        Err(e) => crate::tauri_bind::log_cmds::记一笔("窗口",
+            &format!("{}：撤了，可状态问不出 —— {}（问不出不等于已撤）", 为什么, e)),
+    }
+}
+
+/// 建窗口那一路（那一刻就在主线程上）当场撤一次，并留一句凭据。
+pub fn 就地撤(w: &tauri::WebviewWindow, 为什么: &str) { 撤干净(w, 为什么, true); }
+
+/// 另外几条路（窗口命令、事件回调）走这一颗：排回主线程再做，别在别的线程上碰窗口本体。
+fn 撤那一圈(w: &tauri::WebviewWindow, 为什么: &str) {
+    let 窗 = w.clone();
+    let 话 = 为什么.to_string();
+    if w.run_on_main_thread(move || 撤干净(&窗, &话, false)).is_err() {
+        crate::tauri_bind::log_cmds::记一笔("窗口",
+            &format!("{}：那一圈没排上主线程去撤（主线程已经不抽消息了）", 为什么));
+    }
+}
+
 /* 第二份程序被那颗单实例插件认出来之后，这一头要做的事。
    那句原话照 Electron 那一份（main.cjs 的 second-instance 那一句），一路也照它：
    先记一笔，再把已有的窗口露出来。
@@ -74,6 +115,7 @@ pub fn 第二份进来了(app: &AppHandle) {
         let _ = 窗.unminimize();
         let _ = 窗.show();
         let _ = 窗.set_focus();
+        撤那一圈(&窗, "第二份点图标把窗口唤醒");
     }
 }
 
@@ -99,6 +141,7 @@ pub fn win_ctl(app: AppHandle, act: String, 手: State<'_, 窗口手>) -> Result
         "max" => {
             if w.is_maximized().unwrap_or(false) { w.unmaximize().map_err(错)?; }
             else { w.maximize().map_err(错)?; }
+            撤那一圈(&w, "按了最大化/还原");
         }
         /* 这一颗会先绕 CloseRequested，在那里拦下问页面 —— 跟主进程那边 w.close() 被那张框拦住同一形状 */
         "close" => { let _ = w.close(); }
@@ -106,6 +149,7 @@ pub fn win_ctl(app: AppHandle, act: String, 手: State<'_, 窗口手>) -> Result
         "fullscreen" => {
             let 新 = !w.is_fullscreen().unwrap_or(false);
             w.set_fullscreen(新).map_err(错)?;
+            if !新 { 撤那一圈(&w, "从全屏退回来"); }
         }
         "zoomIn" | "zoomOut" | "zoomReset" => {
             let 新 = zoom_step(*锁(&手.缩放), &act);
@@ -184,10 +228,11 @@ pub fn 窗口事件(w: &tauri::Window, e: &WindowEvent) {
             });
         }
         WindowEvent::Resized(尺) => {
-            吸形状(w, 尺);
+            /* 事件给的是 Window，吸附那几颗统一吃 WebviewWindow（同一张窗，取那一张再动手） */
+            if let Some(窗) = 主窗口(w.app_handle()) { 吸形状(&窗, 尺); }
             报状态(w.app_handle())
         }
-        WindowEvent::Moved(位) => 吸落点(w, 位),
+        WindowEvent::Moved(位) => 排队吸落点(w, 位),
         _ => {}
     }
 }
@@ -207,12 +252,12 @@ const 最小逻辑: (f64, f64) = (720.0, 480.0);
 const 贴边逻辑: f64 = 12.0;
 const 留住逻辑: f64 = 80.0;
 
-fn 缩放(w: &tauri::Window) -> f64 {
+fn 缩放(w: &tauri::WebviewWindow) -> f64 {
     w.scale_factor().unwrap_or(1.0).max(0.25)
 }
 
 /// 这一扇窗所在那台显示器的工作区（任务栏那一截不算在内），换算成物理像素
-fn 工作区(w: &tauri::Window) -> Option<grid_snap::矩形> {
+fn 工作区(w: &tauri::WebviewWindow) -> Option<grid_snap::矩形> {
     let 监 = w.current_monitor().ok()??;
     /* Monitor 上那几个字段是私有的，只能走方法（work_area() 回的是引用） */
     let 工 = 监.work_area();
@@ -228,12 +273,12 @@ fn 工作区(w: &tauri::Window) -> Option<grid_snap::矩形> {
     Some(尺)
 }
 
-fn 不该吸(w: &tauri::Window) -> bool {
+fn 不该吸(w: &tauri::WebviewWindow) -> bool {
     w.is_maximized().unwrap_or(false) || w.is_fullscreen().unwrap_or(false)
 }
 
 /// 拖边界改大小那一趟：把内层尺寸吸到整格
-fn 吸形状(w: &tauri::Window, 尺: &tauri::PhysicalSize<u32>) {
+fn 吸形状(w: &tauri::WebviewWindow, 尺: &tauri::PhysicalSize<u32>) {
     if 不该吸(w) {
         return;
     }
@@ -254,8 +299,42 @@ fn 吸形状(w: &tauri::Window, 尺: &tauri::PhysicalSize<u32>) {
     let _ = w.set_size(tauri::PhysicalSize::new(宽, 高));
 }
 
+/// 拖标题栏那一趟**不在途中改位置**，只记下最新那一个落点，等这一趟挪完（140 毫秒内不再来 Moved）才吸一次。
+/// 为什么：Windows 拖标题栏走的是一个套死的消息循环（startDragging 就是往非客户区按下去，
+/// 循环在系统那一头转），在循环里回手 SetWindowPos 会让窗口跟不住鼠标 ——
+/// 他 issue #64 那张录屏（第 85 帧量到的）就是指针已经跑到屏幕右上角、窗口还停在屏幕左边；
+/// 同一个循环被反复改位置也有概率整个卡住，那就是 #62 顶上那句「(未响应)」的一条来路。
+/// 自己回手改位置引发的那几趟 Moved 落在同一代里，由那一趟负责吸，不会再来一轮；
+/// 吸完真不动了是因为 吸落点 底下那一句「与目标差不到 1 物理像素就当已经到位」。
+fn 排队吸落点(w: &tauri::Window, 位: &tauri::PhysicalPosition<i32>) {
+    let 应用 = w.app_handle().clone();
+    let 代 = {
+        let 手 = 应用.state::<窗口手>();
+        *锁(&手.挪) = Some((位.x, 位.y));
+        let mut 号 = 锁(&手.挪代);
+        *号 += 1;
+        *号
+    };
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(140));
+        let 记;
+        {
+            let 手 = 应用.state::<窗口手>();
+            if *锁(&手.挪代) != 代 { return; }              /* 后面又来了一趟，那一趟负责吸 */
+            记 = match *锁(&手.挪) { Some(那) => 那, None => return };
+            *锁(&手.挪) = None;
+        }
+        let Some(窗) = 应用.get_webview_window("main") else { return };
+        let 窗2 = 窗.clone();
+        /* 动窗口本体要回主线程：tao 那一头不吃后台线程的 SetWindowPos */
+        let _ = 窗.run_on_main_thread(move || {
+            吸落点(&窗2, &tauri::PhysicalPosition::new(记.0, 记.1));
+        });
+    });
+}
+
 /// 拖标题栏（无边框时是页面那一栏）挪位置那一趟：先贴边、再折格、最后夹住别推出屏
-fn 吸落点(w: &tauri::Window, 位: &tauri::PhysicalPosition<i32>) {
+fn 吸落点(w: &tauri::WebviewWindow, 位: &tauri::PhysicalPosition<i32>) {
     if 不该吸(w) {
         return;
     }
@@ -300,7 +379,7 @@ fn 闪一下(app: &AppHandle) {
     match 主窗口(app) {
         Some(w) => {
             if w.is_visible().unwrap_or(true) { let _ = w.minimize(); }
-            else { let _ = w.show(); let _ = w.set_focus(); }
+            else { let _ = w.show(); let _ = w.set_focus(); 撤那一圈(&w, "托盘左键把窗口露出来"); }
         }
         None => {}
     }

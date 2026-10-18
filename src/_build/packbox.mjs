@@ -111,7 +111,8 @@ export function 打包(件, 信, 时间秒){
     const 字 = Buffer.isBuffer(份.字节) ? 份.字节 : Buffer.from(份.字节);
     return { path: 路, len: 字.length, sha256: crypto.createHash('sha256').update(字).digest('hex'), enc: false, 字 };
   });
-  const 全 = { ...信, key_id: 0, files: 列.map(({ path, len, sha256, enc }) => ({ path, len, sha256, enc })) };
+  const 全 = { ...信, key_id: 0, created: Math.floor(Number(时间秒) || Date.now() / 1000),
+    files: 列.map(({ path, len, sha256, enc }) => ({ path, len, sha256, enc })) };
   if(全.kernels){
     for(const 名 of 全.kernels)
       if(!全.files.some(份 => 份.path === 名)) 停('kernels 点了「' + 名 + '」，这一格里没这份文件');
@@ -145,6 +146,12 @@ export function 打目录(目录, 时间秒 = Math.floor(Date.now() / 1000)){
   const 清路 = path.join(目录, 'manifest.json');
   if(!fs.existsSync(清路)) 停('这一格里没有插件清单：' + 清路);
   const 单 = JSON.parse(fs.readFileSync(清路, 'utf8'));
+  /* 打包时刻（Unix 秒）只写进信息段那一份（下面 打包() 落）：格式文档那张表里 `created` 早就写着必填、
+     只管审计，可这颗打包手从前既不写它、也不管用进来的 时间秒 那一个参数 —— 号比不出新旧时一点凭据都没有，
+     2026-10-18 那六颗旧包被当成"新版"、点下去是降级，就是这么来的。
+     不往清单里塞：清单那一份要跟仓里那一字不差（"这一格被改过"那两道核的就是这条），
+     摊开之后文件夹里的来路归壳自己那本 _装过的.json（pack_cmds.rs 的 摊进一格 落）。 */
+  const 秒 = Math.floor(Number(时间秒) || Date.now() / 1000);
   const 件 = [];
   (function 走(格, 前){
     for(const 名 of fs.readdirSync(格).sort()){
@@ -156,7 +163,7 @@ export function 打目录(目录, 时间秒 = Math.floor(Date.now() / 1000)){
   return 打包(件, {
     id: 单.id, name: 单.name, version: 单.version, min_shell: 单.minShell,
     author: 单.author, source: 单.source, kernels: 单.kernels,
-  }, 时间秒);
+  }, 秒);
 }
 
 /* ---------- 容器试件：两份写死的件 + 固定时间，产出确定的字节 ----------

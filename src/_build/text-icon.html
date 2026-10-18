@@ -94,7 +94,7 @@
     <button id="t图" class="页 主">图标素材</button>
     <button id="t字" class="页">界面文字</button>
   </div>
-  <div class="状态" id="状态">正在问现场……</div>
+  <div class="状态" id="状态">正在看现在的状况……</div>
 </header>
   <div class="提示" id="提示"></div>
   <div class="提示" id="git警"></div>
@@ -103,9 +103,9 @@
  <div class="两栏">
   <div class="柜栏">
     <div class="行">
-      <label for="柜路">图标柜</label>
-      <input type="text" id="柜路" placeholder="这台电脑上放图的一格" autocomplete="off" spellcheck="false" style="flex:1 1 160px;min-width:150px">
-      <button id="柜列">列这一格</button>
+      <label for="柜路">图标文件夹</label>
+      <input type="text" id="柜路" placeholder="这台电脑上放图标的那个文件夹" autocomplete="off" spellcheck="false" style="flex:1 1 160px;min-width:150px">
+      <button id="柜列">列出这个文件夹</button>
     </div>
     <div class="行">
       <label for="柜搜">找</label>
@@ -117,11 +117,11 @@
   </div>
   <div class="卡栏">
     <div class="行">
-      <span class="状态" id="图情">正在数 icons 这个文件夹……</span>
+      <span class="状态" id="图情">正在数图标文件夹里的图……</span>
       <span style="flex:1"></span>
       <button id="图重">重新数一遍</button>
-      <button id="图对">重新对齐一遍</button>
-      <button id="厂全">把和出厂不一样的都复制进出厂</button>
+      <button id="图对">重新生成图标索引</button>
+      <button id="厂全">把和打包用的那一份不一样的，全部复制过去</button>
       <label class="筛"><input type="checkbox" id="图筛"><span id="图筛标">只看我动过的</span></label>
     </div>
     <div class="行">
@@ -129,7 +129,7 @@
       <input type="text" id="加名" placeholder="名字空着就照挑中的文件名改（如 gear2.svg；子文件夹写成 tools/gear2.svg）" autocomplete="off" spellcheck="false" style="min-width:220px">
       <input type="file" id="加档" accept=".svg,.png,.jpg,.jpeg,.webp,.gif">
       <button id="加送">添进去</button>
-      <button id="加柜">从图标柜挑一张添进去</button>
+      <button id="加柜">从图标文件夹里挑一张添进去</button>
     </div>
     <div class="提示" id="图果"></div>
     <div class="提示" id="图动"></div>
@@ -144,7 +144,7 @@
     <select id="字段"></select>
     <label for="字搜">找</label>
     <input type="text" id="字搜" placeholder="原句或改后的句子里含这几个字" autocomplete="off">
-    <span class="状态" id="字情">正在读 data\ui-text.yaml……</span>
+    <span class="状态" id="字情">正在读句子清单 data\ui-text.yaml……</span>
   </div>
   <div class="行">
     <span style="flex:1"></span>
@@ -152,7 +152,7 @@
     <button id="字存">保存这些句子</button>
     <button id="字预">预览改动</button>
     <button id="字落" class="主">写进源码</button>
-    <button id="字重">重新生成产物</button>
+    <button id="字重">重新生成页面</button>
     <label class="筛"><input type="checkbox" id="字筛"><span id="字筛标">只看改过的</span></label>
   </div>
   <div class="提示" id="字数"></div>
@@ -176,7 +176,7 @@ async function 问(){
   const 脏 = 问不出 ? '<b class="坏">盘上问不出（git 叫不动）</b>' : 对.脏 ? '<b class="坏">本地有 ' + 对.脏 + ' 处改动还没提交</b>' : '本地改动都提交完了';
   取('状态').innerHTML = '你这份代码现在在 <b>' + 对.站 + '</b> 这条分支上 · ' + 脏 +
     (对.开着 ? ' · <b class="坏">Flow-Desk 正开着</b>（改完要重开窗口才看得见）' : '') +
-    ' · 这一台只管两样：改界面上的句子、改图标。';
+    ' · 小助手只管两样：改界面上的句子、改图标。';
   跑着 = !!对.在跑;
   跑态();
 }
@@ -239,48 +239,48 @@ function 切页(谁){
 取('t字').onclick = () => 切页('字');
 
 async function 数图(){
-  取('图情').textContent = '正在数 icons 这个文件夹……';
+  取('图情').textContent = '正在数图标文件夹里的图……';
   const 对 = await (await fetch('/api/图标')).json();
   图单 = 对.单 || [];
   const 插件 = 对.插件 || [];
   const 没图 = 对.没图条目 || [];
   const 没进厂 = 对.没进厂 || [];
   取('图情').innerHTML = 对.错 ? '读不到：' + 文(对.错)
-    : 'icons 这个文件夹 ' + 对.张 + ' 张 + 插件包自己那一份 ' + 对.插件张 + ' 张 · 每一张干什么、哪份代码叫它几次，读的是 icons\\索引.txt（那份索引文件里登记的，这一台不另搜一套）'
-      + (对.没登记 && 对.没登记.length ? '<br><b class="坏">索引里没登记这 ' + 对.没登记.length + ' 张：' + 文(对.没登记.join('、')) + '</b> —— 跑一遍「重新对齐一遍」' : '')
-      + (没图.length ? '<br><b class="坏">索引登记了、icons 里却没这张图：' + 没图.length + ' 张</b> —— 下面那几格空位点「放一张进去」就能补上，两处（icons\\ 与出厂）一起落' : '')
-      + (对.插件丢图 && 对.插件丢图.length ? '<br><b class="坏">索引登记了、那一格里还没那张封面：' + 文(对.插件丢图.join('、')) + '</b> —— 卡片上的空位点「放一张封面进去」' : '')
-      + (没图.length || (对.插件丢图 && 对.插件丢图.length) ? '<br><span class="淡">插件包那一张封面住在它自己那一家的 data\\plugins\\&lt;包&gt;\\images\\ 里（一家一仓），主程序仓没有就问隔壁那七家</span>' : '')
-      + (没进厂.length ? '<br><b class="坏">' + 没进厂.length + ' 张和出厂那一格不一样</b>（装到机器上带的是 src\\pack\\icons\\ 那一份）：' +
+    : '图标文件夹 ' + 对.张 + ' 张 + 插件包自己那一份 ' + 对.插件张 + ' 张 · 每一张干什么、哪份代码叫它几次，读的是 icons\\索引.txt（只认这份索引里登记的，小助手不另搜一套）'
+      + (对.没登记 && 对.没登记.length ? '<br><b class="坏">索引里没登记这 ' + 对.没登记.length + ' 张：' + 文(对.没登记.join('、')) + '</b> —— 点上面的「重新生成图标索引」' : '')
+      + (没图.length ? '<br><b class="坏">索引里登记了，可图标文件夹里没这一张：' + 没图.length + ' 张</b> —— 下面那几格空位点「放一张进去」就能补上，图标文件夹和打包用的那一份两处一起写' : '')
+      + (对.插件丢图 && 对.插件丢图.length ? '<br><b class="坏">索引里登记了，可那个文件夹里还没那张封面：' + 文(对.插件丢图.join('、')) + '</b> —— 卡片上的空位点「放一张封面进去」' : '')
+      + (没图.length || (对.插件丢图 && 对.插件丢图.length) ? '<br><span class="淡">插件包那一张封面住在它自己那一家的 data\\plugins\\&lt;包&gt;\\images\\ 里（一家一个仓），主程序这个文件夹里没有就去问隔壁那七家</span>' : '')
+      + (没进厂.length ? '<br><b class="坏">' + 没进厂.length + ' 张和打包用的那一份不一样</b>（装到机器上带的是 src\\pack\\icons\\ 那一份）：' +
           文(没进厂.slice(0, 10).join('、')) + (没进厂.length > 10 ? ' …' : '') : '');
   const 厂钮 = 取('厂全');
   厂钮.hidden = !没进厂.length;
-  厂钮.textContent = '把和出厂不一样的 ' + 没进厂.length + ' 张复制进出厂';
+  厂钮.textContent = '把和打包用的那一份不一样的 ' + 没进厂.length + ' 张，复制过去';
   图上数();
   const 格 = 取('图格'); 格.innerHTML = '';
   const 厂行 = x => x.出厂 === '同'
-    ? '<span class="淡"> 出厂 src\\pack\\icons\\ 已经是这一张（打包带出去的就是它）</span>'
-    : '<button data-厂="' + 编(x.名) + '">复制进出厂</button><span class="淡"> 出厂那一格' +
-      (x.出厂 === '没有' ? '还没有这一张' : '还是老图') + ' —— 装到机器上带的是那一格，不是这里</span>';
+    ? '<span class="淡"> 打包用的那一份 src\\pack\\icons\\ 已经是这一张（装到机器上带的就是它）</span>'
+    : '<button data-厂="' + 编(x.名) + '">复制过去</button><span class="淡"> 打包用的那一份 src\\pack\\icons\\' +
+      (x.出厂 === '没有' ? '还没有这一张' : '还是老图') + ' —— 装到机器上带的是那一份，不是这里</span>';
   const 张 = (x, 图路, 通用) => {
     const 动 = 动过.get(x.名);
     if(只看动过 && !动) return;
     const 盒 = document.createElement('div');
     盒.className = '笔' + (动 ? ' 动' : '') + (x.在不在 === false ? ' 停' : '');
     盒.innerHTML = '<div class="名">' + 文(x.键) + '</div>' +
-      '<div class="副">' + 文(x.名) + ' · ' + 文(x.层) + (x.大 >= 0 ? ' · ' + x.大.toLocaleString() + ' 字节' : ' · 那一格里还没有这一张') +
-      (x.出自 ? ' · 在 ' + 文(x.出自) + ' 那一棵' : '') + (x.段 ? ' · ' + 文(x.段) : '') + '</div>' +
+      '<div class="副">' + 文(x.名) + ' · ' + 文(x.层) + (x.大 >= 0 ? ' · ' + x.大.toLocaleString() + ' 字节' : ' · 这个文件夹里还没有这一张') +
+      (x.出自 ? ' · 在 ' + 文(x.出自) + ' 这个仓里' : '') + (x.段 ? ' · ' + 文(x.段) : '') + '</div>' +
       /* 动过的带一个时间戳：地址不换的话浏览器那一层照旧给你旧图（路由回的是 no-store，img 那层缓存照吃）*/
       (x.大 >= 0 ? '<div class="图预览"><img src="' + 图路 + (动 ? '&t=' + 动.时 : '') + '" alt="' + 编(x.键) + ' 读不出图"></div>'
         : '<div class="图预览"><div class="占位">还没有图</div></div>') +
-      (动 ? '<div class="项"><b class="好">这一张你刚' + 动.做 + '过</b><span class="淡"> · ' + new Date(动.时).toLocaleTimeString('zh-CN', { hour12:false }) + ' · 要记进图标索引点「重新对齐一遍」</span></div>' : '') +
+      (动 ? '<div class="项"><b class="好">这一张你刚' + 动.做 + '过</b><span class="淡"> · ' + new Date(动.时).toLocaleTimeString('zh-CN', { hour12:false }) + ' · 要记进图标索引，点上面「重新生成图标索引」</span></div>' : '') +
       (x.说 ? '<div class="项">' + 文(x.说) + '</div>'
-        : x.登记 === false ? '<div class="项"><b class="坏">图标索引里还没有这一张</b>：点上面「重新对齐一遍」把它记上</div>'
+        : x.登记 === false ? '<div class="项"><b class="坏">图标索引里还没有这一张</b>：点上面「重新生成图标索引」把它记上</div>'
         : '<div class="项"><b class="坏">图标索引里这一张没写它是干什么的</b>：那句说明住在 src\\_build\\ico-index.mjs 那张表里，要补得改那一处（小助手不替你编）</div>') +
       (x.引用 ? '<div class="项"><span>引用 </span>' + 文(x.引用) + '</div>' : '') +
       (通用 ? '<div class="项"><button data-换="' + 编(x.名) + '">换这张</button> <button data-删="' + 编(x.名) + '">删这张</button>' + 厂行(x) + '</div>'
             : x.在不在 === false ? '<div class="项"><button data-补包="' + 编(x.包) + '" data-补档="' + 编(x.档) + '">放一张封面进去</button>' +
-              '<span class="淡"> 新建在 ' + 文(x.全) + '（索引登记了这一张，那一格里还没有；同名不给改）</span></div>'
+              '<span class="淡"> 新建在 ' + 文(x.全) + '（索引登记了这一张，这个文件夹里还没有；同名不给改）</span></div>'
             : '<div class="项"><button data-换包="' + 编(x.包) + '" data-换档="' + 编(x.档) + '">换这张</button>' +
               '<span class="淡"> 同名盖进 ' + 文(x.全) + '（只认 .' + 编((String(x.档).split('.').pop() || 'svg').toLowerCase()) + '，这一张的文件名写在它的插件清单与那份索引上，不给改名也不给删）</span></div>');
     格.appendChild(盒);
@@ -296,7 +296,7 @@ async function 数图(){
       '<div class="图预览"><div class="占位">还没有图</div></div>' +
       (动 ? '<div class="项"><b class="好">这一张你刚' + 动.做 + '过</b></div>' : '') +
       '<div class="项"><button data-补="' + 编(x.补) + '">放一张进去</button>' +
-      '<span class="淡"> 同名写进 icons\\ 与出厂 src\\pack\\icons\\ 两处</span></div>' +
+      '<span class="淡"> 同名写进两处：图标文件夹 与 打包用的那一份 src\\pack\\icons\\</span></div>' +
       (x.说 ? '<div class="项">' + 文(x.说) + '</div>' : '') +
       (x.引用 ? '<div class="项"><span>引用 </span>' + 文(x.引用) + '</div>' : '');
     格.appendChild(盒);
@@ -309,11 +309,11 @@ function 读成64(档){ return new Promise(成 => { const r = new FileReader(); 
    一整柜缩略图全是同一个图标，看不出哪张是哪张）。点一下把这一张挂成「待挑」，到下面图标柜里点中一张就落下去。 */
 let 挑 = null;
 function 挑说(){
-  const 去 = !挑 ? '' : 挑.类 === '换包' ? (挑.补 ? '给 <b>' + 编(挑.包) + '</b> 那一包放一张封面'
+  const 去 = !挑 ? '' : 挑.类 === '换包' ? (挑.补 ? '给 <b>' + 编(挑.包) + '</b> 这一家放一张封面'
               : '换掉 <b>' + 编(挑.包 + '\\' + 挑.档) + '</b>')
-      : 挑.类 === '加' ? (挑.补 ? '放进 <b>' + 编(挑.名) + '</b> 那一格（icons\\ 与出厂两处）' : '添进 icons 这一格')
-      : '换掉 <b>' + 编(挑.名) + '</b>（icons\\ 与出厂两处一起换）';
-  取('挑话').innerHTML = 挑 ? '正在挑图 · 到左边图标柜里点一张' + 去 + '　<button id="挑放">不挑了</button>' : '';
+      : 挑.类 === '加' ? (挑.补 ? '放进 <b>' + 编(挑.名) + '</b>（图标文件夹与打包用的那一份两处）' : '添进图标文件夹')
+      : '换掉 <b>' + 编(挑.名) + '</b>（图标文件夹与打包用的那一份两处一起换）';
+  取('挑话').innerHTML = 挑 ? '正在挑图 · 到左边那个图标列表里点一张' + 去 + '　<button id="挑放">不挑了</button>' : '';
   const 放 = 取('挑放'); if(放) 放.onclick = () => { 挑 = null; 挑说(); };
 }
 取('图格').addEventListener('click', e => {
@@ -324,8 +324,8 @@ function 挑说(){
   if(d['换包']){ 挑 = { 类:'换包', 包: d['换包'], 档: d['换档'] }; 挑说(); 柜开口(); return; }
   if(d['补包']){ 挑 = { 类:'换包', 补:true, 包: d['补包'], 档: d['补档'] }; 挑说(); 柜开口(); return; }
   if(d['补']){ 挑 = { 类:'加', 补:true, 名: d['补'] }; 挑说(); 柜开口(); return; }
-  if(d['厂']){ 进厂([d['厂']], '把 ' + d['厂'] + ' 复制进出厂'); return; }
-  if(d['删']){ if(confirm('删掉 icons\\' + d['删'] + ' 这一张？索引上说没有代码在叫它才让删（有叫它的话会拒）。\n\n注意：只删 icons\\ 那一层，出厂 src\\pack\\icons\\ 那一份不动。')) 发图('删', d['删']); }
+  if(d['厂']){ 进厂([d['厂']], '把 ' + d['厂'] + ' 复制到打包用的那一份'); return; }
+  if(d['删']){ if(confirm('删掉图标文件夹里 ' + d['删'] + ' 这一张？索引上说没有代码在叫它才让删（有代码在叫它就会拒）。\n\n注意：只删图标文件夹这一处，打包用的那一份 src\\pack\\icons\\ 不动。')) 发图('删', d['删']); }
 });
 /* 挑中一张之后落下去：换 / 换包 / 加 三种去向，走的还是那两条老通道（后端那五把守门一道不少）。
    待挑那一手带了固定名字的（占位符那两张卡）以它为准，不让「加一张图」那一栏里剩着的名字把落点换了。 */
@@ -345,19 +345,19 @@ async function 发图(哪道, 名, 字64){
   if(回.ok){
     const 对 = JSON.parse(文2);
     if(哪道 === '删'){
-      取('图果').innerHTML = '<b>删掉了：</b>' + 文(名) + ' · 只删 icons\\ 那一层，出厂 src\\pack\\icons\\ 那一份不动';
+      取('图果').innerHTML = '<b>删掉了：</b>' + 文(名) + ' · 只删图标文件夹这一处，打包用的那一份 src\\pack\\icons\\ 不动';
       记一笔(名, 哪道); 图单 = []; 数图(); return;
     }
     const 厂 = 对.出厂 || {};
-    取('图果').innerHTML = '<b>' + 哪道 + '完了：</b>' + 文(名) + ' · ' + 文(厂.好 ? 'icons\\ 与出厂 src\\pack\\icons\\ 两处都换了这一张（打包带的就是它）' : 'icons\\ 换了')
-      + (厂.好 ? '' : '<b class="坏"> —— 但出厂那一格没写进去：' + 文(厂.错 || '不知道哪一步砸的') + '</b>')
-      + ' · 要记进图标索引，再点「重新对齐一遍」';
+    取('图果').innerHTML = '<b>' + 哪道 + '完了：</b>' + 文(名) + ' · ' + 文(厂.好 ? '图标文件夹与打包用的那一份 src\\pack\\icons\\ 两处都换了这一张（装到机器上带的就是它）' : '图标文件夹换了')
+      + (厂.好 ? '' : '<b class="坏"> —— 但打包用的那一份没写进去：' + 文(厂.错 || '不知道哪一步砸的') + '</b>')
+      + ' · 要记进图标索引，再点上面「重新生成图标索引」';
     记一笔(名, 哪道); 图单 = []; 数图();
     return;
   }
   取('图果').innerHTML = '<b class="坏">' + 文(文2) + '</b>';
 }
-/* 复制进出厂（他 2026-10-17 那句「保存呢？改的图标要复制替换程序内原版图标的保存呢」）：
+/* 复制到打包用的那一份（他 2026-10-17 那句「保存呢？改的图标要复制替换程序内原版图标的保存呢」）：
    换 / 加 那两道自己已经带着复制了，这一颗管的是他在资源管理器里直接换掉的那几张。 */
 async function 进厂(单, 话){
   取('图果').textContent = 话 + '……';
@@ -366,14 +366,14 @@ async function 进厂(单, 话){
   const 信 = await 回.text();
   if(!回.ok){ 取('图果').innerHTML = '<b class="坏">' + 文(信) + '</b>'; return; }
   const 对 = JSON.parse(信);
-  取('图果').innerHTML = '<b>出厂那一格已经和 icons\\ 一样了 ' + 对.成.length + ' 张</b>（src\\pack\\icons\\ 那一份就是装到机器上带的）'
+  取('图果').innerHTML = '<b>打包用的那一份已经和图标文件夹一样了 ' + 对.成.length + ' 张</b>（src\\pack\\icons\\ 那一份就是装到机器上带的）'
     + (对.坏.length ? ' · <b class="坏">没写进去 ' + 对.坏.length + ' 张：' + 文(对.坏.join('；')) + '</b>' : '');
   图单 = []; 数图();
 }
 /* 插件包那一格的封面：挑一张同名盖进它自己那一格（后缀由那颗按钮上的 accept 限死，后端再拦一道）。
    一家一仓之后那一张住在它自己那一家的仓里，落点与仓名由后端报回来 —— 那一格就是这一家的原版。 */
 async function 发插件封面(包, 档, 字64){
-  取('图果').textContent = '正在把这一张盖进 ' + 包 + ' 那一包…';
+  取('图果').textContent = '正在把这一张盖进 ' + 包 + ' 这一家…';
   const 回 = await fetch('/api/图标/换', { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 },
     body: JSON.stringify({ 包, 档, 图:字64 }) });
   const 信 = await 回.text();
@@ -394,14 +394,14 @@ function 柜开口(){
 }
 async function 柜列(){
   const 路 = 取('柜路').value.trim();
-  if(!路){ 取('图果').innerHTML = '<b class="坏">先写一格</b>：图标柜那一栏填一个放图的文件夹（上一次那一格这台自己记着）'; return; }
-  取('图果').textContent = '正在数这一格……';
+  if(!路){ 取('图果').innerHTML = '<b class="坏">先填一个文件夹</b>：在上面「图标文件夹」那一栏写一个放图的文件夹（上一次填的，小助手自己记着）'; return; }
+  取('图果').textContent = '正在数这个文件夹里的图……';
   const 对 = await (await fetch('/api/图柜?路=' + encodeURIComponent(路))).json();
   if(对.错){ 柜单 = []; 柜画(); 取('图果').innerHTML = '<b class="坏">' + 文(对.错) + '</b>'; return; }
   柜单 = 对.单 || []; 柜根 = 对.根;
   try{ localStorage.setItem(柜存, 路); }catch(e){}
-  取('图果').innerHTML = '<b>' + 文(对.根) + '</b> · 这一格 ' + 对.张 + ' 张图，全摆出来了，点一张就用'
-    + (对.全 === false ? '（这一格实在太大，只数到 ' + 对.张 + ' 张 · 用「找」那一格缩小范围）' : '');
+  取('图果').innerHTML = '<b>' + 文(对.根) + '</b> · 这个文件夹里 ' + 对.张 + ' 张图，全摆出来了，点一张就用'
+    + (对.全 === false ? '（这个文件夹实在太大，只数到 ' + 对.张 + ' 张 · 用「找」那一栏缩小范围）' : '');
   柜画();
 }
 function 柜画(){
@@ -414,8 +414,8 @@ function 柜画(){
   格.innerHTML = 单.map(x => '<button class="柜格" data-相="' + 编(x.相) + '" title="' + 编(x.相) + ' · ' + x.大.toLocaleString() + ' 字节">'
       + '<img loading="lazy" decoding="async" src="/api/图柜/一张?路=' + encodeURIComponent(柜根) + '&相=' + encodeURIComponent(x.相) + '" alt="">'
       + '<span>' + 文(x.相) + '</span></button>').join('')
-    + (单.length ? '<div class="提示 柜脚">这一筛 ' + 单.length + ' 张，全摆出来了（图滚到哪儿读到哪儿）</div>'
-      : (柜单.length ? '<div class="提示">这一格里没有名字含这几个字的图</div>' : ''));
+    + (单.length ? '<div class="提示 柜脚">按这几个字筛出 ' + 单.length + ' 张，一次全摆出来了（图滚到哪儿读到哪儿）</div>'
+      : (柜单.length ? '<div class="提示">这个文件夹里没有名字含这几个字的图</div>' : ''));
   格.hidden = !单.length && !柜单.length;
 }
 取('柜列').onclick = 柜列;
@@ -455,13 +455,13 @@ const 图名 = n => String(n || '').replace(/^.*[\\/]/, '').replace(/\s+/g, '-')
 }
 取('加柜').onclick = () => { 挑 = { 类:'加' }; 挑说(); 柜开口(); };
 取('图重').onclick = () => { 图单 = []; 数图(); };
-取('图对').onclick = () => 跑('图标/对齐', '重新对齐图标索引');
-/* 一次把不一致的那几张全复制进出厂（换 / 加 那两道自己已经带着复制，这里管的是他在别处直接动过的那几张） */
+取('图对').onclick = () => 跑('图标/对齐', '重新生成图标索引');
+/* 一次把不一致的那几张全复制到打包用的那一份（换 / 加 那两道自己已经带着复制，这里管的是他在别处直接动过的那几张） */
 取('厂全').onclick = () => {
   const 单 = 图单.filter(x => x.出厂 !== '同').map(x => x.名);
-  if(!单.length){ 取('图果').textContent = 'icons\\ 里每一张都和出厂那一格一样，没什么要复制的。'; return; }
-  if(confirm('把 ' + 单.length + ' 张从 icons\\ 原样复制进出厂 src\\pack\\icons\\？\n\n出厂那一格是装到机器上带的那一份：同名盖掉它，icons\\ 这一层一个字不动。'))
-    进厂(单, '把 ' + 单.length + ' 张复制进出厂');
+  if(!单.length){ 取('图果').textContent = '图标文件夹里每一张都和打包用的那一份一样，没什么要复制的。'; return; }
+  if(confirm('把 ' + 单.length + ' 张从图标文件夹原样复制到打包用的那一份 src\\pack\\icons\\？\n\n打包用的那一份是装到机器上带的：同名盖掉它，图标文件夹这一个字不动。'))
+    进厂(单, '把 ' + 单.length + ' 张复制到打包用的那一份');
 };
 取('图筛').onchange = e => { 只看动过 = !!e.target.checked; 图单 = []; 数图(); };
 
@@ -498,7 +498,8 @@ async function 字读(){
   if(对.错){ 取('字情').innerHTML = '<b class="坏">' + 文(对.错) + '</b> —— 先点「刷新清单」生成它'; return; }
   字条 = 对.条;
   取('字段').innerHTML = 对.段.map(s => '<option' + (s === 取('字段').value ? ' selected' : '') + '>' + 编(s) + '</option>').join('');
-  取('字情').textContent = '清单 ' + 对.段.length + ' 页 / ' + 对.字条 + ' 条 · 填了先点「保存这些句子」写进 data\\ui-text.yaml，预览与写进源码都以这个文件为准';
+  取('字情').textContent = '清单 ' + 对.段.length + ' 页 / ' + 对.字条 + ' 条 · 填了先点「保存这些句子」写进 data\\ui-text.yaml，预览与写进源码都以这个文件为准'
+    + ' · 插件那几家的句子一起在内，改完写回它自己那个仓（隔壁那几个仓：' + ((对.邻居 || []).join('、') || '这台没找到') + '）';
   字数();
   字画();
 }
@@ -540,7 +541,7 @@ function 字集(){
   const 回 = await fetch('/api/文字/存', { method:'POST', headers:{ 'content-type':'application/json','x-push-code':码 }, body: JSON.stringify({ 改 }) });
   const 回文 = await 回.text();
   if(!回.ok){ 取('字果').innerHTML = '<b class="坏">' + 文(回文) + '</b>'; return; }
-  取('字果').textContent = '写进 data\\ui-text.yaml 了：' + JSON.parse(回文).动了 + ' 句。要让它上到界面上，还得「预览改动」→「写进源码」→「重新生成产物」。';
+  取('字果').textContent = '写进 data\\ui-text.yaml 了：' + JSON.parse(回文).动了 + ' 句。要让它上到界面上，还得「预览改动」→「写进源码」→「重新生成页面」。';
   字读();
 };
 async function 字走(哪道, 话){
@@ -554,12 +555,13 @@ async function 字走(哪道, 话){
   取('字果').innerHTML = (对.落 ? '<b>已经写进源码 ' + 对.写了.length + ' 份文件</b> · ' : '预览（一个字没写）· ')
     + '清单里填了 ' + 对.递 + ' 句 · ' + (对.落 ? '写掉了' : '对得上位置、要改') + ' ' + 对.成.length + ' 句（' + 落点.length + ' 处）'
     + (对.对不上.length ? ' · <b class="坏">对不上 ' + 对.对不上.length + ' 句</b>（清单里那一句原话在当前源码里一处都认不到，多半是那句已经被别处改过：先点「刷新清单」再看）' : '')
-    + (对.落 && 对.成.length ? '<br>落点：' + 文(落点.slice(0, 12).join('、')) + (落点.length > 12 ? ' …（共 ' + 落点.length + ' 处）' : '')
-        + '<br><b>界面上这会儿还没变</b>：改的是源码，得再点一次「重新生成产物」（' + 文((对.重跑 || []).join(' → ')) + '），重开窗口才看得见。' : '');
+    + (对.落 && 对.成.length ? '<br>落点：' + 文(落点.join('、'))
+        + '<br>写进了这些文件（隔壁那几个仓里的写成「仓名/路径」）：' + 文((对.写了 || []).join('、') || '一份没有')
+        + '<br><b>界面上这会儿还没变</b>：改的是源码，得再点一次「重新生成页面」（' + 文((对.重跑 || []).join(' → ')) + '），重开窗口才看得见。' : '');
 }
 取('字预').onclick = () => 字走('预览', '预览改动');
-取('字落').onclick = () => { if(confirm('要把清单里填了的句子写进源码那几份文件？\n\n源码会被改（改完点「重新生成产物」才上到界面上）；这一趟不动 pages\\ 里那一张已经生成的页面。')) 字走('落', '写进源码'); };
-取('字重').onclick = () => 跑('文字/重生成', '重新生成产物');
+取('字落').onclick = () => { if(confirm('要把清单里填了的句子写进源码那几份文件？\n\n源码会被改（改完点「重新生成页面」才上到界面上）；这一趟不动 pages\\ 里那一张已经生成的页面。')) 字走('落', '写进源码'); };
+取('字重').onclick = () => 跑('文字/重生成', '重新生成页面');
 
 try{ 取('柜路').value = localStorage.getItem('fd图标柜那一格') || ''; }catch(e){}
 问();

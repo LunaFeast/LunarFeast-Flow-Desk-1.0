@@ -81,6 +81,25 @@ const 夹注释报 = bads.filter(b => /sh-e1 q/.test(b)).join(' ｜ ');
 ok('E · 两条规则夹一段注释时，行号指到选择器那一行',
   /sh-doc\.js:2、src\/_shared\/sh-doc\.js:5/.test(夹注释报), 夹注释报 || '没报');
 
+/* ---- 2026-10-18 09:41 那一崩钉在这里：屏顶红字「启动整趟：additem is not defined」。
+   样式那一段是模板字符串（fd3-shell.js 里 h('style',{html:` … `})），注释里用反引号去框类名，
+   等于把字符串从中间截断 —— 后半截 CSS 被当成代码跑，整页启动崩掉、桌面全空、图标全没。
+   语法检查抓不到它（截断后仍是合法 JS），只有这一道抓得到。 ---- */
+const 壳 = rd('src/_fd/src/fd3-shell.js');
+const 允许的插值 = new Set(['FF_BASE_FD']);   /* 现量：整段里只有这一处往样式串里塞变量 */
+const 开 = 壳.indexOf("h('style', { html:`"), 关 = 壳.indexOf('\n` }));', 开);
+const 段 = 壳.slice(开, 关);
+ok('样式那一段模板字符串的两颗定界反引号都找得着（找不到就是写法变了，这道闸要看住的东西也变了）',
+  开 >= 0 && 关 > 开, '开 ' + 开 + ' · 止 ' + 关);
+ok('样式那一段里不许再出现第三颗反引号（注释里框类名一律用「」）—— 一颗就把字符串截断、整页崩',
+  (段.match(/`/g) || []).length === 1, '整段扫到 ' + (段.match(/`/g) || []).length + ' 颗（开头那颗定界算一颗）：' +
+    段.split('\n').filter(l => l.includes('`')).map(l => l.trim().slice(0, 60)).join(' ⏎ '));
+ok('样式那一段里每一处 ${ 都在白名单里（往字符串里塞变量只准这几颗）',
+  (段.match(/\$\{[A-Za-z_$][\w$]*/g) || []).every(m => 允许的插值.has(m.slice(2))),
+  (段.match(/\$\{[A-Za-z_$][\w$]*/g) || []).map(m => m.slice(2)).join('、') || '一处 ${ 都没有');
+ok('反证：把一颗反引号塞回注释里，这道闸立刻叫（判法不是空的）',
+  ((段 + '\n   测 `.fd-x` 一下\n').match(/`/g) || []).length > 1);
+
 let pass = 0;
 for(const r of out){ console.log((r.p ? 'PASS ' : 'FAIL ') + r.n + (r.note ? '  ｜ ' + r.note : '')); if(r.p) pass++; }
 console.log('—— ' + pass + ' / ' + out.length + ' 条过');

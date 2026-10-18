@@ -506,7 +506,7 @@ const PackLoader = {
    webTitle（这一颗是出网的，插件要网得走明面的口径）、外加 setCloseChoice / systemMing / winState /
    onRebuild 那两颗 / onIcons。判据只有一条：这一颗是不是「宿主自己的事」—— 是就进地板。
    ============================================================ */
-const APP_DENY = ['packList', 'packSet', 'packFile', 'packImport', 'packWipe', 'rebuild',
+const APP_DENY = ['packList', 'packSet', 'packFile', 'packImport', 'packWipe', 'packUpdates', 'packUpdate', 'rebuild',
   'onRebuildDone', 'onRebuildStep',
   'compRead', 'compWrite', 'compDelete', 'boxInspect', 'boxVerify',
   'readPageFile', 'writePageFile', 'writePageBytes', 'appendPageFile', 'pageFileExists',

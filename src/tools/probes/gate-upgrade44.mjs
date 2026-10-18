@@ -5,8 +5,8 @@
    钉的是这几件事，不是钉实现细节：
      ① 目标那一棵已经在了不再拒绝（从前那句「升级别用这一个」是这条链的断口）
      ② 动手之前先问「那一棵开着没有」，开着就一个字节不动
-     ③ 旧的先去 update\backups\<时间戳>\：resources\app\ 整层挪、别的一个文件一份，
-        pages\ 不许整层挪（那一格同时是他放文稿的地方）
+     ③ 不留旧版本备份（他 2026-10-17 撤的）：先摊新的，再清 src\ 那一层里这一包没带的散文件，
+        pages\ 只覆盖包里带的（那一格同时是他放文稿的地方）
      ④ data\ 一个字节不碰 —— 靠 publish 那道「包里不许有 data\」的硬闸 + 这一颗只做两件事：挪走和摊开
      ⑤ 编译得过（这一颗是 Windows 自带的 csc 现编的，编不过就没有首装包）
    往探针工区（src\tools\本地路径.cjs 里那颗「工区」）编一颗检查用的壳，仓里那颗 sfx-stub.exe 不碰，C 盘不留东西。
@@ -28,6 +28,7 @@ const 段 = 名 => {
   return sfx.slice(起, 止 < 0 ? sfx.length : 止 + 8);
 };
 const Install = 段('Install');
+const 清理 = (sfx.match(/static Result Stash\(string dest, Payload pl\)[\s\S]*?\n    \}/) || [''])[0];
 
 台.题('一、已经有的那一棵不再被拒');
 台.判('从前那句「升级别用这一个」已经没了', !sfx.includes('升级别用这一个'));
@@ -40,32 +41,38 @@ const Install = 段('Install');
 台.题('二、那一棵正开着就一个字节都不动');
 台.判('动手前先问一遍能不能写（Busy 这一颗在）', /static string Busy\(string dest, Payload pl\)/.test(sfx));
 台.判('探测的办法是独占打开（FileShare.None），不是猜进程名', /new FileStream\(to, FileMode\.Open, FileAccess\.Write, FileShare\.None\)/.test(sfx));
-台.判('开着的时候先返回、不落到挪和摊那两步', Install.indexOf('Busy(dest, pl)') < Install.indexOf('Stash(dest, pl, back)'));
+台.判('开着的时候先返回、不落到摊和清那两步', Install.indexOf('Busy(dest, pl)') < Install.indexOf('Stash(dest, pl)'));
 台.判('开着这一条给的是单独的码 7（不是"出了岔子"那个 4）', /j\.Code = 7;/.test(Install));
 台.判('码 7 不关窗口，让他退了再点一次', /if\(code != 7\)/.test(sfx));
 台.判('码 7 那一趟把三颗控件放开（不是死窗口）', /d\.Go\.Enabled = true; d\.Pick\.Enabled = true; d\.Box\.Enabled = true;/.test(sfx));
 台.判('话里说明白「一个字节都还没动」（这一句拆成了三小句住在顶上那一格，装那一趟取的还是它们）',
   Install.includes('UiBusyQuit') && /UiBusyHead\s*=\s*"这一棵正在开着，先别动它："/.test(sfx) && sfx.includes('一个字节都还没动'));
 
-台.题('三、旧的先去备份，落点和程序里「关于」列的那一格是同一处');
-台.判('备份落在 update\\backups\\<时间戳>（覆盖升级写这一格，关于那一屏读同一格）', /Path\.Combine\(dest, "update"\)/.test(Install) && /"backups"/.test(sfx));
-台.判('时间戳是四位年两位月日 - 时分秒（这一颗起的名字要能顺着排进关于那一列）', /ToString\("yyyyMMdd-HHmmss"\)/.test(sfx));
-台.判('程序里那一屏列备份是按名字排的（点开头的不要，排一遍再倒过来，只报最近那五格）',
-  /列\.sort\(\);\s*列\.reverse\(\);/.test(rd('src/_tauri/src/core/about_info.rs'))
-  && rd('src/_tauri/src/core/about_info.rs').includes('!n.starts_with(\'.\')')
-  && rd('src/_tauri/src/core/about_info.rs').includes('take(5)'));
-台.判('整层挪只有 resources\\app\\ 这一处（Directory.Move 全文就一次）', (sfx.match(/Directory\.Move/g) || []).length === 1, (sfx.match(/Directory\.Move/g) || []).length);
-台.判('那一处整层挪的是 src\\ 那一层（程序自己的源码），不是页面层', /Directory\.Move\(srcLayer, to\)/.test(sfx));
-台.判('pages\\ 不做整层挪（源码里 pages 和 Directory.Move 不沾边）', !/Directory\.Move\([^)]*pages/i.test(sfx));
-台.判('别的是一个一个文件挪（File.Move 在逐条目那一段里）', /File\.Move\(from, to\)/.test(sfx));
-台.判('整层挪过的那些不再重复挪（跳过 src/ 前缀）', /it\.Name\.StartsWith\("src\/"\)/.test(sfx));
-台.判('挪不动就停下报是哪一份，已挪的把落点报出来（那一句现在住在顶上那一格，装这一趟两条路都取它）',
-  /旧的 " \+ it\.Name \+ " 挪不动/.test(sfx) && Install.includes('UiOldAllIn') &&
-  (sfx.match(/UiOldAllIn/g) || []).length >= 3 && sfx.includes('已经挪走的旧文件都在'));
+台.题('三、不留旧版本备份（他 2026-10-17 撤的：数据本来就能导出导入，想用旧版就装旧版再导回去）');
+台.判('全文没有 update\\backups 那一路：不建那一格、不往那一格写，起时间戳那颗也一起撤了',
+  !/backups/.test(sfx) && !/Stamp\(\)/.test(sfx) && !/Directory\.Move/.test(sfx));
+台.判('次序钉死：先 Extract 摊新的，清旧的一定向后（没有备份可退，倒了就是先把源码删了再摊）',
+  Install.indexOf('Extract(self, pl, dest') < Install.indexOf('Stash(dest, pl)'), Install.slice(0, 0) + 'Extract → Stash');
+台.判('清的就是 src\\ 那一层里"这一包没带"的那几份（带着的一份不删、清完把份数报进成功那一句）',
+  清理.length > 100 && /StartsWith\("src\/"\)/.test(清理) && /带\.Contains\(f\)/.test(清理) &&
+  /File\.Delete\(f\)/.test(清理) && /r\.Files\+\+/.test(清理), 清理.length + ' 字');
+台.判('删除只可能落在 dest\\src 那一层底下（整颗只认那一个根，data\\ 与 pages\\ 一个字都删不到）',
+  /string 层 = Path\.Combine\(dest, "src"\)/.test(清理) &&
+  (sfx.match(/File\.Delete/g) || []).length === 1 && (sfx.match(/Directory\.Delete/g) || []).length === 1 &&
+  !/Delete\([^)]*"data"/.test(sfx) && !/Delete\([^)]*pages/i.test(sfx),
+  'File.Delete ' + (sfx.match(/File\.Delete/g) || []).length + ' · Directory.Delete ' + (sfx.match(/Directory\.Delete/g) || []).length);
+台.判('空掉的那一层从最里往外删（先长后短排，不然先动的是删不掉的父格）', /b\.Length\.CompareTo\(a\.Length\)/.test(清理));
+台.判('清不动不算装失败，但那一句要摆到话里（不许悄悄少清）',
+  /if\(s\.Error != null\) 清不动 = s\.Error/.test(Install) && Install.includes('UiStuckOld') && sfx.includes('没清掉'));
+台.判('摊到一半砸了那一句不再提"挪回去就还是上一版"（没有备份可挪了），报的是这一棵删掉重装',
+  !/UiOldAllIn|UiPutBack|挪回去/.test(sfx) && Install.includes('UiDeleteRetry'));
 
 台.题('四、data\\ 不碰这件事靠什么成立');
 台.判('publish 那道「包里不许有 data\\」的硬闸还在', pub.includes('首装那棵树里出现了数据层的格子'));
-台.判('这一颗只有两种落子：挪走和摊开（没有删除那一手）', !/File\.Delete|Directory\.Delete/.test(sfx), (sfx.match(/File\.Delete|Directory\.Delete/g) || []).length);
+台.判('这一颗只有三种落子：摊开、删 src\\ 里这一包没带的那几份、删空掉的层格（data\\ 底下永远轮不到）',
+  (sfx.match(/File\.Delete/g) || []).length === 1 && (sfx.match(/Directory\.Delete/g) || []).length === 1 &&
+  !/File\.Delete[^]*"data/.test(sfx.slice(0, sfx.indexOf('File.Delete') + 400)),
+  'File.Delete ' + (sfx.match(/File\.Delete/g) || []).length + ' · Directory.Delete ' + (sfx.match(/Directory\.Delete/g) || []).length);
 台.判('摊开的目标只从选定的那一棵拼（不写死别的格）', /Path\.Combine\(dest, it\.Name\.Replace\(\'\/\', Path\.DirectorySeparatorChar\)\)/.test(sfx));
 
 台.题('五、闷头那一条道（探针和脚本用的 --quiet）也走同一步');
@@ -94,7 +101,9 @@ if(csc && 工区){
 台.判('首装包的名字带完整号（含 +build.短哈希那一截）；名字那一段只从 setup名() 出（那里面除了可选的档位段就是号）',
   /const setup名 = 号 => 'Flow_Desk_setup_' \+ \(名段 \? 名段 \+ '_' : ''\) \+ 号 \+ '\.exe'/.test(pub) &&
   /setup: \{ file: setup名\(VER\.fd\)/.test(pub) && /path\.join\(OUT_DIR, setup名\(TAG\)\)/.test(pub) && /const TAG = VER\.fd;/.test(pub));
-台.判('安装说明改口成「再双击一颗 exe 就是覆盖升级」，整层挪那一格说的是 src\\', pub.includes('点「覆盖升级」') && pub.includes('src\\\\ 那一层整层挪'));
+台.判('安装说明改口成「再双击一颗 exe 就是覆盖升级」，并且说明不留旧版本备份、清的是 src\\ 那一层',
+  pub.includes('点「覆盖升级」') && pub.includes('不留旧版本备份') && pub.includes('src\\\\ 那一层里这一包没带的散文件') &&
+  !pub.includes('update\\\\backups\\\\<时间戳>'));
 台.判('安装说明里那条挑 zip 装更新的老路已经撤干净（主程序换版只剩 exe 这一颗）', !pub.includes('老路还在') && !pub.includes('本地更新'));
 
 台.收尾();

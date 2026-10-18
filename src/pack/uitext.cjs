@@ -219,22 +219,25 @@ function fnAt(map, line){
 
 /* ---------- 3. 出处：哪个程序的哪一页 ---------- */
 const P_FD = 'Flow-Desk', P_WNW = '为写', P_RP = '声笔输入法练习',
-  P_MAIN = 'Flow-Desk 主进程', P_SH = '共用模块', P_PACK = '功能包', P_WC = '推演组件定制',
+  P_MAIN = 'Flow-Desk 主进程', P_SH = '共用模块', P_PACK = '插件', P_WC = '推演组件定制',
   P_SFX = '首装那一个 exe';
 /* 功能包那几段的名字不在这儿抄第二份：读各包自己那份插件清单（manifest.json 里的 name），
    改名字、装功能、卸功能都跟着真身走。以前这里抄过一份功能包的名字表，包一改名清单上就凭空
    多出一段谁也对不上的旧名字，所以改成读插件清单。 */
 function packNames(TREE){
   const out = {};
-  const dir = 那格(TREE, 'data/plugins').全;
-  let es = [];
-  try{ es = fs.readdirSync(dir, { withFileTypes:true }); }catch(e){ return out; }
-  for(const e of es){
-    if(!e.isDirectory()) continue;
-    try{
-      const m = JSON.parse(fs.readFileSync(path.join(dir, e.name, 'manifest.json'), 'utf8'));
-      if(m && m.name) out[e.name] = String(m.name);
-    }catch(err){}
+  /* 一家一仓之后插件那一格住在隔壁那几棵里，本仓那一格是「空的一格还在」——只问一次就一份也认不到，
+     界面上那一段标题会全挂到主程序底下。每一棵都问一遍，同一家以本仓那一份为准（打包那一棵里两家在同一棵）。 */
+  for(const dir of 每一格(TREE, 'data/plugins')){
+    let es = [];
+    try{ es = fs.readdirSync(dir, { withFileTypes:true }); }catch(e){ continue; }
+    for(const e of es){
+      if(!e.isDirectory() || out[e.name]) continue;
+      try{
+        const m = JSON.parse(fs.readFileSync(path.join(dir, e.name, 'manifest.json'), 'utf8'));
+        if(m && m.name) out[e.name] = String(m.name);
+      }catch(err){}
+    }
   }
   return out;
 }
@@ -656,6 +659,18 @@ function 那格(TREE, 相){
   }
   return { 全: path.join(TREE, ...拆), 根: TREE };
 }
+/* 本仓有这一格、隔壁那几棵也有（或反过来）时，每一棵里的那一格都要拿到：
+   「只问第一处有的」在 data\\plugins 那一个格子上会停在主程序仓那枚**空的**子格子（空壳装出来就这样），
+   于是七家的 main.js 一句都扫不到 —— 现量过：清单 4,842 句全在 src 底下，data/plugins 一份没有（他 2026-10-18 那句「我要插件文字可以一起改」）。 */
+function 每一格(TREE, 相){
+  const 拆 = String(相).split('/').filter(Boolean);
+  const 出 = [];
+  for(const 根 of [TREE, ...邻根]){
+    const 全 = path.join(根, ...拆);
+    if(fs.existsSync(全)) 出.push(全);
+  }
+  return 出;
+}
 function listFiles(TREE){
   const out = [];  const walk = (dir, 根 = TREE) => {
     let es = [];
@@ -669,9 +684,12 @@ function listFiles(TREE){
       }
     }
   };
-  for(const d of ['src/pack', 'src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/_tauri', 'data/plugins']){
+  for(const d of ['src/pack', 'src/_fd', 'src/_wnw', 'src/_shared', 'src/_wcustom', 'src/_tauri']){
     const 格 = 那格(TREE, d); walk(格.全, 格.根);
   }
+  /* 插件那一格每一棵都走一遍（隔壁那几棵里躺着的就是各家的 main.js —— 那些句子正是要给他改的那一批）；
+     rel 按各自那一棵算，同一份名（打包那一棵里插件与主程序同在一棵）以本仓那一份为准，最后 new Set 收一遍 */
+  for(const 格 of 每一格(TREE, 'data/plugins')) walk(格, path.resolve(格).split(path.sep).slice(0, -2).join(path.sep));
   for(const f of ['src/_build/p1.js','src/_build/p2.js','src/_build/p3.js','src/_build/p4.js','src/_build/p5.js','src/_build/p6.js'])
     if(fs.existsSync(那格(TREE, f).全)) out.push(f);
   for(const f of HTML_FILES) if(fs.existsSync(那格(TREE, f).全)) out.push(f);
@@ -787,7 +805,7 @@ const HEAD = [
   '  字里的 {1} {2} 是程序运行时填进去的数字或名字；不想显示那个数，就把它删掉。',
   '  写坏一行只坏那一行：读不懂的那一行程序自己跳过，其余各行照常按这一份显示。',
   '  字里带冒号、井号、引号的那几句，外面会被程序裹上一双引号 —— 那是格式要裹的，改的时候连引号一起改就行。',
-  '  改完想让它变成程序本来就有的一段代码：设置 → 数据 → 界面文字 里点「把改动写进程序」，先给你看改动清单，你确认才落笔。',
+  '  改完想让它变成程序本来就有的一段代码：开发那一台小工具（双击 src\\tools\\text-icon.bat 起的那一屏）里点「预览改动」再看「写进源码」，先给你看改动清单，你确认才落笔。',
   '  写进程序之后，这一份里冒号左边跟着变成新的字，这时候把这一份删掉也不影响程序里的字。',
   '  这一份由程序在每次重新生成页面时刷新，你写在冒号右边的字不会丢。以 # 开头的行是说明，程序读的时候跳过。',
   '  万一某一句在当前源码里认不到了（功能卸了、或者原话改了名字），你给它写的改动不会被顺手清掉 —— 会被挪到这一份最末尾那几段底下，认回来之后再回到原来那一段。'
@@ -1054,24 +1072,43 @@ module.exports = { 设邻居, collectAll, groupsOf, render, parse, plan, apply, 
 if(require.main === module){
   const TREE = treeOf(__dirname);
   const mode = process.argv[2];
-  const { files, occ } = collectAll(TREE);
-  const gs = groupsOf(occ);
-  if(mode === 'stats'){
-    const byProg = new Map(), byPage = new Map();
-    for(const g of gs){
-      byProg.set(g.prog, (byProg.get(g.prog) || 0) + 1);
-      const k = g.prog + ' · ' + g.page;
-      byPage.set(k, (byPage.get(k) || 0) + 1);
+  /* 单跑这一颗（命令行、还有小工具上那颗「刷新清单」）也得覆盖搬走的那几家。
+     从前这一支没递邻居名单（只有 src\_fd\build.mjs 那一趟递），于是它按"只有本仓这一棵"排这本清单 ——
+     2026-10-17 量到：装壳那几句话改完单跑一次，清单从四千多行掉到一千三百多行，七家的句子整段从这本账上没了。
+     名单与生成页面那一趟取的是同一把尺（src\_build\邻居.mjs 的 根列表，去掉本仓那一格）。 */
+  const 跑 = () => {
+    const { files, occ } = collectAll(TREE);
+    const gs = groupsOf(occ);
+    if(mode === 'stats'){
+      const byProg = new Map(), byPage = new Map();
+      for(const g of gs){
+        byProg.set(g.prog, (byProg.get(g.prog) || 0) + 1);
+        const k = g.prog + ' · ' + g.page;
+        byPage.set(k, (byPage.get(k) || 0) + 1);
+      }
+      console.log('扫过文件 ' + files.length + ' 个 · 每一处算一条 ' + occ.length + ' 处 · 合并成清单 ' + gs.length + ' 行');
+      console.log('按程序：');
+      [...byProg.entries()].sort((a, b) => b[1] - a[1]).forEach(([k, v]) => console.log('  ' + String(v).padStart(5) + '  ' + k));
+      console.log('按出处（哪一页几行）：');
+      [...byPage.entries()].sort((a, b) => a[0].localeCompare(b[0], 'zh')).forEach(([k, v]) => console.log('  ' + String(v).padStart(5) + '  ' + k));
+    } else if(mode === 'dump'){
+      console.log(render(gs, []));
+    } else {
+      const r = refresh(TREE);
+      console.log('WROTE ' + r.file + '  清单 ' + r.rows + ' 行（扫到 ' + r.occ + ' 处）· 邻居 ' + (process.env.FD_界面邻居 || 0) + ' 棵');
     }
-    console.log('扫过文件 ' + files.length + ' 个 · 每一处算一条 ' + occ.length + ' 处 · 合并成清单 ' + gs.length + ' 行');
-    console.log('按程序：');
-    [...byProg.entries()].sort((a, b) => b[1] - a[1]).forEach(([k, v]) => console.log('  ' + String(v).padStart(5) + '  ' + k));
-    console.log('按出处（哪一页几行）：');
-    [...byPage.entries()].sort((a, b) => a[0].localeCompare(b[0], 'zh')).forEach(([k, v]) => console.log('  ' + String(v).padStart(5) + '  ' + k));
-  } else if(mode === 'dump'){
-    console.log(render(gs, []));
-  } else {
-    const r = refresh(TREE);
-    console.log('WROTE ' + r.file + '  清单 ' + r.rows + ' 行（扫到 ' + r.occ + ' 处）');
-  }
+  };
+  const 借邻居 = () => {
+    const { pathToFileURL } = require('node:url');
+    return import(pathToFileURL(path.join(TREE, 'src/_build/邻居.mjs')).href).then(邻 => {
+      const 根 = (邻.根列表() || []).slice(1);
+      设邻居(根);
+      process.env.FD_界面邻居 = String(根.length);
+      跑();
+    }, e => {
+      console.log('问不到隔壁那几棵（' + String((e && e.message) || e).split(/\r?\n/)[0] + '）—— 这一本清单只按本仓这一棵排，七家的句子这趟进不来');
+      process.exitCode = 1;
+    });
+  };
+  借邻居();
 }

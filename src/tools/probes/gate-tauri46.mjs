@@ -166,11 +166,50 @@ const 动作 = [...new Set([...顶栏.matchAll(/winCtl\('([A-Za-z]+)'\)/g)].map(
   const 建窗数 = 每一份.reduce((n, x) => n + (x.文.match(/WebviewWindowBuilder::new/g) || []).length, 0);
   台.判('建窗那一句带 .decorations(false)（系统那一圈撤掉，页面上那一行才是唯一那一行）',
     建窗.includes('.decorations(false)'));
+  /* ---- 2026-10-18 08:18 他接着问的第二层：标题栏是没了，窗口外面还箍着一圈灰带、左上角那道是它的接缝。
+     根不在样式位上：tao 的 decoration_shadow 默认 true（platform_impl/windows/mod.rs:56），
+     开着时 WM_NCCALCSIZE 把客户区往里让一圈给系统那道投影腾地方，让出来的那一条就是灰带。
+     页自己有四档外观与影子，不需要系统再垫一层 —— 钉住 .shadow(false)，也不许别处再开回去。 ---- */
+  台.判('建窗那一句带 .shadow(false)（灰带是影子那一档让出来的一圈客户区，不是标题栏）',
+    建窗.includes('.shadow(false)'));
+  台.判('全仓没有第二处把影子开回去（.shadow(true) 一处都不许有）',
+    !每一份.some(x => /\.shadow\(\s*true/.test(x.文)));
   台.判('全仓没有任何一处再把那一圈打开（.decorations(true) 与 set_decorations(true) 一处都不许有）',
     再开.length === 0, 再开.map(x => x.p).join('、'));
   台.判('建窗只有一颗（label "main"）、配置那一头 app.windows 是空的 —— 第二颗带边框的窗口生不出来',
     建窗数 === 1 && /WebviewWindowBuilder::new\([^,]+,\s*"main"/.test(建窗) &&
     Array.isArray(配置.app.windows) && 配置.app.windows.length === 0, '建窗 ' + 建窗数 + ' 颗 · 配置 ' + JSON.stringify(配置.app.windows));
+  /* ---- issue #62 第三次报同一件（「这不是双层窗口是什么？两层最小化、最大化/还原、关闭」）。
+     这一轮读了 tao 0.37.1 的源码才动手：window_state.rs 的 to_window_styles() 无条件写 WS_CAPTION | WS_SYSMENU，
+     decorations(false) 只是让 wry/tao 自己接住 WM_NCCALCSIZE 报零，把非客户区压成零高 —— 样式位一直都在，
+     窗口一卡住不抽消息（他那张截图标题栏上写着「Flow-Desk (未响应)」）、系统一重画非客户区，那一圈就原样回来。
+     所以钉的是样式位本身：建好窗口当场把 WS_CAPTION 那一位摘掉，四条会补回来的路各摘一次，
+     并把摘前摘后的样式位读回来写进运行日志 —— 下一次再有两层，日志里那一句就是凭据，不用再来回猜哪一枚包。 ---- */
+  台.判('建好窗口当场就撤一次（不再只靠建那一句 decorations(false)，也不留"读回来是已撤/还在"那种含糊话）',
+    建窗.includes('crate::tauri_bind::win_cmds::就地撤(&窗, "建好窗口");'));
+  /* 2026-10-18 08:26 翻过一次的车钉在这里：那一度把 WS_CAPTION 从 GWL_STYLE 上摘掉，
+     标题栏确实画不出来了，可最大化跟着铺满整块屏幕、把任务栏压掉 —— Windows 算最大化尺寸看的就是那一位。
+     tao 留著那一位、只靠接 WM_NCCALCSIZE 报零压住非客户区，拿的就是这一对。壳里从此不许写样式位。 */
+  台.判('全仓一份 Rust 都不碰样式位（摘 WS_CAPTION 那一手害了最大化，不许再来一次；注释里提到这几个名字不算，只拦真调用）',
+    每一份.every(x => !/GWL_STYLE\s*[,)]|SetWindowLongPtrW\s*\(|GetWindowLongPtrW\s*\(/.test(x.文)),
+    每一份.filter(x => /GWL_STYLE\s*[,)]|SetWindowLongPtrW\s*\(|GetWindowLongPtrW\s*\(/.test(x.文)).map(x => x.p).join('、'));
+  台.判('撤法只有一手：请 Tauri 自己撤（set_decorations(false)），撤完把 tao 那份标记读回来',
+    /fn 撤干净\(w: &tauri::WebviewWindow, 为什么: &str, 每趟都记: bool\) \{\s*let _ = w\.set_decorations\(false\);\s*match w\.is_decorated\(\)/.test(窗));
+  台.判('读回来那一句三种写法分开：已撤（只在开机那一趟留一笔）/ 还是「有装饰」/ 问不出',
+    窗.includes('系统那一圈已撤（tao 那份标记是无装饰') && 窗.includes('这一趟就是双层窗口，见 issue #62')
+    && 窗.includes('（问不出不等于已撤）'));
+  台.判('不在主线程上的那几条路把这一手排回主线程（别在别的线程上碰窗口本体）',
+    窗.includes('if w.run_on_main_thread(move || 撤干净(&窗, &话, false)).is_err()'));
+  const 撤手 = (窗.match(/fn 撤那一圈\(&?w: &tauri::WebviewWindow, 为什么: &str\)/g) || []).length;
+  台.判('运行时那一道撤手只有一颗（四条路共用它，不在每一处各写一遍读回来各说一套）',
+    撤手 === 1 && 窗.includes('let _ = w.set_decorations(false);') && 窗.includes('match w.is_decorated()'));
+  台.判('四条会把那一圈补回来的路各补一次：最大化/还原、托盘左键露出来、第二份点图标唤醒、从全屏退回来',
+    (窗.match(/撤那一圈\(&?窗?w?, "/g) || []).length === 4
+    && 窗.includes('撤那一圈(&w, "按了最大化/还原")') && 窗.includes('撤那一圈(&w, "托盘左键把窗口露出来")')
+    && 窗.includes('撤那一圈(&窗, "第二份点图标把窗口唤醒")') && 窗.includes('撤那一圈(&w, "从全屏退回来")'),
+    '补手 ' + (窗.match(/撤那一圈\(/g) || []).length + ' 处（含那颗定义）');
+  台.判('启动那一路留了两笔时间戳：窗口露出来用了多少毫秒 —— 那一笔没落进日志就是卡在这之前，落了还卡就是页面的事',
+    建窗.includes('let 起 = std::time::Instant::now();') && 建窗.includes('窗口露出来这一步走完，用了 {} 毫秒'));
 }
 
 台.题('九、回报给页面的形状与两枚事件名照旧');

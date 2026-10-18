@@ -183,6 +183,10 @@ fn 字面(串: &str) -> String {
 
 /// 那一扇窗：挑页面、递门牌与桥、开起来。桥是编译期打进 exe 的那一份生成物，不读盘上的
 pub fn 开页面窗口(壳: &AppHandle) -> Result<String, String> {
+    /* 「启动就卡死」那一条（issue #62 的第一句）从前没有凭据：日志里连"走到哪一步"都没有。
+       这一颗从挑页面那一步起表，走到"窗口露出来"记一笔毫秒数 —— 那一笔没落进日志，就是卡在这之前，
+       落进了还卡，就是页面那一路的事。两条路分开，不靠猜。 */
+    let 起 = std::time::Instant::now();
     let (树, 页, 数) = 三个格();
     let 样式 = "Flow_Desk_*.html";
     let 名 = 挑最新(&列候选(&页, 样式)).ok_or_else(|| format!("找不到页面文件：{}\\{}", 页, 样式))?;
@@ -212,14 +216,27 @@ pub fn 开页面窗口(壳: &AppHandle) -> Result<String, String> {
            于是系统那一圈与页面自己那一行叠成两层，页面顶不满的地方还露出一条底色。
            顶栏的拖动区因此归页面：pointerdown 上请一次 startDragging（桥里那颗 winDrag）。 */
         .decorations(false)
+        /* 影子那一档关掉（tao 的 decoration_shadow 默认是 true）：开着的时候它在 WM_NCCALCSIZE 里
+           把客户区往里让一圈（左右下各约 8 像素、上面少一些）给系统那道投影腾地方 ——
+           让出来的那一条带子在屏上是灰的，左上角那一段还是它的接缝（他 2026-10-18 08:18 指着那一圈问的）。
+           这一张页自己就有四档外观与影子，不需要系统再垫一层，所以宁可没有那道投影，也不能留这一条灰带。 */
+        .shadow(false)
         .visible(false)
         .build()
         .map_err(|e| format!("窗口开不起来：{}", e))?;
+    /* 系统那一圈：建窗口那一句递的是 decorations(false)，可它到底生没生效，从前只能拿他的截图猜
+       （issue #62 那一句「居然还是双层窗口」）。这一趟起不猜了 —— 建好当场再撤一次、把 tao 那份标记读回来
+       写进运行日志，「已撤」「还是『有装饰』」「问不出」三种写法分开。
+       只请 Tauri 自己撤，不许在这里改 GWL_STYLE 的样式位：2026-10-18 08:26 试过把 WS_CAPTION 那一位摘掉，
+       那一圈确实画不出来了，可最大化跟着铺满整块屏幕、把任务栏压掉 —— Windows 算最大化尺寸看的就是那一位。
+       完整的道理写在 win_cmds.rs 顶上那颗注释里。此刻就在主线程上（setup 里），所以就地撤、不排队。 */
+    crate::tauri_bind::win_cmds::就地撤(&窗, "建好窗口");
     /* FD_SHELL_NOWIN=1 是给自证用的：窗口不露出来，页面照跑（配 WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
        那颗调试端口从另一头读现值）。这样在用户桌面上跑一趟也不抢他眼前的窗口。
        名子全用字母：环境变量这一头走 Windows 那道宽字符接口，中文名子在这台机器上不成。 */
     if std::env::var("FD_SHELL_NOWIN").unwrap_or_default() != "1" {
         窗.show().map_err(|e| format!("窗口露不出来：{}", e))?;
     }
+    crate::tauri_bind::log_cmds::记一笔("启动", format!("窗口露出来这一步走完，用了 {} 毫秒", 起.elapsed().as_millis()));
     Ok(名)
 }

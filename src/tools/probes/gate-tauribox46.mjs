@@ -139,9 +139,9 @@ const 表 = JSON.parse((桥.match(/const 参表 = (\{[\s\S]*?\});/) || [])[1] ||
   /async boxInspect\(id\)\{[^}]*invoke\('box:inspect'/.test(桥) && 桥请壳(桥).includes('box:inspect'));
 台.判('硬地板收了这一颗：插件清单点名也不给（读包这件事是宿主自己的事）',
   /const APP_DENY = \[[\s\S]*?'boxInspect'/.test(rd('src/_shared/sh-load.js')));
-台.判('壳里那份生成物跟着更新了（名单 55 颗，且顶上那句数的也是 55）',
+台.判('壳里那份生成物跟着更新了（名单 57 颗，且顶上那句数的也是 57）',
   rd('src/_tauri/src/core/app_deny.rs').includes('"boxInspect"') && rd('src/_tauri/src/core/app_deny.rs').includes('"boxVerify"')
-  && /名单 55 颗/.test(rd('src/_tauri/src/core/app_deny.rs')));
+  && /名单 57 颗/.test(rd('src/_tauri/src/core/app_deny.rs')));
 const 跑 = (() => { try { execFileSync(process.execPath, [path.join(ROOT, 'src', '_tauri', 'bridge.mjs'), '--验'], { encoding: 'utf8' }); return 0; }
   catch(e) { return e.status || 1; } })();
 台.判('那份名单拿 --验 重跑一趟：盘上这一份没过期（退出码 ' + 跑 + '）', 跑 === 0);

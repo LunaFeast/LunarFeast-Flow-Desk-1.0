@@ -7,10 +7,11 @@
    ③ 他写在冒号右边的字不会因为重扫被吃掉（render → parse 在内存里对一遍）；
    外加一条防将来：.mjs 那道口子是量过才关的，五棵源码树里该扫的一份不漏。 */
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { 根列表 } from '../../_build/邻居.mjs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { 记账, rd, lsd } from './lib-slice.mjs';
+import { ROOT, 记账, rd, lsd } from './lib-slice.mjs';
 import { fileURLToPath as __url } from 'node:url';
 
 const __树根 = __url(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');   /* 仓根从这份脚本自己的位置算，不写死本机路径 */
@@ -181,6 +182,39 @@ Z.题('五、拼接式不许越过本句的末尾（外32 图7 踩出来的那�
   const 一颗 = 扫(rd('src/_wnw/src/w10-cards.js')).length;
   Z.判('21 拿真源码再量一遍：卡片那一摊扫出来的条数不该掉一截（外32 图7 那一版只剩 26 条，一份清单当场少四百多行）',
     一颗 > 450, 一颗);
+}
+
+/* ---------- 单跑这一颗（命令行 / 小工具那颗「刷新清单」）也要覆盖搬走的那几家 ----------
+   2026-10-17 量到的：邻居名单只有 src\_fd\build.mjs 那一趟递，命令行这一支没递，
+   于是它按"只有本仓这一棵"排这本清单 —— 装壳那几句话改完单跑一次，清单从 4199 行掉到 1275 行，
+   七家的句子整段从这本账上消失（他要是接着点「写进源码」，那几家就再也写不回去）。 */
+Z.题('单跑那一支递不递邻居（少递就是这本清单静默窄掉一大截）');
+{
+  const 文 = rd('src/pack/uitext.cjs');
+  const 那支 = (文.match(/if\(require\.main === module\)\{[\s\S]*\n\}\n/) || [''])[0];
+  Z.数('命令行那一段抓到几个字', 那支.length);
+  Z.判('那一段自己借了邻居那一把尺（import 邻居.mjs 的 根列表，并照生成页面那一趟同一写法 slice(1) 去掉本仓）',
+    那支.includes("src/_build/邻居.mjs") && /根列表\(\)[\s\S]{0,24}slice\(1\)/.test(那支) && 那支.includes('设邻居('));
+  Z.判('借不到就明说并给非零退出码（不闷着写一本窄清单）',
+    /只按本仓这一棵排/.test(那支) && /process\.exitCode = 1/.test(那支));
+  /* 真跑一眼：stats 那一档只量不写盘，正好拿它看七家在不在 */
+  let 出 = '';
+  try{
+    出 = execFileSync(process.execPath, ['src/pack/uitext.cjs', 'stats'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  }catch(e){ 出 = String((e && e.stdout) || '') + String((e && e.stderr) || e); }
+  const 行 = Number((出.match(/合并成清单 (\d+) 行/) || [])[1] || 0);
+  const 份 = Number((出.match(/扫过文件 (\d+) 个/) || [])[1] || 0);
+  Z.判('单跑 stats 真量到四千多行、一百一十多份文件（不递邻居只有 1275 行、几十份 —— 搬走那几家的源码根本没进这一趟）',
+    行 > 4000 && 份 > 100 && 出.includes('为写') && 出.includes('声笔输入法练习') && 出.includes('推演组件定制'),
+    '清单 ' + 行 + ' 行 · 文件 ' + 份 + ' 份');
+  /* 反证：把邻居那一手摘掉，同一颗脚本立刻量不到那几家 —— 测的确实是"递没递" */
+  const 字 = createRequire(import.meta.url)('../../pack/uitext.cjs');
+  字.设邻居([]);
+  const 窄 = 字.groupsOf(字.collectAll(ROOT).occ).length;
+  字.设邻居(根列表().slice(1));
+  const 全 = 字.groupsOf(字.collectAll(ROOT).occ).length;
+  Z.判('同一颗脚本两跑：不递邻居 ' + 窄 + ' 段，递了 ' + 全 + ' 段（少的那一段一段都是搬走的那几家）',
+    全 > 窄 + 20, 窄 + ' → ' + 全);
 }
 
 Z.收尾();

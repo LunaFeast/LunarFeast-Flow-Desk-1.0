@@ -34,7 +34,8 @@ const pub = rd('src/pack/publish.mjs');
 
 台.题('二、发布脚本那九条');
 台.判('① 主仓有没提交的改动就停下报清单（不替他提交主仓）', /status', '--porcelain'/.test(rel) && rel.includes('要么提交掉，要么这一轮别发'));
-台.判('① 程序开着也不发（页面和程序壳那一层被它读着）', /IMAGENAME eq Flow-Desk\.exe/.test(rel));
+台.判('① 程序开着只念一句提示、不再挡路（2026-10-18 改掉：编的在临时工作树、出的在 dist 那一格、装的在 E 盘，三处不重叠；从前那一手是 Electron 同一棵 tree 才需要的）',
+  /IMAGENAME eq Flow-Desk\.exe/.test(rel) && !/停\('Flow-Desk 正在开着/.test(rel));
 台.判('② 七家一种形状：拿各自那一支与拼装那一棵对树，独立仓那一条路（逐字节比自己那棵）整条退了',
   !/function 会动吗\(/.test(rel) && !/job\.仓/.test(rel) && /git\(TREE, \['diff', '--name-only', job\.支, 拼装支/.test(rel));
 台.判('② 没动的那一家整家跳过：不送、不落笔、不打 tag', /if\(送\) P\(/.test(rel) && /if\(r\.动了\) r\.新tag/.test(rel));
@@ -174,5 +175,43 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
     (清.match(/^【.*】这一家的代码在 plugin\/[\w-]+ 那一支$/gm) || []).length === 7 &&
     !/自己那一棵/.test(清), (清.match(/^【/gm) || []).length + ' 笔');
 }
+
+台.题('七、插件容器跟着这一趟出门（2026-10-17 那两条：放一起 + 有更新才打）');
+台.判('1 出货那一趟里有一颗 出插件容器 与一把读上一趟那几号的尺（自测与发版两头都叫它）',
+  /function 出插件容器\(那一格, 上回\)/.test(rel) && /function 上一趟出的那几号\(\)/.test(rel)
+  && (rel.match(/出插件容器\(/g) || []).length === 3 && (rel.match(/上一趟出的那几号\(\)/g) || []).length === 3);
+台.判('2 位置：与主安装包同住那一格，容器摆进旁边的 plugins\\ 小格里（不再另起一处产物目录）',
+  rel.includes("const 小格 = path.join(那一格, 'plugins');") && rel.includes('fs.copyFileSync(打.件, path.join(小格, 件名));'));
+台.判('3 名字带号：<id>-<号>.<容器后缀>，后缀那一枚朝打包手借（这一颗里不写第二份后缀字面 —— 那五个字由 gate-tauribox46 那一台数，写一份就多一处）',
+  rel.includes("const 件名 = job.id + '-' + 号 + '.' + 容器后缀();")
+  && !/["']\.?fd[pk]kg["']/.test(rel));
+台.判('4 只出有更新的那几家：号与内容逐份摘要都跟上一趟一样才不出（「这一趟不出它」），一家都不出时那一格不建',
+  rel.includes('if(老.号 === 号 && 老.摘要 === 摘要)') && rel.includes('这一趟不出它')
+  && rel.includes("if(!出.length) P(") && rel.includes('那一格这一趟不建'));
+台.判('4b 比的不只是号：号 = 底号+build.那一仓 HEAD 的短哈希，他在自己那一棵改了句子没落笔时号不动、字节动了 —— 只比号就永远出旧的那一份',
+  /function 内容摘要\(信\)/.test(rel) && rel.includes("f.path + ':' + f.len + ':' + f.sha256")
+  && rel.includes('.sort().join') && rel.includes(".digest('hex').slice(0, 12)")
+  && rel.includes("要别处('node:crypto')")
+  && rel.includes("出.push({ id: job.id, 名: job.中文, 号, 摘要,") && rel.includes("摘要: String(c.摘要"));
+台.判('4c 号没变而内容变了的那一趟，屏上要说清是哪一家的摘要换了（不然看着像同一号出两遍）',
+  rel.includes('（号没变，内容变了：') && rel.includes("(老.摘要 || '（没记过摘要）')"));
+台.判('5 压那一下不在这一颗里第二次动手：只喊各家自己那条 出包.mjs（pack-repo 的 打包），读回来用同一颗 读容器',
+  rel.includes("import { 打包 as 出那一家的包, 仓名 as 各家仓名 } from './pack-repo.mjs';")
+  && rel.includes("import { 读容器, 扩展名 as 容器后缀 } from './packbox.mjs';")
+  && !/打目录|打容器\(/.test(rel));
+台.判('6 那几号记进原来那本账的「容器」那一格（不另起第二本账：路径那一颗只从 plugin-repos.mjs 那一份借，这一颗里不再定义）',
+  rel.includes('容器,') && rel.includes('Array.isArray(项.容器)')
+  && /import \{[^}]*打包记录路[^}]*\} from '\.\/plugin-repos\.mjs';/.test(rel)
+  && !/打包记录(路|名)\s*=/.test(rel));
+台.判('7 主程序那一枚还是空壳：这一颗只往产物那一格复制，一字节都不铺进首装那棵树',
+  !/addLayer\(/.test(rel) && !fs.existsSync(path.join(ROOT, 'src', 'pack', 'plugins'))
+  && rel.includes("fs.copyFileSync(打.件, path.join(小格, 件名));"));
+台.判('8 两家都铺了仓才谈得出包：没铺的那一家报的是「先 --铺=<id>」那一句，不静悄悄跳过',
+  rel.includes('还没铺成自己那一仓') && rel.includes("pack-repo.mjs --铺="));
+台.判('9 出包那一条砸了不停整趟：那一家记一句「出包命令没跑成」，别的家照出（停 = 一枚都出不了，是他不要的形状）',
+  /catch\(e\)\{ P\('  ' \+ job\.中文 \+ ' · 它自己那条出包命令没跑成：'/.test(rel));
+台.判('10 账上记的是全七家的号（这一趟没出的是「跟着上一趟那一个号」），不是只记这一趟出门的那几颗 —— 只记后者，下一趟会把没更新那几家当"从来没出过"再出一遍',
+  /function 账上那几号\(上回, 这一趟\)/.test(rel) && rel.includes('账上那几号(上回, 容器)')
+  && rel.includes('账上那几号(发上回, 发容器)') && rel.includes('这一趟: false'));
 
 台.收尾();

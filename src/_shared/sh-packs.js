@@ -325,7 +325,7 @@ const PackOps = {
   },
   async load(id){
     const cur = await this.ids();
-    if(!cur){ toast('插件名单读不到 · 这台机器上还没有放进路径的插件'); return false; }
+    if(!cur){ toast('插件名单读不到 · 这台机器上还没有放进插件文件夹的安装包'); return false; }
     if(cur.includes(String(id))) return true;         /* 已经加载着，不用再走一趟 */
     const 核 = await this.核一下(id);
     if(!核.ok){
@@ -338,7 +338,7 @@ const PackOps = {
   async unload(id, opt){
     const o = opt || {};
     const cur = await this.ids();
-    if(!cur){ toast('插件名单读不到 · 这台机器上还没有放进路径的插件'); return false; }
+    if(!cur){ toast('插件名单读不到 · 这台机器上还没有放进插件文件夹的安装包'); return false; }
     if(o.wipe) await this.wipe(id);
     return this.apply(cur.filter(x => x !== id), '卸载「' + Packs.name(id) + '」· 改名单…');
   },
@@ -356,7 +356,7 @@ const PackOps = {
     else r = await compPost({ op:'delete', id });
     if(!r || r.ok === false){
       this.bar.hide();
-      toast('那一格没删掉：' + ((r && r.msg) || '主进程没回话'));
+      toast('那个文件夹没删掉：' + ((r && r.msg) || '主进程没回话'));
       return false;
     }
     /* 名单里没有它就别再多写一趟（多写一次就是白翻一次页） */
@@ -380,7 +380,7 @@ const PackOps = {
     }catch(e){ return false; }   /* 用户按了取消 */
     if(!h){ toast('这一版选不了' + (kind === 'dir' ? '文件夹' : '文件')); return false; }
     const src = (typeof A.pathOf === 'function' && A.pathOf(h)) || h._p || '';
-    if(!src){ toast('拿不到那份东西的真路径'); return false; }
+    if(!src){ toast('拿不到那个安装包的完整位置'); return false; }
     this.bar.show('在把这个包收进插件库…', 6);
     const r = await A.packImport({ src });
     if(!r || r.ok === false){ this.bar.hide(); toast('导入没成：' + ((r && r.msg) || '')); return false; }
@@ -400,24 +400,73 @@ const PackOps = {
      四颗一律摆出来（他 2026-10-17 issue #56：安装那颗要始终在，每一行那三颗也要始终在）——
      这一台读不到插件路径、或这一条通道不在，按下去把话说明白，不靠把钮藏起来当提示。
      Flow-Desk 的「插件管理」与为写的「打开内容」都调这几颗，两端的入口一个都不差。 */
-  这一台能使(){ if(this.can()) return true; toast('这台机器读不到插件路径', true); return false; },
+  这一台能使(){ if(this.can()) return true; toast('这台机器找不到插件文件夹', true); return false; },
   loadButton(id, name){
     return h('button', { class:'wnw-btn mini', title:'请进使用页（改名单 + 刷新这一页）' + (name ? ' · ' + name : ''),
       html:icoMarkup('run') + '加载', onclick:async () => { if(this.这一台能使()) await this.load(id); } });
   },
   unloadButton(id, after){
-    return h('button', { class:'wnw-btn mini', title:'从使用页撤下来 · 包留在插件路径里',
+    return h('button', { class:'wnw-btn mini', title:'从使用页撤下来 · 安装包留在插件文件夹里，随时可以再加载',
       html:icoMarkup('eject') + '卸载', onclick:() => { if(this.这一台能使()) this.unloadAsk(id, after); } });
   },
   removeButton(id, after){
-    return h('button', { class:'wnw-btn mini', title:'把这一格连文件一起从插件路径里清掉（删之前问一句）',
+    return h('button', { class:'wnw-btn mini', title:'把这个插件连文件一起从插件文件夹里清掉（删之前问一句）',
       html:icoMarkup('trash') + '删除', onclick:() => { if(this.这一台能使()) this.removeAsk(id, after); } });
   },
   /* 屏幕上那颗「安装」：挑一个包放进来（压好的 zip 或解开的文件夹都认） */
   installButton(){
-    return h('button', { class:'wnw-btn mini', title:'挑一个包放进插件路径（装完先不加载，要用了再按「加载」）',
+    return h('button', { class:'wnw-btn mini', title:'挑一个安装包放进插件文件夹（装完先不加载，要用了再按「加载」）',
       html:icoMarkup('install') + '安装',
       onclick:() => { if(!this.canImport()){ toast('导入插件只在 Flow-Desk 程序里有', true); return; } this.installAsk(); } });
+  },
+  /* ---------- 更新那一道（他 2026-10-17 定的形状，2026-10-18 当面把名字定为「更新」）----------
+     新的那颗包丢进插件路径 → 进软件时提醒一句 → 在这一行点「更新」→ 那一格换成包里的内容、那颗包删掉。
+     判"值不值得提醒"只看号不一样（号上那一截构建哈希比不出高低，口径在壳里 pack_rule::该提醒换），
+     所以那颗钮的悬停格里写清"更新到哪一号"。
+     这张表住在页面上这一趟里：每一回画那一列之前先问一遍（查更新），行上摆不摆那一颗就照它。 */
+  更新表: new Map(),
+  async 查更新(){
+    const 那 = this.host();
+    if(!那 || typeof 那.packUpdates !== 'function'){ this.更新表 = new Map(); return this.更新表; }
+    let 回 = null;
+    try{ 回 = await 那.packUpdates(); }catch(e){ 回 = null; }
+    const 表 = new Map();
+    if(回 && 回.ok) for(const 一 of (回.list || [])) 表.set(String(一.id), 一);
+    this.更新表 = 表;
+    return 表;
+  },
+  等着更新的(){ return [...this.更新表.values()]; },
+  /* 这一行有没有那颗新包躺着：有就多一颗「更新」，没有这一行还是那三颗（不是藏钮当提示） */
+  updateButton(id, after){
+    /* 这颗钮常在（#56 那一条：四颗一律摆出来，不许拿"这一家没东西可更新"当理由藏一颗）：
+       路径里有新包就更新到那一号，没有就按下去把现状说清楚 —— 藏起来不算提示 */
+    const 一 = this.更新表.get(String(id));
+    return h('button', { class:'wnw-btn mini',
+      title: 一 ? '更新到 ' + (一.to || '更新的版本') + ' · 点一下就把插件文件夹里那个安装包换上，换完这个安装包自动删掉（你自己写的内容不动）'
+        : '现在用的就是这个版本 —— 插件文件夹里没有比它更新的安装包。要换更新的版本：先把新的安装包放进插件文件夹，重启后这里会告诉你哪几家可以换',
+      html:icoMarkup('cycle') + '更新', onclick:async () => {
+        if(!this.这一台能使()) return;
+        if(!this.更新表.get(String(id))){
+          toast('「' + (Packs.name(id) || String(id)) + '」现在用的就是这个版本，不用换 —— 插件文件夹里没有比它更新的安装包。'
+            + '要换更新的版本：把新的安装包放进插件文件夹，重启后软件会告诉你哪几家可以换。', true);
+          return;
+        }
+        await this.updateNow(id, after);
+      } });
+  },
+  async updateNow(id, after){
+    const 名 = Packs.name(id) || String(id);
+    const 那 = this.host();
+    if(!那 || typeof 那.packUpdate !== 'function'){ toast('更新这一条只在 Flow-Desk 程序里有', true); return; }
+    const 一 = this.更新表.get(String(id));
+    const 回 = await 那.packUpdate(String(id));
+    if(!回 || 回.ok === false){
+      toast('「' + 名 + '」没换上：' + ((回 && 回.msg) || '不知道哪一步砸的'), true);
+      return;
+    }
+    toast('「' + 名 + '」已更新到 ' + ((一 && 一.to) || '更新的版本') + ' · 那个安装包已经删掉，你自己写的内容不动');
+    await this.查更新();
+    if(after) await after();
   },
   /* 卸载前那一句：说清楚这是停止加载、数据默认留着，勾上那一句才一起清 */
   unloadAsk(id, after){

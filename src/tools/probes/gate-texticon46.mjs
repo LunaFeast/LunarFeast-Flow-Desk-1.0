@@ -3,7 +3,7 @@
    ------------------------------------------------------------
      node src/tools/probes/gate-texticon46.mjs
    钉的是这一台「只管两样、两件都不越界」：
-     一、它不实现任何发布动作 —— 起的子进程只有刷新清单、重新生成产物、重新对齐索引那三颗，git 只读不写，不碰密钥，不起他的程序；
+     一、它不实现任何发布动作 —— 起的子进程只有刷新清单、重新生成页面、重新生成图标索引那三颗，git 只读不写，不碰密钥，不起他的程序；
      二、只听 127.0.0.1，写请求不带那一枚随机码就拒；被闸当零件借进去时不许占端口；
      三、界面上看到的与写回去的那两样都只有一份：句子住在 src\pack\uitext.cjs，图标那张表住在 icons\索引.txt 与 src\_build\ico-index.mjs；
      四、git 叫不动的时候顶上那一行只许说"问不出"，不许装成"盘上干净"；
@@ -39,6 +39,15 @@ fs.writeFileSync(path.join(沙, '索引.txt'),
   '【图标索引】一张图一行：文件名 = 这是干什么的（引用它的代码）\n\n# —— 通用图标（icons\\ 文件夹）——\ngear = 设置（齿轮）：某处 —— 引用：src/_fd/src/fd3-shell.js×1\ncal = 日历：某处 —— 引用：没有代码直接叫它（可能是备用或已改名）\n');
 process.env.FD_ICONS = 沙;
 process.env.FD_PLUGINS = 沙包;
+/* 隔壁那一棵（插件自己那一仓）也拿沙盒里的一棵顶上：这一台递给自己那份界面文字那颗的邻居名单，
+   闸跑的那一句就写进这一棵里，绝不可能落到他真那几家仓（他 2026-10-18 那条：插件的文字要能一起改）。 */
+const 假邻 = path.join(探针沙盒, '邻居那一棵-闸跑');
+const 邻那份 = path.join(假邻, 'data', 'plugins', 'notes', 'main.js');
+const 邻那句 = '闸跑：这一句住在插件自己那一棵里';
+fs.rmSync(假邻, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(邻那份), { recursive: true });
+fs.writeFileSync(邻那份, 'const 话 = "' + 邻那句 + '";\nexport default 话;\n', 'utf8');
+process.env.FD_TEXT_NEIGHBORS = JSON.stringify([假邻]);
 const 那 = await import('../../_build/text-icon.mjs');
 
 台.题('一、这一台只管两样，不实现发布动作');
@@ -49,7 +58,7 @@ const 那 = await import('../../_build/text-icon.mjs');
     '/api/现场', '/api/文字', '/api/文字/存', '/api/文字/扫', '/api/文字/落', '/api/文字/预览', '/api/文字/重生成'].sort();
   台.判('这一台只开该开的那几格，推送那一摊的路由一格不剩（量 / 摊单 / 推项 / 快进 / 删支 / 自测 / 完整 / 集成 / pr / 发 / 开产物 都不在）',
     JSON.stringify(路由) === JSON.stringify(该有) && !/摊单|推项|快进|删支|自测|集成|开产物/.test(ui), 路由.join('、'));
-  台.判('起的子进程只有那三颗：刷新清单（src/pack/uitext.cjs）、重新生成产物（uitext 那份 artifactBuilds() 的名单）、重新对齐索引（src/_build/ico-index.mjs）—— 没有第二道口子',
+  台.判('起的子进程只有那三颗：刷新清单（src/pack/uitext.cjs）、重新生成页面（uitext 那份 artifactBuilds() 的名单）、重新生成图标索引（src/_build/ico-index.mjs）—— 没有第二道口子',
     (ui.match(/起\(\['/g) || []).length === 2 && ui.includes("['src/pack/uitext.cjs']") &&
     ui.includes("['src/_build/ico-index.mjs']") && ui.includes('字.artifactBuilds().map(相 => [相])') &&
     !/'src\/_build\/(release|pr)\.mjs'/.test(ui), (ui.match(/起\(\['[^\]]*\]/g) || []).join(' '));
@@ -131,7 +140,7 @@ const 那 = await import('../../_build/text-icon.mjs');
   台.判('3 索引文件自己的标题行（中间也带 " = "）不许变成一条图标：段首之前的一律不算数据',
     ui.includes('if(!当段){ continue; }') && ui.includes('段首之前的一律不算数据'));
   台.判('4 插件包那七张的位置问邻居那把尺（本仓 data\\plugins 先问、再问 plugins\\<仓名>\\ 那七棵），不混进 icons 那一格里比"丢图"，也不在这台里抄第二份仓名表',
-    ui.includes("import { 找 as 邻找, 出自 as 邻出自 } from './邻居.mjs'") &&
+    ui.includes("import { 找 as 邻找, 出自 as 邻出自, 根列表 as 邻根列表 } from './邻居.mjs'") &&
     ui.includes('function 插件找(包, 档)') && ui.includes('邻找(插件相(包, 档))') &&
     !/from '\.\/(pack-repo|布局)\.mjs'/.test(ui) && ui.includes('const 通用没图 =') && ui.includes('插件丢图: 插件.filter(x => !x.在不在)'));
   台.判('4b 真读一眼他这一棵（另起一个不带 FD_ 环境变量的进程，只读不写）：那七张封面张张取得到、报的是它自己那一家的仓名 —— 从前只认主程序仓那一格，七张全报「取不到」',
@@ -154,12 +163,12 @@ const 那 = await import('../../_build/text-icon.mjs');
     ui.includes('只认 icons 这个文件夹里的图') && ui.includes('全.startsWith(根 + path.sep)') &&
     ui.includes("^[a-z0-9][a-z0-9-]*$") && ui.includes('jpe?g') &&
     ui.includes('插件包那张图标只认'));
-  台.判('6 「重新对齐一遍」那颗跑的就是那颗现成的索引脚本，这一台自己从不写那份索引',
+  台.判('6 「重新生成图标索引」那颗跑的就是那颗现成的索引脚本，小助手自己从不写那份索引',
     ui.includes("起(['src/_build/ico-index.mjs']") && !/writeFileSync\([^)]*索引/.test(ui));
-  台.判('7 屏上两栏在（图标素材 / 界面文字），「版本与推送」那一栏与那一枚对话框都不许留壳；图标那一栏列出干什么、引用、大小、预览，索引没登记、那一格里还没有这一张分开报',
+  台.判('7 屏上两栏在（图标素材 / 界面文字），「版本与推送」那一栏与那一枚对话框都不许留壳；图标那一栏列出干什么、引用、大小、预览，索引没登记、这个文件夹里还没有这一张分开报',
     pg.includes('id="t图"') && pg.includes('id="t字"') && !pg.includes('id="t版"') && !pg.includes('id="p版"') &&
     !pg.includes('class="挡') && !pg.includes('摊着来(') &&
-    pg.includes('图标索引里还没有这一张') && pg.includes("' · 那一格里还没有这一张'") && pg.includes('没登记') && pg.includes('alt="'));
+    pg.includes('图标索引里还没有这一张') && pg.includes("' · 这个文件夹里还没有这一张'") && pg.includes('没登记') && pg.includes('alt="'));
   台.判('8 加、换、删三颗手都在屏上（icons 那一格一张两颗 + 顶上"加一张图"）',
     pg.includes('data-换=') && pg.includes('data-删=') && pg.includes('id="加名"') && pg.includes('id="加档"') &&
     pg.includes('取(\'加送\').onclick'));
@@ -211,7 +220,7 @@ const 那 = await import('../../_build/text-icon.mjs');
     && ui.includes(')(字树, 用);'));
   台.判('6 补一句没填就回绝：清单里一句都没填的时候不起那一趟（免得一屏报「写掉 0 句」）',
     ui.includes('清单里一句都没填'));
-  台.判('7 写落完给的是重新生成产物那几趟，屏上那颗「重新生成产物」跑的就是 uitext 里那一颗名单（是哪几趟不在这一台里抄第二份）',
+  台.判('7 写落完给的是重新生成页面那几趟，屏上那颗「重新生成页面」跑的就是 uitext 里那一颗名单（是哪几趟不在小助手里抄第二份）',
     ui.includes("路 === '/api/文字/重生成'") && ui.includes('字.artifactBuilds().map(相 => [相])')
     && pg.includes("跑('文字/重生成'") && !/src\/_wnw\/build-kernel/.test(ui) && !/三趟/.test(ui));
   台.判('8 那一屏认的树可以用 FD_TREE 指到沙盒那一棵（与图标那一格同一个口子）：生成那几趟跟着这一棵走，不拿沙盒清单去跑他仓里的脚本',
@@ -221,7 +230,7 @@ const 那 = await import('../../_build/text-icon.mjs');
   台.判('10 屏上那一栏一屏一条不换行：那一格一段（不再切成四列小卡），行里三格排成一排',
     pg.includes('#字格{ grid-template-columns:1fr; }') && pg.includes('.字行{ display:flex')
     && pg.includes("'<div class=\"项 字行'") && pg.includes('text-overflow:ellipsis'));
-  台.判('11 屏上那五颗手（刷新清单 / 保存句子 / 预览改动 / 写进源码 / 重新生成产物）都在，且不让人挑「写进哪一张页面」（落点是源码）',
+  台.判('11 屏上那五颗手（刷新清单 / 保存句子 / 预览改动 / 写进源码 / 重新生成页面）都在，且不让人挑「写进哪一张页面」（落点是源码）',
     pg.includes('id="字段"') && pg.includes('id="字搜"') &&
     pg.includes('字扫') && pg.includes('字存') && pg.includes('字预') && pg.includes('字落') && pg.includes('字重')
     && !pg.includes('还没接上') && !pg.includes('id="字页"'));
@@ -296,7 +305,7 @@ const 那 = await import('../../_build/text-icon.mjs');
         const 成 = 那.图标写插件('gate-none-pack', 'icon.svg', 新);
         const 盘 = path.join(沙包, 'gate-none-pack', 'images', 'icon.svg');
         return 成.好 === true && 成.新建 === true && fs.existsSync(盘) &&
-          fs.readFileSync(盘).equals(Buffer.from(新, 'base64')) && 成.出自 === '沙盒那一格' &&
+          fs.readFileSync(盘).equals(Buffer.from(新, 'base64')) && 成.出自 === '沙盒里的那个文件夹' &&
           成.路径 === 'data/plugins/gate-none-pack/images/icon.svg';
       })(), JSON.stringify(那.插件封面('gate-none-pack', 'icon.svg')).slice(0, 90));
     台.判('10 往外钻的文件名拦得住（icon.svg 之外一律拒，../../ 那种连试的机会都不给）',
@@ -328,8 +337,8 @@ const 那 = await import('../../_build/text-icon.mjs');
     列.单.every(x => x.相 && typeof x.大 === 'number' && 那0.图标后缀.includes(x.后)) &&
     列.单.every(x => !/^[A-Za-z]:/.test(x.相) && !x.相.startsWith('..')), 列.根 + ' · ' + 列.张 + ' 张');
   台.判('2 三种"量不到"分得开：不存在的一格报读不到、空着报先写一格、是文件不是文件夹也报明白 —— 不拿空名单冒充"这一格没有图"',
-    /读不到这一格/.test(那.柜列(path.join(ROOT, '没有这么一格')).错 || '') && /先写一个文件夹/.test(那.柜列('').错 || '') &&
-    /不是文件夹/.test(那.柜列(path.join(ROOT, 'src/_build/text-icon.mjs')).错 || ''));
+    /读不到这个文件夹/.test(那.柜列(path.join(ROOT, '没有这么一格')).错 || '') && /先写一个文件夹/.test(那.柜列('').错 || '') &&
+    /不是一个文件夹/.test(那.柜列(path.join(ROOT, 'src/_build/text-icon.mjs')).错 || ''));
   台.判('3 取预览那一路三道拦：往外钻的相对名、六种后缀之外、超大那一张 —— 一律拒，不把别处的文件递出去',
     /往外钻/.test(那.柜一张(柜根, '../../../package.json').错 || '') &&
     /六种后缀/.test(那.柜一张(柜根, '索引.txt').错 || '') &&
@@ -457,16 +466,69 @@ const 那 = await import('../../_build/text-icon.mjs');
       !找('tools-cog') && 找('no-such') && 找('no-such').补 === 'no-such.svg' &&
       又.单.some(x => x.名 === 'tools/cog.svg' && x.出厂 === '没有'), JSON.stringify(又.没图条目.map(x => x.补)));
   }
-  台.判('6 屏上三处都接上了：卡片底下那颗「复制进出厂」/ 顶上那一颗一把补齐 / 占位卡上那枚「放一张进去」与插件那枚「放一张封面进去」都挂得能使的钮',
+  台.判('6 屏上三处都接上了：卡片底下那颗「复制过去」/ 顶上那一颗一把补齐 / 占位卡上那枚「放一张进去」与插件那枚「放一张封面进去」都挂得能使的钮',
     pg.includes('data-厂=') && pg.includes('id="厂全"') && pg.includes('const 厂行 = x =>') && pg.includes('async function 进厂(单, 话)') &&
     pg.includes('data-补=') && pg.includes('data-补包=') && pg.includes('class="占位"') && pg.includes('还没有图') &&
-    pg.includes('放一张进去') && pg.includes('放一张封面进去') && pg.includes('张和出厂那一格不一样') &&
+    pg.includes('放一张进去') && pg.includes('放一张封面进去') && pg.includes('张和打包用的那一份不一样') &&
     !pg.includes('取不到这个文件'));
-  台.判('7 换 / 加 那一发回来看的是两处都落了（出厂那一步砸了要红着报，不许闷着说"换好了"）；删只删一层这句话也写在屏上',
-    /厂\.好 \? 'icons\\\\ 与出厂/.test(pg) && pg.includes('但出厂那一格没写进去') && pg.includes('只删 icons\\\\ 那一层，出厂') &&
+  台.判('7 换 / 加 那一发回来看的是两处都落了（打包用的那一份砸了要红着报，不许闷着说"换好了"）；删只删图标文件夹这一处这句话也写在屏上',
+    /厂\.好 \? '图标文件夹与打包用的那一份/.test(pg) && pg.includes('但打包用的那一份没写进去') && pg.includes('只删图标文件夹这一处，打包用的那一份') &&
     /待挑那一手带了固定名字的/.test(pg) && pg.includes('待.名 || 取(\'加名\')'));
   fs.rmSync(沙, { recursive: true, force: true });
   fs.rmSync(path.join(探针沙盒, 'src'), { recursive: true, force: true });
+}
+
+台.题('十二、插件那一句也改得回去（他 2026-10-18 那句「我要插件文字可以一起改！！！」）');
+{
+  台.判('1 这一台加载那一刻就把邻居名单递给界面文字那一颗（不递，插件那几家的句子只列得出、写不回去）',
+    /字\.设邻居\(界面邻居\)/.test(ui) && 那.界面邻居.length === 1 && 那.界面邻居[0] === 假邻,
+    '递进去的名单：' + 那.界面邻居.join('、'));
+  台.判('2 名单只有一份：从 src\\_build\\邻居.mjs 的 根列表 去掉本仓那一格，这一台不抄第二本仓名表',
+    ui.includes("import { 找 as 邻找, 出自 as 邻出自, 根列表 as 邻根列表 } from './邻居.mjs';")
+    && ui.includes('return 邻根列表().slice(1);') && !/Notes|Schedule|Your-Sentences|Music-Remote/.test(ui));
+  台.判('3 沙盒那一趟不往他家插件仓落一个字：FD_TREE 或 FD_PLUGINS 指着别处时名单是空的，闸要验这一手才自己指 FD_TEXT_NEIGHBORS',
+    /if\(process\.env\.FD_TREE \|\| process\.env\.FD_PLUGINS\) return \[\];/.test(ui)
+    && /if\(process\.env\.FD_TEXT_NEIGHBORS\)/.test(ui));
+  台.判('4 真跑：填一句插件自己那一棵里的话，plan 认得到它（从前这一台没递名单，这一句直接落进「对不上」）',
+    (() => {
+      /* prog / page 不能瞎填：那一颗是按"哪一家 · 哪一页"配上的，就现扫一遍拿它自己报出来的那两格 */
+      const 扫 = 那.界面文字那颗.collectAll(那.字树);
+      const 处 = 扫.occ.filter(o => o.rel === 'data/plugins/notes/main.js');
+      台.数('  现扫到的那一句', 处.length + ' 处 · prog「' + (处[0] ? 处[0].prog : '?') + '」');
+      if(!处.length) return false;
+      const 一条 = 处[0];
+      const 果 = 那.界面文字那颗.plan(那.字树, [{ prog: 一条.prog, page: 一条.page, from: 一条.text, to: '闸跑：换成另一句', del: false }]);
+      台.数('  plan 回执', '认到 ' + 果.list.length + ' 句 · 对不上 ' + 果.miss.length + ' 句 · 落点 ' + 果.list.map(x => x.at.join(',')).join(' '));
+      return 果.list.length === 1 && 果.miss.length === 0
+        && 果.list[0].at.some(a => String(a).startsWith('data/plugins/notes/main.js'));
+    })());
+  台.判('5 回执那一名说清写进了哪一棵：本仓报相对路径，隔壁那几棵报「仓名/路径」（看不见落在哪儿就等于不放心）',
+    那.那份在哪(path.join(那.字树, 'src/_fd/src/fd3-shell.js')) === 'src/_fd/src/fd3-shell.js'
+    && 那.那份在哪(邻那份) === '邻居那一棵-闸跑/data/plugins/notes/main.js', 那.那份在哪(邻那份));
+  台.判('6 那一屏顶上那一行报得出插件那几家在内（报的是名单里那几棵的名字）',
+    /邻居: 界面邻居\.map\(根 => path\.basename\(根\)\)/.test(ui) && pg.includes("对.邻居 || []"));
+  台.判('7 屏上写完那一步要把「写进了这些文件」整串列出来，不许拿 slice 截一半（他 2026-10-17 那条「给我展示全部」）',
+    pg.includes("对.写了 || []") && !/落点\.slice\(0, 12\)/.test(pg) && pg.includes('落点：\' + 文(落点.join'));
+  台.判('8 反证：把那句改成一个插件里根本没有的，plan 认不到（名单递了也不许"差不多就算认到"）',
+    (() => {
+      const 果 = 那.界面文字那颗.plan(那.字树, [{ prog: '你的便签', page: '闸跑那一句', from: 邻那句 + '后面多了一截', to: 'x', del: false }]);
+      return 果.list.length === 0 && 果.miss.length === 1;
+    })());
+}
+
+台.题('十三、屏上那几句话不许再留内部叫法（他 2026-10-18 那句「不但是按钮改名！更重要的是小助手要说人话！」）');
+{
+  const 旧词 = ['那一格里还没有', '复制进出厂', '出厂那一格', '重新对齐一遍', '重新生成产物', '图标柜里点一张',
+    '写回它自己那一棵', '这一台只管', '这一格不是文件夹', '读不到这一格', '没这一格', '沙盒那一格'];
+  台.判('1 屏上那几句话与发给屏上的回话里，' + 旧词.length + ' 个内部叫法一个都不留（这一台往后也不许再往里塞）',
+    旧词.every(词 => !pg.includes(词) && !ui.includes("'" + 词 + "'")),
+    '还留着的：' + (旧词.filter(词 => pg.includes(词) || ui.includes("'" + 词 + "'")).join('、') || '都撤干净了'));
+  台.判('2 换上的名字说得清是哪一处：图标那一片叫「图标文件夹」，src\\pack\\icons\\ 那一份叫「打包用的那一份」，两颗重新跑的叫「重新生成图标索引」「重新生成页面」',
+    pg.includes('图标文件夹与打包用的那一份') && pg.includes('重新生成图标索引') && pg.includes("跑('文字/重生成', '重新生成页面'")
+    && pg.includes('这个文件夹里还没有这一张') && pg.includes('在 ' + "' + 文(x.出自) + '" + ' 这个仓里'));
+  台.判('3 那颗钮叫什么，回执里就得写什么：屏上那颗「重新生成页面」的钮与点它时那句标题同字（差一个字就是让人对着两个名字找）',
+    pg.includes('>重新生成页面</button>') && pg.includes("跑('文字/重生成', '重新生成页面'")
+    && pg.includes('>重新生成图标索引</button>') && ui.includes("'重新生成页面（跑 src"));
 }
 
 台.收尾();
