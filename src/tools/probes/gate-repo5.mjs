@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { 记账, rd, lsd, 有, 出自, 隔壁 } from './lib-slice.mjs';
 import { 仓名, 看一家, 铺, 打包, 分自检, TREE } from '../../_build/pack-repo.mjs';
 import { 插件格, 沙盒格 } from '../../_build/布局.mjs';
+import { 根列表 } from '../../_build/邻居.mjs';   /* 号那一节要挨家读隔壁那几棵的 出包.mjs（一家一仓，主仓里没有） */
 import { 私人串清单, 扫文本 } from '../../_build/public-scan.mjs';
 
 const 台 = 记账('gate-repo5');
@@ -274,4 +275,20 @@ try{
 }
 清();
 台.数('沙盒已清', fs.existsSync(沙盒) ? '还在：' + 沙盒 : '删干净了：' + 沙盒);
+台.题('八、号里那一段排序数（他 2026-10-19 那三句：「比不出来我要版本号干什么」「谁家安装包记录时间啊」「json不可靠」）');
+{
+  const 家 = 根列表().slice(1).filter(根 => fs.existsSync(path.join(根, '出包.mjs')));
+  台.数('量到几家有 出包.mjs', 家.length + ' 家：' + 家.map(根 => path.basename(根)).join('、'));
+  台.判('每一家都把「这一仓的提交数」写进预发布那一段（semver 真比它），后面 +build.<短哈希> 只负责认人',
+    家.length >= 7 && 家.every(根 => {
+      const 文 = fs.readFileSync(path.join(根, '出包.mjs'), 'utf8');
+      return 文.includes("rev-list', '--count', 'HEAD'") && 文.includes("段[1] += '.' + 数")
+        && !文.includes(".split('+')[0] + '+build.' + 短");
+    }));
+  台.判('问不出提交数就退回老形状、不猜一个数（"问不出"与"问出来是空的"是两件事，这一条从外46 起就没松过）',
+    家.every(根 => fs.readFileSync(path.join(根, '出包.mjs'), 'utf8').includes("catch(e){ 数 = ''; }")));
+  台.判('出包那一步不写盘上的时间当号（没有 Date.now 混进版本号那一段）',
+    家.every(根 => !/version[^\n]*Date\.now\(\)/.test(fs.readFileSync(path.join(根, '出包.mjs'), 'utf8'))));
+}
+
 台.收尾();
