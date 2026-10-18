@@ -100,4 +100,20 @@ R.题('四 · 接线与外观（顺序错了就等于没改）');
     !/transition:[^;}]*width/.test(S) && !/transition:[^;}]*height/.test(S));
 }
 
+R.题('五 · 贴边贴的是网格，不是零距离（他 2026-10-19 定死：保留最小间隙）');
+{
+  const LIB = rd('src/_fd/src/fd3-lib.js');
+  R.判('间距那一档最低就是 4 像素，0 不许成为一个能选的数（放开到 0 就等于两张卡贴死在一起）',
+    /const LOOK_GAP = \{ min:4, max:24 \};/.test(LIB) && !/min:\s*0/.test(LIB),
+    (LIB.match(/const LOOK_GAP[^\n]*/) || [''])[0]);
+  R.判('方案没钉间距时走"自动"，自动那一条也算不出 0（4..18 之间跟着格子走）',
+    /this\.gap = 钉死 > 0 \? 钉死 : Math\.max\(4, Math\.min\(18, Math\.round\(Math\.min\(this\.cellW, this\.cellH\) \* \.16\)\)\);/.test(切方法(S, '  fitGrid(){')));
+  R.判('卡片画的时候自己往内缩半个间距（place 里那两条 --gap-half）：所以"贴边"= 网格首尾相接，视觉上仍隔着 --gap 那道缝',
+    /--gap-half/.test(切方法(S, '  place(card, it){')) && /- var\(--gap\)\)/.test(切方法(S, '  place(card, it){')));
+  const 邻 = 开一张([卡('邻', 10, 4, 6, 4)]);
+  const 吸 = JSON.parse(邻.贴边({ x:15.75, y:4, w:6, h:4 }, 卡('我', 0, 0, 0, 0)));
+  R.判('真跑一遍吸边：落到 16 就是网格上首尾相接（重叠 0 格），再近就压着邻居了 —— 那半格以内的缝由 --gap 顶着',
+    吸.x === 16 && 吸.x + 吸.w === 22 && 22 - 16 === 6, JSON.stringify(吸));
+}
+
 R.收尾();
