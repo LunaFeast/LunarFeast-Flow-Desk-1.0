@@ -858,10 +858,28 @@ fn 那一格的号与时刻(格: &str, 包名: &str) -> (String, String) {
         },
         Err(_) => String::new(),
     };
-    let 秒 = fs::read_to_string(并路(&家, 来路那份)).ok()
+    let mut 秒 = fs::read_to_string(并路(&家, 来路那份)).ok()
         .and_then(|文| serde_json::from_str::<Value>(&文).ok())
         .map(|单| 清单上的一刻(&单)).unwrap_or_default();
+    /* 来路那一份是 2026-10-18 才开始写的：在那之前进的那一格（跟着老安装包摊开的、他自己拷进去的）没有这一份，
+       时刻就是空串 —— 空着按"两边都拿不出时刻就不提醒"那一条，界面就永远说没得更新
+       （他 2026-10-19 那一问：为什么每次把新包丢进去都告诉我是最新）。所以这一格没有来路记录时，
+       退一步拿那一格里**清单自己那一份**的写入时间当"装着的时刻"：摊开那一刻就是它。
+       只认这一份文件，不认整格 —— 他后来换封面、改设置动的是别的时间，不该把装着的时刻推到今天。 */
+    if 秒.is_empty() { 秒 = 格上的一刻(&家); }
     (号, 秒)
+}
+
+/// 那一格里清单那一份的写入时间（Unix 秒，串）。这份读不到就退到整格的修改时间，再读不到回空串。
+fn 格上的一刻(家: &str) -> String {
+    let 秒of = |m: &fs::Metadata| m.modified().ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs().to_string()).unwrap_or_default();
+    match fs::metadata(并路(家, 清单那份)) {
+        Ok(m) => { let s = 秒of(&m); if !s.is_empty() { return s; } }
+        Err(_) => {}
+    }
+    fs::metadata(家).map(|m| 秒of(&m)).unwrap_or_default()
 }
 
 /// 读一张 JSON 里那格 `created`（Unix 秒）。写成数或写成串都认；没有、读不出回空串。
