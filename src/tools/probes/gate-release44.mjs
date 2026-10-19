@@ -186,7 +186,7 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
   rel.includes("const 件名 = job.id + '-' + 号 + '.' + 容器后缀();")
   && !/["']\.?fd[pk]kg["']/.test(rel));
 台.判('4 每一趟都摆齐：号与内容跟上一趟一样的那几家不报成新出，但照原样带一份进这一格 —— 最新那一格里七家一颗不缺（他 2026-10-19 指着只有 exe 与 index.json 的那一格问「？」：让他回头翻上一趟那一格找配套的那颗，就是把出货的账推到他头上）',
-  rel.includes('const 沿用 = 老.号 === 号 && 老.摘要 === 摘要;') && rel.includes('不重建，照原样摆进这一格')
+  rel.includes('const 沿用 = 老.号 === 号 && 老.摘要 === 摘要;') && rel.includes('照这一格摆一份（这一颗是重新压的，里面每一份字节都没变')
   && rel.includes('这一趟新出: !沿用') && rel.includes('拿最新那一格就够，不必回头翻上一趟那一格'),
   '旧写法「那一格这一趟不建」还在 = 会缺颗：' + (rel.includes('那一格这一趟不建') ? '还在（不该）' : '已改口'));
 台.判('4a 反证 · 摆进这一格那一手排在"沿用就不报"之前（先 copy 再决定报不报：把 copy 挪到那句 continue 后面，没更新的那几家就又从这一格里没了）',
