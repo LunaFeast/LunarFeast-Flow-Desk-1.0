@@ -2276,9 +2276,11 @@ const Shell = {
     const 空话 = h('div', { class:'fd-empty' });
     /* 换上去了不等于换进这一轮了：插件那份代码是开机那一刻请进来的（PackLoader.load），
        盘上那一格换了、页面手里还是上一版 —— 界面上看着就像「点了更新什么也没变」。
-       所以换完问一句重启，让他自己挑现在换还是回头换。 */
-    const 换完 = async () => {
+       所以换完问一句重启，让他自己挑现在换还是回头换。一张条子跨几家的改动走旁边那颗「全部更新」，
+       一次换完只问这一句，不必一家一家点、也不必记住哪几家点过。 */
+    const 换完 = async (确实换了) => {
       await draw();
+      if(确实换了 === false) return;
       if(await fdRestartAsk('插件已经换上新的那一份：重启之后，为写和各家面板跑的就是那一版。') === 'now') await fdRestart();
     };
     const draw = async () => {
@@ -2339,6 +2341,7 @@ const Shell = {
       h('input', { type:'search', class:'fd-input', placeholder:'搜插件名', style:'flex:1 1 auto',
         oninput:ev => { q = ev.target.value; draw(); } }),
       PackOps.installButton(),
+      PackOps.updateAllButton(换完),
       h('button', { class:'wnw-btn mini', title:PackOps.can() ? '重看一遍插件路径里有什么' : '这台机器找不到插件文件夹',
         html:icoMarkup('cycle') + '重看', onclick:() => draw() })
     ]));

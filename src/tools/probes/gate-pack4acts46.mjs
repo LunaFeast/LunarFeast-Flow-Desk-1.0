@@ -163,9 +163,9 @@ const 试 = 只认代码("const a = 'x';\n/* 注释里写「没装」不算 */\n
 台.题('九、插件换上新的那一份之后：问一句重启，屏上那两句说清哪一步要重启');
 {
   const 设 = rd('src/_fd/src/fd4-builtin.js');
-  台.判('换完那一趟不是重画列表就完了：先重画，再问一句重启，答"立刻"才真重启',
-    /const 换完 = async \(\) => \{[\s\S]*?await draw\(\);[\s\S]*?fdRestartAsk\([\s\S]*?\) === 'now'\) await fdRestart\(\);/.test(桌),
-    (桌.match(/const 换完 = async \(\) => \{[\s\S]{0,240}/) || [''])[0].replace(/\n\s*/g, ' '));
+  台.判('换完那一趟不是重画列表就完了：先重画，再问一句重启，答"立刻"才真重启（一家都没换上的那一趟不问）',
+    /const 换完 = async \(确实换了\) => \{[\s\S]{0,160}if\(确实换了 === false\) return;[\s\S]{0,200}fdRestartAsk\([\s\S]{0,120}\) === 'now'\) await fdRestart\(\);/.test(桌),
+    (桌.match(/const 换完 = async [\s\S]{0,300}/) || [''])[0].replace(/\n\s*/g, ' '));
   台.判('问话与那颗「立刻重启」全程序只有 fd3-shell.js 顶上那两颗：一键清理那一条也走它，措辞不留第二份',
     /function fdRestartAsk\(msg\)\{[\s\S]*?Modal\.open\('改动已经写进程序'/.test(桌)
     && 桌.includes("function fdRestart(){ return window.FD_APP && window.FD_APP.restartApp")
@@ -179,6 +179,20 @@ const 试 = 只认代码("const a = 'x';\n/* 注释里写「没装」不算 */\n
   台.判('咬口 · 把「问一句重启」那一行摘掉，这一道立刻叫（留着重画列表也照样像没换）',
     !/const 换完 = async \(\) => \{[\s\S]*?fdRestartAsk/.test(
       桌.replace("if(await fdRestartAsk('插件已经换上新的那一份：重启之后，为写和各家面板跑的就是那一版。') === 'now') await fdRestart();", '')));
+  /* 一张条子跨几家的改动（插件「停靠」那一条就要 为写 + 便签 + 声笔练习 + 你的句子 四家的清单都换新）
+     不能让他一家一家点、还要记住哪几家点过 —— 那颗「全部更新」就是替他记这笔账的。 */
+  台.判('顶上那一排多一颗「全部更新」，与「安装」「重看」并排（不藏钮：没东西可换时按下去自己说）',
+    桌.includes('PackOps.installButton(),\n      PackOps.updateAllButton(换完),')
+    && /updateAllButton\(after\)\{[\s\S]{0,240}一次全换上/.test(名单));
+  台.判('换全部那一颗先现问一遍再一家一家换：哪一家砸了只报那一家，别的照换（一条撞车不许整停）',
+    /async 换全部\(after\)\{[\s\S]{0,400}for\(const 一 of 等\)[\s\S]{0,500}成了\.push[\s\S]{0,200}砸了\.push[\s\S]{0,200}await this\.查更新\(\);/.test(名单),
+    (名单.match(/async 换全部[\s\S]{0,120}/) || [''])[0].replace(/\n\s*/g, ' '));
+  台.判('换完报的是"换上了几家、各是哪一号"，没换上的那几家逐家点名（不是一句"完成"）',
+    名单.includes("'已换上 ' + 成了.length + ' 家：'") && 名单.includes("' 家：' + 砸了.join"));
+  台.判('一家都没换上的那一趟不问他重不重启（换全部 回 false，换完 那一颗自己咽下这一句）',
+    名单.includes('if(after) await after(成了.length > 0);') && 桌.includes('if(确实换了 === false) return;'));
+  台.判('开机那一句提醒指的是这一颗（不再让他在那一列里一家一家找「更新」）',
+    rd('src/_fd/src/fd6-boot.js').includes('按上面那颗「全部更新」一次全换上'));
 }
 
 台.收尾();

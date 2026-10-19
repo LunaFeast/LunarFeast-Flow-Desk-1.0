@@ -468,6 +468,41 @@ const PackOps = {
     await this.查更新();
     if(after) await after();
   },
+  /* 一次把路径里所有"比这一格新"的那几家全换上：一张条子跨几家的时候（比如插件「停靠」那一栏
+     要 为写 + 便签 + 声笔练习 + 你的句子 四家的清单都换新才看得见），一家一家点、还要记住哪几家点过
+     没点过，那是把工程的账推到用户头上（他 2026-10-19：「为什么需要额外记录哪个装了哪个没装？纯属多余」）。
+     换完只问一句重启。哪一家砸了只报那一家，别的照换。 */
+  async 换全部(after){
+    const 那 = this.host();
+    if(!那 || typeof 那.packUpdate !== 'function'){ toast('更新这一条只在 Flow-Desk 程序里有', true); return false; }
+    const 等 = this.等着更新的();
+    if(!等.length){ toast('插件文件夹里没有比现在更新的安装包 · 一家都不用换'); return false; }
+    const 成了 = [], 砸了 = [];
+    for(const 一 of 等){
+      const 名 = Packs.name(一.id) || String(一.id);
+      let 回 = null;
+      try{ 回 = await 那.packUpdate(String(一.id)); }catch(e){ 回 = null; }
+      if(回 && 回.ok !== false) 成了.push(名 + ' ' + (一.to || ''));
+      else 砸了.push(名 + '：' + ((回 && 回.msg) || '不知道哪一步砸的'));
+    }
+    await this.查更新();
+    if(成了.length) toast('已换上 ' + 成了.length + ' 家：' + 成了.join('、')
+      + (砸了.length ? ' · 没换上的 ' + 砸了.length + ' 家：' + 砸了.join('；') : '')
+      + ' · 那几颗安装包已经删掉，你自己写的内容不动');
+    else if(砸了.length) toast('一家都没换上：' + 砸了.join('；'), true);
+    if(after) await after(成了.length > 0);
+    return 成了.length > 0;
+  },
+  /* 「全部更新」那颗：常在（同一条规矩 —— 不拿"没东西可换"当藏钮的理由），按下去自己说这一趟换了几家 */
+  updateAllButton(after){
+    return h('button', { class:'wnw-btn mini',
+      title:'把插件文件夹里所有比现在新的安装包一次全换上（一张条子跨几家的改动就靠这一颗，不用一家一家点）· 换完问一句重启',
+      html:icoMarkup('cycle') + '全部更新', onclick:async () => {
+        if(!this.这一台能使()) return;
+        await this.查更新();
+        await this.换全部(after);
+      } });
+  },
   /* 卸载前那一句：说清楚这是停止加载、数据默认留着，勾上那一句才一起清 */
   unloadAsk(id, after){
     const nm = Packs.name(id);

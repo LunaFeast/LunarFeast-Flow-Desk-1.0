@@ -45,7 +45,7 @@ function 报启动(哪一步, e){
     await PackOps.查更新();
     const 等 = PackOps.等着更新的();
     if(等.length) setTimeout(() => toast('插件文件夹里有 ' + 等.length + ' 家可以换更新的版本：' + 等.map(x => x.name || x.id).join('、')
-      + ' · 打开「插件管理」，在那一行的最后点「更新」就换上'), 1200);
+      + ' · 打开「插件管理」，按上面那颗「全部更新」一次全换上（一张条子跨几家的改动就靠这一颗），换完点「立刻重启」'), 1200);
   }catch(e){ 报启动('问不到有没有新包', e); }
   await Palette.init();
   await Theme.init();

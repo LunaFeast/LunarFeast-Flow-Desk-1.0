@@ -833,61 +833,38 @@ fn 落一份容器(格: &str, 那串: &str) -> 一份导入 {
 }
 
 /* ---------- 更新那两道（他 2026-10-17 定的形状：新包丢进插件路径 → 进软件提醒一句 → 点一下换进那一格 → 那颗包删掉） ----------
-   判"值不值得提醒"那一手在 core::pack_rule::该提醒换 —— **包上那份必须比这一格上的新才提醒**：
-   先比号里参与排序那两段（`+build.` 那一截按 semver 规定不参与排序），平手再比清单里 `created` 那一格打包时刻，
-   两样都拿不出就不提醒。从前这里只认"号不一样"，而每一家的号都是 `1.0.0-alpha+build.<那一笔>`，
-   那一段比不出高低 —— 结果路径里躺着六颗旧包也被当成"等着更新"，点下去是把旧的换进来、等于降级
-   （他 2026-10-18 那一句「点下去是降级」）。
+   判"值不值得提醒"那一手在 core::pack_rule::该提醒换，**手里只有两个版本号**：
+   号里带参与排序那一段（`1.0.0-alpha.<提交数>+build.<那一笔>`，见 src\_build\version.mjs 与各家 出包.mjs），
+   所以新旧由号自己比得出来 —— 不比打包时刻、不读盘上文件时间、不在那一格里另留一张"装过什么"的条
+   （他 2026-10-19 两句：「比不出来我要版本号干什么」「为什么需要额外记录哪个装了哪个没装？纯属多余」）。
+   号比不出高低而两个号又不一样：把两个号一起摆到界面上让人自己挑，不许拿"我比不出"当成"你已经是最新"。
    用户写的东西不在这一趟的射程里：插件的数据住 数据\userdata-fd\，这一趟只动 <插件路径>\<包名>\ 那一格。
    换的走法是"先摊到旁边那一格 → 旧的挪开 → 新的挪进 → 旧的删掉"：任何一步砸了都把旧的挪回来，
    那一格任何时刻都是完整的一版，不会出现半新半旧跑起来说不清的状态。 */
 
-/// 壳给每一家留的那张来路条（摊成那一刻写进那一格）：下划线开头 = 算一家不认它，
-/// 它也不在容器那张表里、不参与「这一格被改过」那三道核。
-const 来路那份: &str = "_装过的.json";
-
-/// 这一格上现在挂的是哪一号、那一份是哪一刻打的（来路条里 `created` 那一格，Unix 秒）。
-/// 读不出号回空串 —— 空串不提醒，那是要重装的那一家，不是要换版的那一家；
-/// 时刻读不出回空串（这一格装上之前摊的那批没这张条），纯判断那一颗会因此比不出新旧（宁可不提，不许拿旧包换掉好好的一格）。
-fn 那一格的号与时刻(格: &str, 包名: &str) -> (String, String) {
+/// 这一格上现在挂的是哪一号 —— 读的就是那一格里那份插件清单的 `version`，
+/// 与页面手里那一份同源（页面 import 的就是这一格），所以界面上那一行显示的数字就是它。
+/// 读不出号回空串 —— 空串不提醒，那是要重装的那一家，不是要换版的那一家。
+fn 那一格的号(格: &str, 包名: &str) -> String {
     let 家 = 并路(格, 包名);
-    let 号 = match fs::read_to_string(并路(&家, 清单那份)) {
+    match fs::read_to_string(并路(&家, 清单那份)) {
         Ok(文) => match serde_json::from_str::<Value>(&文) {
             Ok(单) => 单.get("version").and_then(|v| v.as_str()).unwrap_or("").trim().to_string(),
             Err(_) => String::new(),
         },
         Err(_) => String::new(),
-    };
-    let 秒 = fs::read_to_string(并路(&家, 来路那份)).ok()
-        .and_then(|文| serde_json::from_str::<Value>(&文).ok())
-        .map(|单| 清单上的一刻(&单)).unwrap_or_default();
-    /* 从前这里补过一手"拿那一格里文件的写入时间顶上"，当天就被否了（他 2026-10-19：「json不可靠」「比不出来我要版本号干什么」）——
-       盘上时间不是记录，谁拷一次文件它就变。新旧这一事交给号自己比：号里带排序那一段（见 src\_build\version.mjs），
-       这份时刻只当"顺手记一笔是哪一刻摊进来的"，不再参与决定要不要提醒。 */
-    (号, 秒)
-}
-
-/// 读一张 JSON 里那格 `created`（Unix 秒）。写成数或写成串都认；没有、读不出回空串。
-pub(crate) fn 清单上的一刻(单: &Value) -> String {
-    match 单.get("created") {
-        Some(v) => match (v.as_u64(), v.as_str()) {
-            (Some(秒), _) => 秒.to_string(),
-            (None, Some(串)) => 串.trim().to_string(),
-            _ => String::new(),
-        },
-        None => String::new(),
     }
 }
 
-/// 插件路径里躺着的那几颗运输件：（包名, 那颗的路径, 包上的号, 包上那一格打包时刻, 那份插件清单）。
+/// 插件路径里躺着的那几颗运输件：（包名, 那颗的路径, 包上的号, 那份插件清单）。
 /// 不过检的一颗先摘掉（坏包不配提醒），信息段那一名与文件名对不上也不列（规格那张表：目录名必须与信息段一样）。
 /// 同一家还剩两颗（新的丢进来、旧的忘了删）留哪一颗交给纯判断那一颗（一家留最新一颗：认文件时间，不认名字、也不比号）。
-fn 躺着的那几颗(格: &str) -> Vec<(String, String, String, String, Value)> {
+fn 躺着的那几颗(格: &str) -> Vec<(String, String, String, Value)> {
     let 目 = match fs::read_dir(格) {
         Ok(v) => v,
         Err(_) => return vec![],
     };
-    let mut 候选: Vec<(String, u64, String, String, String, Value)> = vec![];   /* 原名 · 毫秒 · 路径 · 号 · 打的时刻 · 清单 */
+    let mut 候选: Vec<(String, u64, String, String, Value)> = vec![];   /* 原名 · 毫秒 · 路径 · 号 · 清单 */
     for 项 in 目.filter_map(|x| x.ok()) {
         let 名 = 项.file_name().to_string_lossy().to_string();
         if 容器成名(&名).is_none() {
@@ -907,15 +884,13 @@ fn 躺着的那几颗(格: &str) -> Vec<(String, String, String, String, Value)>
         let 毫 = 项.metadata().ok().and_then(|m| m.modified().ok())
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| d.as_millis() as u64).unwrap_or(0);
-        /* 打包时刻读信息段那一份（created，Unix 秒；这一格装上之前出的旧包没写，回空串） */
-        候选.push((名, 毫, 那串, 信.version.trim().to_string(),
-                   if 信.created > 0 { 信.created.to_string() } else { String::new() }, 单));
+        候选.push((名, 毫, 那串, 信.version.trim().to_string(), 单));
     }
     let 选 = 一家留最新一颗(&候选.iter().map(|(名, 毫, ..)| (名.clone(), *毫)).collect::<Vec<_>>());
-    let mut 出列: Vec<(String, String, String, String, Value)> = vec![];
+    let mut 出列: Vec<(String, String, String, Value)> = vec![];
     for 名 in 选 {
-        if let Some((_, _, 那串, 号, 刻, 单)) = 候选.iter().find(|(那一名, ..)| 那一名 == &名) {
-            出列.push((容器成名(&名).unwrap_or("").to_string(), 那串.clone(), 号.clone(), 刻.clone(), 单.clone()));
+        if let Some((_, _, 那串, 号, 单)) = 候选.iter().find(|(那一名, ..)| 那一名 == &名) {
+            出列.push((容器成名(&名).unwrap_or("").to_string(), 那串.clone(), 号.clone(), 单.clone()));
         }
     }
     出列
@@ -940,12 +915,12 @@ pub struct 一份换版列 {
 #[tauri::command]
 pub fn pack_updates() -> 一份换版列 {
     let 格 = 那一列的格();
-    let 列: Vec<一条换版> = 躺着的那几颗(&格).into_iter().filter_map(|(包名, 那串, 号, 打的刻, 单)| {
+    let 列: Vec<一条换版> = 躺着的那几颗(&格).into_iter().filter_map(|(包名, 那串, 号, 单)| {
         let 那一格 = 并路(&格, &包名);
         /* 那一格不在 = 这一家还没装：那是"装"的那一路（开机自己会摊），不算换版提醒 */
         if !盘上有(&那一格) { return None; }
-        let (现在, 现在的一刻) = 那一格的号与时刻(&格, &包名);
-        if !该提醒换(&现在, &号, &现在的一刻, &打的刻) { return None; }
+        let 现在 = 那一格的号(&格, &包名);
+        if !该提醒换(&现在, &号) { return None; }
         Some(一条换版 { id: 包名.clone(), name: 清单上的名字(&单, &包名), from: 现在, to: 号, file: 那串 })
     }).collect();
     一份换版列 { ok: true, list: 列 }
@@ -978,17 +953,6 @@ fn 摊进一格(字节: &[u8], 检: &一份检查, 信: &一张信息, 到: &str
         }
         数 += 1;
     }
-    /* 摊成了，给这一格留一张来路条（壳自己那本账，不是插件的文件）：下划线开头 = 列一家时不认它，
-       它也不在容器那张表里、不参与「这一格被改过」那三道核。
-       为什么非留不可：号里 `+build.` 那一截按 semver 不比高低，比不出新旧时只剩"这一格是哪一刻摊出来的、
-       摊的是哪一刻打的那一颗"这一条凭据 —— 没有它，路径里躺着一颗旧包也会被当成"等着更新"，点下去是降级
-       （他 2026-10-18 那一句）。写砸了不影响这一格已经摊好的那些文件，所以只当没留成。 */
-    if let Ok(刻) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        let 条 = serde_json::json!({
-            "id": 信.id, "version": 信.version, "created": 信.created, "摊于": 刻.as_secs()
-        });
-        let _ = fs::write(并路(到, 来路那份), 条.to_string());
-    }
     Ok(数)
 }
 
@@ -1004,8 +968,8 @@ pub fn pack_update(id: Option<String>) -> 一份导入 {
     if !盘上有(&那一格) {
         return 一份导入::不成(format!("「{}」这一格里此刻是空的 —— 那颗包直接丢进这一格、重启一次就是装它", 包名));
     }
-    let 那串 = match 躺着的那几颗(&格).into_iter().find(|(名, _, _, _, _)| *名 == 包名) {
-        Some((_, 路径, _, _, _)) => 路径,
+    let 那串 = match 躺着的那几颗(&格).into_iter().find(|(名, _, _, _)| *名 == 包名) {
+        Some((_, 路径, _, _)) => 路径,
         None => return 一份导入::不成(format!("这一格里没有「{}」那颗新包 —— 把那颗 {} 丢进这一格再点", 包名, 带点后缀)),
     };
     let 字节 = match fs::read(&那串) { Ok(v) => v, Err(e) => return 一份导入::不成(format!("{}{}", 导入失败那句, 说错(e))) };
