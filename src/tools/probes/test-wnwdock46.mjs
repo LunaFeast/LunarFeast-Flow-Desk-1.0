@@ -53,4 +53,20 @@ R.题('三 · 三家清单各自点了头，另外四家没有');
   }
 }
 
+R.题('四 · 双栏拖不动的根（issue #19：那张卡整张不许选，把拖拽的手也一起禁了）');
+{
+  const 皮 = rd('src/_wnw/src/w0-skin.js');
+  R.判('那颗抓手还是走 HTML5 拖（draggable + dragstart 记 dockCur），没换成第二套',
+    壳.includes("el.setAttribute('draggable', 'true')") && /addEventListener\('dragstart'/.test(壳));
+  R.判('停靠那张卡确实挂着 .wnw-nosel（user-select:none）—— 这就是坑：Chromium 上选择权被禁的元素起不了 HTML5 拖拽',
+    /class:'wnw-dock-card wnw-nosel/.test(壳) && /\.wnw-root \.wnw-nosel\{user-select:none;/.test(皮));
+  R.判('修法只给那颗抓手单独放行（-webkit-user-drag:element），没把整张卡的"不许选出蓝底"改掉',
+    皮.includes('.wnw-root .wnw-grip{-webkit-user-drag:element;}') && 皮.includes('.wnw-root .wnw-nosel{user-select:none;}'),
+    (皮.match(/\.wnw-root \.wnw-grip\{[^}]*\}/) || [''])[0]);
+  R.判('抓手那颗的类名确实是 wnw-grip（CSS 落不到别处，也漏不掉这一颗）',
+    壳.includes("el.classList.add('wnw-grip')"));
+  R.判('反证：把那条放行摘掉，这一道立刻叫',
+    !皮.replace('.wnw-root .wnw-grip{-webkit-user-drag:element;}', '').includes('-webkit-user-drag:element'));
+}
+
 R.收尾();
