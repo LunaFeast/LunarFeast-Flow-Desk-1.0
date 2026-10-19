@@ -2352,19 +2352,10 @@ function tabData(){
         ], () => res(yes));
       });
     },
-    /* 这一类要重启才全换的做法：问一句立刻重启还是稍后自己重启（各窗口刷新也能见到新字，只是菜单托盘要重启才换） */
-    askRestart(msg){
-      return new Promise(res => {
-        Modal.open('改动已经写进程序', h('div', { style:'display:grid;gap:8px;min-width:380px' }, [
-          h('div', {}, msg),
-          h('div', { class:'fd-hint' }, '立刻重启 Flow-Desk，所有窗口、菜单和托盘一次换成新的；选稍后就先干活，回头自己关一次再开也一样。')
-        ]), [
-          h('button', { class:'fd-btn', onclick:() => { Modal.close(); res('later'); } }, '稍后手动重启'),
-          h('button', { class:'fd-btn primary', onclick:() => { Modal.close(); res('now'); } }, '立刻重启')
-        ], () => res('later'));
-      });
-    },
-    restart(){ return window.FD_APP && window.FD_APP.restartApp ? window.FD_APP.restartApp() : { ok:false }; }
+    /* 这一类要重启才全换的做法：问一句立刻重启还是稍后自己重启（各窗口刷新也能见到新字，只是菜单托盘要重启才换）。
+       问话与那颗「立刻重启」如今全程序只有一处（fd3-shell.js 顶上那两颗），插件换上新的那一条也走同一句 */
+    askRestart(msg){ return fdRestartAsk(msg); },
+    restart(){ return fdRestart(); }
   };
   /* ---------- 外42 二 · 一键清理所有用户数据 ----------
      三次确认：点这一颗算第一次，后面两道各问一句（那两句就是他给的原话，不添小字）。

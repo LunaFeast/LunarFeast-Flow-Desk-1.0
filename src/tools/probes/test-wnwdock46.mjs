@@ -53,21 +53,40 @@ R.题('三 · 三家清单各自点了头，另外四家没有');
   }
 }
 
-R.题('四 · 双栏拖不动的根（issue #19：那张卡整张不许选，把拖拽的手也一起禁了）');
+R.题('四 · 双栏拖不动（issue #19）：这一手改成指针自己算，不再求浏览器起拖');
 {
   const 皮 = rd('src/_wnw/src/w0-skin.js');
-  R.判('那颗抓手还是走 HTML5 拖（draggable + dragstart 记 dockCur），没换成第二套',
-    壳.includes("el.setAttribute('draggable', 'true')") && /addEventListener\('dragstart'/.test(壳));
-  R.判('停靠那张卡确实挂着 .wnw-nosel（user-select:none）—— 这就是坑：Chromium 上选择权被禁的元素起不了 HTML5 拖拽',
-    /class:'wnw-dock-card wnw-nosel/.test(壳) && /\.wnw-root \.wnw-nosel\{user-select:none;/.test(皮));
-  R.判('修法只给那颗抓手单独放行（-webkit-user-drag:element），没把整张卡的"不许选出蓝底"改掉',
-    皮.includes('.wnw-root .wnw-grip{-webkit-user-drag:element;}') && 皮.includes('.wnw-root .wnw-nosel{user-select:none;}'),
-    (皮.match(/\.wnw-root \.wnw-grip\{[^}]*\}/) || [''])[0]);
-  R.判('抓手那颗的类名确实是 wnw-grip（CSS 落不到别处，也漏不掉这一颗）',
-    壳.includes("el.classList.add('wnw-grip')"));
-  R.判('反证：把那条放行整条摘掉，这一道立刻叫（判的是那一条规则本身，注释里提一嘴不算数）',
-    !/\.wnw-root \.wnw-grip\{-webkit-user-drag:element;\}/
-      .test(皮.replace('.wnw-root .wnw-grip{-webkit-user-drag:element;}', '')));
+  const 拖 = 切方法(壳, '  dockGrip(el, it){');
+  const 点 = 切方法(壳, '  dockHit(x, y, src){');
+  R.判('抓手听的是 pointerdown / pointermove / pointerup 这三下，浏览器自带那套（draggable、dragstart、drop）在这一颗里一个字都不剩',
+    拖.includes("addEventListener('pointerdown'") && 拖.includes("addEventListener('pointermove'")
+    && 拖.includes("addEventListener('pointerup'") && !/draggable|dragstart|dragend|dataTransfer/.test(拖),
+    (拖.match(/addEventListener\('[a-z]+'/g) || []).join(' '));
+  R.判('按下不动不算拖：挪过 4 像素才立这回事，没挪过的那一趟原样交给 click（点名字还是折叠 / 展开）',
+    /< 4\) return;/.test(拖) && 拖.includes('拖着 = true'));
+  R.判('落点从指针底下现量：先认卡片、再认空的那一栏，拖着自己那张回 null（在自己身上松手不该平白换位）',
+    点.includes('document.elementFromPoint') && 点.includes("closest('.wnw-dock-card')")
+    && 点.includes("closest('.wnw-dock-col')") && /card === src \? null/.test(点));
+  R.判('上下位置照老规矩分：落在别的卡上半 = 插到它前面，下半 = 插到它后面；落在栏里 = 那一栏末尾',
+    /pos:\(y < card\.getBoundingClientRect\(\)\.top \+ card\.getBoundingClientRect\(\)\.height \/ 2 \? 'before' : 'after'\)/.test(点)
+    && 拖.includes("me.dockMoveTo(it, 落.col, null)") && 拖.includes('落.card.__dockItem, 落.pos)'));
+  R.判('卡片建好那一刻就把对应那一条钉在自己身上（重画一次换一只，线跟着卡走，不另存一张表），松手时从那一格认回它',
+    /card\.__dockItem = it;/.test(壳) && 拖.includes('落.card.__dockItem'));
+  R.判('摆两栏才改栏归属，一栏时只换顺序（从前那条规矩没动）',
+    拖.includes('me.colsShown === 2 ? me.dockColOf(落.card.__dockItem, 2) : null'));
+  R.判('真拖过的那一趟紧跟着那一次 click 被拦掉（按下与抬起都在名字上时浏览器一定补这一下）：抖一下不该把面板折起来',
+    /if\(拖着\) el\.addEventListener\('click'[\s\S]{0,120}capture:true, once:true/.test(拖));
+  R.判('状态还是那一份：拖的时候记 dockCur、亮的是原来那三节课（dnd-out / dnd-tgt / dnd-col），暗的也是原来那颗 markCol',
+    拖.includes('me.dockCur = it') && 拖.includes('me.markCol(') && 拖.includes('.dnd-out,.dnd-tgt,.dnd-col'));
+  R.判('旧那两套 HTML5 的接法整块退场，全仓再没有第二处引它们（dockDnd / dockColDnd）',
+    !壳.includes('dockDnd') && !壳.includes('dockColDnd'),
+    'dockDnd 出现 ' + (壳.match(/dockDnd/g) || []).length + ' 次 · dockColDnd 出现 ' + (壳.match(/dockColDnd/g) || []).length + ' 次');
+  R.判('那条 -webkit-user-drag 也整条撤（不改走 CSS 就不留死引用），可「这一张卡不许选出蓝底」那句还在',
+    !皮.includes('-webkit-user-drag') && 皮.includes('.wnw-root .wnw-nosel{user-select:none;}'));
+  R.判('停靠那张卡照旧挂着 .wnw-nosel（关的是选字，不再顺手把拖的手也一起管着 —— 这一手不归它了）',
+    /class:'wnw-dock-card wnw-nosel/.test(壳));
+  R.判('反证：把 pointerdown 那一行摘掉，这一道立刻叫（判的是真接上了指针，不是注释里提一嘴）',
+    !/addEventListener\('pointerdown'/.test(拖.replace("el.addEventListener('pointerdown', ev => {", '')));
 }
 
 R.题('五 · 章纲那一档（issue #10：默认始终悬浮，三档在设置 · 版式 那一页换）');
@@ -77,13 +96,22 @@ R.题('五 · 章纲那一档（issue #10：默认始终悬浮，三档在设置
   R.判('三档一个不落：始终悬浮 / 自动折叠 / 随正文滚动，认的是同一个位（ol-way），默认是"始终悬浮"',
     /const OlWay = \{/.test(写) && 写.includes("值:'stick'") &&
     写.includes("'stick', '始终悬浮'") && 写.includes("'auto', '自动折叠'") && 写.includes("'flow', '随正文滚动'"));
-  R.判('卡片那一格真按这一档换类：flow 不钉、其余钉；auto 在正文超出这一屏时再按 shut 画',
-    /const 折 = c\.olShut \|\| \(档 === 'auto' && OlWay\.该折\(this\)\);/.test(写) &&
-    /'wnw-olcard' \+ \(折 \? ' shut' : ''\) \+ \(档 === 'flow' \? '' : ' stick'\)/.test(写));
-  R.判('样式那一条在：.wnw-olcard.stick 钉在顶端（position:sticky），另外两条类各有样子',
-    /\.wnw-olcard\.stick\{position:sticky;top:0;z-index:3;\}/.test(写));
-  R.判('量不到正文那一栏就当不折（宁可不折，不许把章纲无故收掉）',
-    /该折\(视图\)\{[\s\S]{0,200}return !!\(主 && 主\.scrollHeight > 主\.clientHeight \+ 2\);/.test(写));
+  R.判('卡片那一格真按这一档换折与不折：auto 在正文装不下这一屏时按 shut 画；钉这一条挂到外面那一格身上',
+    /const 折 = c\.olShut \|\| \(档 === 'auto' && OlWay\.该折\(this\)\);/.test(写)
+    && /this\.olSlot\.className = 'wnw-colw' \+ \(档 === 'flow' \? '' : ' wnw-olpin'\);/.test(写)
+    && /class:'wnw-olcard' \+ \(折 \? ' shut' : ''\)/.test(写));
+  R.判('钉这一条挂的是正文那一栏的亲儿子那一格（.wnw-olpin），不是卡自己 —— 卡自己那一格高就等于卡高，sticky 走不动，一滚就跟着正文走了',
+    /\.wnw-olpin\{position:sticky;top:0;z-index:3;\}/.test(写) && !/\.wnw-olcard\.stick\{/.test(写));
+  R.判('反证：把 sticky 挪回卡上那一格，这一道立刻叫（钉不住等于这一档白做）',
+    !/\.wnw-olpin\{/.test(写.replace('.wnw-olpin{position:sticky;top:0;z-index:3;}', '.wnw-olcard.stick{position:sticky;top:0;z-index:3;}')));
+  R.判('「超出这一屏」量的是真在滚的那一格（.wnw-doc 那位 bodyBox，它才挂着 overflow:auto），用的还是正文自己的高度（正文那块自己 scrollHeight 永远等于 clientHeight，拿它比就一辈子不折；比底边又会在折与不折之间来回弹）',
+    /该折\(视图\)\{[\s\S]{0,140}视图\.bodyBox[\s\S]{0,460}文\.offsetHeight > 滚\.clientHeight/.test(写)
+    && !/scrollHeight > .*clientHeight/.test(写.slice(写.indexOf('该折(视图)'), 900)));
+  R.判('量不到就当不折，扣掉的是这一格自己算出来的内边距与折叠那一条标题的高（不留一个说不清的数）',
+    /if\(!滚 \|\| !文 \|\| !\(滚\.clientHeight > 0\)\) return false;/.test(写)
+    && 写.includes('parseFloat(样.paddingTop)') && 写.includes('.offsetHeight : 0'));
+  R.判('设置里点完当场把正开着的那几章重建一遍（等切一章才换样子，按下去那一眼就是没反应）',
+    /for\(const \[, 视\] of ChOpen\) try\{ if\(视 && 视\.buildOl\) 视\.buildOl\(\); \}catch\(e\)\{\}/.test(写));
   R.判('开屏读回来、点完写回去（State 的 ol-way 是唯一那一份，不在两处各存一遍）',
     /State\.get\('ol-way', 'stick'\)/.test(写) && /State\.set\('ol-way', this\.值\)/.test(写) && /await OlWay\.读\(\);/.test(起));
   R.判('这一段待在 addCss 那一段外面（塞进模板字符串就当 CSS 发出去了，既不生效也脏了样式）',

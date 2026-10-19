@@ -1607,6 +1607,21 @@ function fdAsk(q, yes){
   });
 }
 
+/* 改完要重启才全换的那一句问话：立刻重启，还是稍后自己关一次再开。
+   「一键清理」和「插件换上新的」两条路问的是同一件事，措辞只留这一份。 */
+function fdRestartAsk(msg){
+  return new Promise(res => {
+    Modal.open('改动已经写进程序', h('div', { style:'display:grid;gap:8px;min-width:380px' }, [
+      h('div', {}, msg),
+      h('div', { class:'fd-hint' }, '立刻重启 Flow-Desk，所有窗口、菜单和托盘一次换成新的；选稍后就先干活，回头自己关一次再开也一样。')
+    ]), [
+      h('button', { class:'fd-btn', onclick:() => { Modal.close(); res('later'); } }, '稍后手动重启'),
+      h('button', { class:'fd-btn primary', onclick:() => { Modal.close(); res('now'); } }, '立刻重启')
+    ], () => res('later'));
+  });
+}
+function fdRestart(){ return window.FD_APP && window.FD_APP.restartApp ? window.FD_APP.restartApp() : { ok:false }; }
+
 /* ---------- 组件注册表 ---------- */
 const Registry = new Map();
 function registerWidget(def){
@@ -2259,6 +2274,13 @@ const Shell = {
     const box = h('div', { class:'wnw-col fd-addbox' });
     const grid = h('div', { class:'fd-gridpick' });
     const 空话 = h('div', { class:'fd-empty' });
+    /* 换上去了不等于换进这一轮了：插件那份代码是开机那一刻请进来的（PackLoader.load），
+       盘上那一格换了、页面手里还是上一版 —— 界面上看着就像「点了更新什么也没变」。
+       所以换完问一句重启，让他自己挑现在换还是回头换。 */
+    const 换完 = async () => {
+      await draw();
+      if(await fdRestartAsk('插件已经换上新的那一份：重启之后，为写和各家面板跑的就是那一版。') === 'now') await fdRestart();
+    };
     const draw = async () => {
       const kw = q.trim().toLowerCase();
       const d = await PackOps.disk();
@@ -2303,7 +2325,7 @@ const Shell = {
              第四颗「更新」：插件路径里躺着一颗号不一样的新包就把那一格换成它（他 2026-10-17 那条：新包丢进来 → 提醒 → 点一下换进那一格 → 那颗包删掉）。 */
           h('div', { class:'fd-addops' }, [
             PackOps.loadButton(id, 名), PackOps.unloadButton(id, draw), PackOps.removeButton(id, draw),
-            PackOps.updateButton(id, draw)])
+            PackOps.updateButton(id, 换完)])
         ]));
       }
       const 一行 = grid.children.length;

@@ -137,7 +137,7 @@ const 试 = 只认代码("const a = 'x';\n/* 注释里写「没装」不算 */\n
 台.判('2 列表按他说的来：plugins 路径里存在插件包的就列（不再按 host 挑掉不归本宿主的那几家）',
   桌.includes('.filter(p => p.manifest && p.manifest.id)') && !/forHost\(p\.manifest\)/.test(桌));
 台.判('3 每一行四颗全摆：加载、卸载、删除、换版（从前加载/卸载二选一，还要 .filter(Boolean) 摘掉回 null 的那颗；换版那颗也常在，按下去自己说这一趟不用换）',
-  桌.includes('PackOps.loadButton(id, 名), PackOps.unloadButton(id, draw), PackOps.removeButton(id, draw),\n            PackOps.updateButton(id, draw)]')
+  桌.includes('PackOps.loadButton(id, 名), PackOps.unloadButton(id, draw), PackOps.removeButton(id, draw),\n            PackOps.updateButton(id, 换完)]')
   && !/上了 \? PackOps\.unloadButton/.test(桌) && !/\.filter\(Boolean\)\)\n/.test(桌)
   && !/updateButton\(id, after\)\{\s*const 一 = this\.换版表\.get\(String\(id\)\);\s*if\(!一\) return null;/.test(名单));
 台.判('4 四颗钮一律回一颗钮（「安装」那颗要始终在屏上）：读不到路径这种时候按下去把话说明白，不靠藏起来当提示',
@@ -154,5 +154,31 @@ const 试 = 只认代码("const a = 'x';\n/* 注释里写「没装」不算 */\n
 台.判('菜单条目一种不少（重新载入页面 / 强制重新载入 / 插件管理 / 设置 / 放大 / 缩小 / 实际大小 / 全屏 / 最小化 / 还原窗口或最大化 / 退出程序）',
   ['重新载入页面', '强制重新载入', '插件管理', '设置', '放大', '缩小', '实际大小', '全屏', '最小化', '退出程序']
     .every(条 => 顶栏.includes("'" + 条 + "'")) && 顶栏.includes("this.st.maximized ? '还原窗口' : '最大化'"));
+
+/* ---- 他 #25 这一轮现场量到的：包是新的、跑的还是旧代码 ----
+   data\plugins\<那一家>\ 那一格换了，页面手里那份 kernel 却是开机那一刻 PackLoader.load 请进来的，
+   点完「更新」界面上一个字都不变 —— 从他那头看就是「完全没修」。
+   所以换完必须问一句重启；而"看得见哪几家可以换"不用重启（每画一遍列表都现问一次），
+   从前那两句写的「重启后这里会告诉你」是句错话，害他白重启一趟。 ---- */
+台.题('九、插件换上新的那一份之后：问一句重启，屏上那两句说清哪一步要重启');
+{
+  const 设 = rd('src/_fd/src/fd4-builtin.js');
+  台.判('换完那一趟不是重画列表就完了：先重画，再问一句重启，答"立刻"才真重启',
+    /const 换完 = async \(\) => \{[\s\S]*?await draw\(\);[\s\S]*?fdRestartAsk\([\s\S]*?\) === 'now'\) await fdRestart\(\);/.test(桌),
+    (桌.match(/const 换完 = async \(\) => \{[\s\S]{0,240}/) || [''])[0].replace(/\n\s*/g, ' '));
+  台.判('问话与那颗「立刻重启」全程序只有 fd3-shell.js 顶上那两颗：一键清理那一条也走它，措辞不留第二份',
+    /function fdRestartAsk\(msg\)\{[\s\S]*?Modal\.open\('改动已经写进程序'/.test(桌)
+    && 桌.includes("function fdRestart(){ return window.FD_APP && window.FD_APP.restartApp")
+    && 设.includes('askRestart(msg){ return fdRestartAsk(msg); }') && 设.includes('restart(){ return fdRestart(); }')
+    && !/Modal\.open\('改动已经写进程序'/.test(设));
+  台.判('那句错话改了：要看得见哪几家可以换，按「重看」就当场告诉你，不叫他先重启',
+    !名单.includes('重启后这里会告诉你') && !名单.includes('重启后软件会告诉你')
+    && 名单.includes('再按这一屏上面那颗「重看」'));
+  台.判('换上之前那一颗的悬停格里就写了"换完会问一句重启"（他要先知道这一趟不止换盘上那一格）',
+    名单.includes('换完会问一句重启'));
+  台.判('咬口 · 把「问一句重启」那一行摘掉，这一道立刻叫（留着重画列表也照样像没换）',
+    !/const 换完 = async \(\) => \{[\s\S]*?fdRestartAsk/.test(
+      桌.replace("if(await fdRestartAsk('插件已经换上新的那一份：重启之后，为写和各家面板跑的就是那一版。') === 'now') await fdRestart();", '')));
+}
 
 台.收尾();
