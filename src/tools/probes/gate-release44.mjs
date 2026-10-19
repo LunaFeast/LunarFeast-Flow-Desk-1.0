@@ -185,9 +185,12 @@ const 那颗URL = pathToFileURL(path.resolve(ROOT, 'src/_build/plugin-repos.mjs'
 台.判('3 名字带号：<id>-<号>.<容器后缀>，后缀那一枚朝打包手借（这一颗里不写第二份后缀字面 —— 那五个字由 gate-tauribox46 那一台数，写一份就多一处）',
   rel.includes("const 件名 = job.id + '-' + 号 + '.' + 容器后缀();")
   && !/["']\.?fd[pk]kg["']/.test(rel));
-台.判('4 只出有更新的那几家：号与内容逐份摘要都跟上一趟一样才不出（「这一趟不出它」），一家都不出时那一格不建',
-  rel.includes('if(老.号 === 号 && 老.摘要 === 摘要)') && rel.includes('这一趟不出它')
-  && rel.includes("if(!出.length) P(") && rel.includes('那一格这一趟不建'));
+台.判('4 每一趟都摆齐：号与内容跟上一趟一样的那几家不报成新出，但照原样带一份进这一格 —— 最新那一格里七家一颗不缺（他 2026-10-19 指着只有 exe 与 index.json 的那一格问「？」：让他回头翻上一趟那一格找配套的那颗，就是把出货的账推到他头上）',
+  rel.includes('const 沿用 = 老.号 === 号 && 老.摘要 === 摘要;') && rel.includes('不重建，照原样摆进这一格')
+  && rel.includes('这一趟新出: !沿用') && rel.includes('拿最新那一格就够，不必回头翻上一趟那一格'),
+  '旧写法「那一格这一趟不建」还在 = 会缺颗：' + (rel.includes('那一格这一趟不建') ? '还在（不该）' : '已改口'));
+台.判('4a 反证 · 摆进这一格那一手排在"沿用就不报"之前（先 copy 再决定报不报：把 copy 挪到那句 continue 后面，没更新的那几家就又从这一格里没了）',
+  rel.indexOf('fs.copyFileSync(打.件, path.join(小格, 件名));') < rel.indexOf('if(沿用){'));
 台.判('4b 比的不只是号：号 = 底号+build.那一仓 HEAD 的短哈希，他在自己那一棵改了句子没落笔时号不动、字节动了 —— 只比号就永远出旧的那一份',
   /function 内容摘要\(信\)/.test(rel) && rel.includes("f.path + ':' + f.len + ':' + f.sha256")
   && rel.includes('.sort().join') && rel.includes(".digest('hex').slice(0, 12)")
