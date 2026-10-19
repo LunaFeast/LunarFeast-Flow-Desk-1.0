@@ -65,8 +65,9 @@ R.题('四 · 双栏拖不动的根（issue #19：那张卡整张不许选，把
     (皮.match(/\.wnw-root \.wnw-grip\{[^}]*\}/) || [''])[0]);
   R.判('抓手那颗的类名确实是 wnw-grip（CSS 落不到别处，也漏不掉这一颗）',
     壳.includes("el.classList.add('wnw-grip')"));
-  R.判('反证：把那条放行摘掉，这一道立刻叫',
-    !皮.replace('.wnw-root .wnw-grip{-webkit-user-drag:element;}', '').includes('-webkit-user-drag:element'));
+  R.判('反证：把那条放行整条摘掉，这一道立刻叫（判的是那一条规则本身，注释里提一嘴不算数）',
+    !/\.wnw-root \.wnw-grip\{-webkit-user-drag:element;\}/
+      .test(皮.replace('.wnw-root .wnw-grip{-webkit-user-drag:element;}', '')));
 }
 
 R.收尾();
