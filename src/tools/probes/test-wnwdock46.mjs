@@ -70,4 +70,27 @@ R.题('四 · 双栏拖不动的根（issue #19：那张卡整张不许选，把
       .test(皮.replace('.wnw-root .wnw-grip{-webkit-user-drag:element;}', '')));
 }
 
+R.题('五 · 章纲那一档（issue #10：默认始终悬浮，三档在设置 · 版式 那一页换）');
+{
+  const 写 = rd('src/_wnw/src/w8-write.js');
+  const 起 = rd('src/_wnw/src/w6-boot.js');
+  R.判('三档一个不落：始终悬浮 / 自动折叠 / 随正文滚动，认的是同一个位（ol-way），默认是"始终悬浮"',
+    /const OlWay = \{/.test(写) && 写.includes("值:'stick'") &&
+    写.includes("'stick', '始终悬浮'") && 写.includes("'auto', '自动折叠'") && 写.includes("'flow', '随正文滚动'"));
+  R.判('卡片那一格真按这一档换类：flow 不钉、其余钉；auto 在正文超出这一屏时再按 shut 画',
+    /const 折 = c\.olShut \|\| \(档 === 'auto' && OlWay\.该折\(this\)\);/.test(写) &&
+    /'wnw-olcard' \+ \(折 \? ' shut' : ''\) \+ \(档 === 'flow' \? '' : ' stick'\)/.test(写));
+  R.判('样式那一条在：.wnw-olcard.stick 钉在顶端（position:sticky），另外两条类各有样子',
+    /\.wnw-olcard\.stick\{position:sticky;top:0;z-index:3;\}/.test(写));
+  R.判('量不到正文那一栏就当不折（宁可不折，不许把章纲无故收掉）',
+    /该折\(视图\)\{[\s\S]{0,200}return !!\(主 && 主\.scrollHeight > 主\.clientHeight \+ 2\);/.test(写));
+  R.判('开屏读回来、点完写回去（State 的 ol-way 是唯一那一份，不在两处各存一遍）',
+    /State\.get\('ol-way', 'stick'\)/.test(写) && /State\.set\('ol-way', this\.值\)/.test(写) && /await OlWay\.读\(\);/.test(起));
+  R.判('这一段待在 addCss 那一段外面（塞进模板字符串就当 CSS 发出去了，既不生效也脏了样式）',
+    写.indexOf('const OlWay = {') > 写.indexOf('\n`);'),
+    'OlWay 在第 ' + 写.slice(0, 写.indexOf('const OlWay = {')).split('\n').length + ' 行，addCss 收尾在第 ' + 写.slice(0, 写.indexOf('\n`);')).split('\n').length + ' 行');
+  R.判('反证：把默认那档换成"随正文滚动"，这一道立刻叫（默认必须是他要的"始终悬浮"）',
+    !写.replace("值:'stick',", "值:'flow',").includes("值:'stick',"));
+}
+
 R.收尾();
