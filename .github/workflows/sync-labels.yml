@@ -13,12 +13,15 @@ jobs:
           SOURCE_REPO: LunarFeast/LunarFeast-Flow-Desk-1.0
           TARGETS: |
             LunarFeast/Music-Remote
-            LunarFeast/Music-Remote-plugins-MusicBe
+            LunarFeast/Music-Remote-plugins-MusicBee
             LunarFeast/Singbit-Input-Practice
             LunarFeast/Your-Sentences
             LunarFeast/Notes
             LunarFeast/Schedule
+            LunarFeast/Why-Not-Wirte
             LunarFeast/Why-Not-Wirte-plugins-Deduce-Custom
+            LunarFeast/Flow-Desk-Prototype
+            LunarFeast/Flow-Desk-Website
         run: |
           set -euo pipefail
 
