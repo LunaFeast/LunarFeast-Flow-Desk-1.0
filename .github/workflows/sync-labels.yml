@@ -19,7 +19,7 @@ jobs:
             LunarFeast/Notes
             LunarFeast/Schedule
             LunarFeast/Why-Not-Write
-            LunarFeast/Why-Not-Wirte-plugins-Deduce-Custom
+            LunarFeast/Why-Not-Write-plugins-Deduce-Custom
             LunarFeast/Flow-Desk-Prototype
             LunarFeast/Flow-Desk-Website
         run: |
